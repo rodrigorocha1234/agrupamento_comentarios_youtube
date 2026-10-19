@@ -1,0 +1,202 @@
+import json
+import pytest
+import requests
+
+from app.coleta_youtube.cliente_youtube import ClienteYouTube
+from app.coleta_youtube.extrator_comentarios import ExtratorComentarios
+from app.coleta_youtube.tratador_erros import (
+    ChaveApiAusenteErro,
+    QuotaExcedidaErro,
+)
+
+
+class RespostaFalsa(requests.Response):
+    """Subclasse customizada de Response para testes sem tocar em atributos protegidos."""
+
+    def __init__(self, status_code: int, corpo: dict[str, object]) -> None:
+        super().__init__()
+        self.status_code = status_code
+        self._corpo = corpo
+
+    def json(self, **kwargs: object) -> dict[str, object]:
+        return self._corpo
+
+    @property
+    def text(self) -> str:
+        return json.dumps(self._corpo)
+
+
+class SessaoHttpFalsa:
+    """Mock estrutural aderente ao ProtocoloRequisitorHttp para simulações determinísticas."""
+
+    def __init__(self, respostas_por_url: dict[str, tuple[int, dict[str, object]]]) -> None:
+        self.respostas_por_url = respostas_por_url
+        self.requisicoes_feitas: list[dict[str, object]] = []
+
+    def get(
+        self,
+        url: str | bytes,
+        *,
+        params: dict[str, str] | None = None,
+        timeout: float | None = None,
+    ) -> requests.Response:
+        url_str = url.decode("utf-8") if isinstance(url, bytes) else url
+        self.requisicoes_feitas.append({"url": url_str, "params": params, "timeout": timeout})
+
+        codigo_status, corpo = self.respostas_por_url.get(
+            url_str, (404, {"error": {"message": "Nao encontrado"}})
+        )
+        return RespostaFalsa(status_code=codigo_status, corpo=corpo)
+
+
+def test_chave_api_vazia_lanca_excecao() -> None:
+    """Valida que chave de API vazia gera erro de domínio."""
+    with pytest.raises(ChaveApiAusenteErro):
+        ClienteYouTube(chave_api="   ")
+
+
+def test_obter_id_playlist_uploads_sucesso() -> None:
+    """Testa resolução correta da playlist de uploads a partir de channels.list."""
+    dados_canal: dict[str, object] = {
+        "items": [
+            {
+                "contentDetails": {
+                    "relatedPlaylists": {"uploads": "UU_CANAL_TESTE_UPLOADS"}
+                }
+            }
+        ]
+    }
+    mock_http = SessaoHttpFalsa(
+        {"https://www.googleapis.com/youtube/v3/channels": (200, dados_canal)}
+    )
+    cliente = ClienteYouTube(chave_api="CHAVE_VALIDA", sessao_http=mock_http)
+    playlist_id = cliente.obter_id_playlist_uploads("UC_TESTE")
+    assert playlist_id == "UU_CANAL_TESTE_UPLOADS"
+
+
+def test_listar_comentarios_e_respostas_com_paginacao() -> None:
+    """Valida coleta exaustiva de commentThreads e de comments (respostas) com paginação."""
+    dados_canal: dict[str, object] = {
+        "items": [
+            {"contentDetails": {"relatedPlaylists": {"uploads": "UU_PLAYLIST"}}}
+        ]
+    }
+    dados_playlist: dict[str, object] = {
+        "items": [
+            {
+                "contentDetails": {
+                    "videoId": "VID_01",
+                    "videoPublishedAt": "2026-10-10T12:00:00Z",
+                },
+                "snippet": {
+                    "title": "Video de Teste",
+                    "publishedAt": "2026-10-10T12:00:00Z",
+                },
+            }
+        ]
+    }
+    dados_threads: dict[str, object] = {
+        "items": [
+            {
+                "id": "COMM_TOP_1",
+                "etag": "etag_1",
+                "snippet": {
+                    "topLevelComment": {
+                        "snippet": {
+                            "textOriginal": "Excelente video explicativo!",
+                            "publishedAt": "2026-10-11T10:00:00Z",
+                            "updatedAt": "2026-10-11T10:00:00Z",
+                            "likeCount": 15,
+                        }
+                    }
+                },
+            }
+        ]
+    }
+    dados_respostas: dict[str, object] = {
+        "items": [
+            {
+                "id": "COMM_REPLY_1",
+                "etag": "etag_reply_1",
+                "snippet": {
+                    "textOriginal": "Concordo plenamente com a explicacao.",
+                    "publishedAt": "2026-10-11T11:00:00Z",
+                    "updatedAt": "2026-10-11T11:00:00Z",
+                    "likeCount": 3,
+                },
+            }
+        ]
+    }
+
+    mock_http = SessaoHttpFalsa(
+        {
+            "https://www.googleapis.com/youtube/v3/channels": (200, dados_canal),
+            "https://www.googleapis.com/youtube/v3/playlistItems": (200, dados_playlist),
+            "https://www.googleapis.com/youtube/v3/commentThreads": (200, dados_threads),
+            "https://www.googleapis.com/youtube/v3/comments": (200, dados_respostas),
+        }
+    )
+
+    cliente = ClienteYouTube(chave_api="CHAVE_VALIDA", sessao_http=mock_http)
+    extrator = ExtratorComentarios(cliente)
+
+    videos, comentarios = extrator.extrair_canal_completo(
+        id_canal="UC_TESTE",
+        dias_retroativos=7,
+        incluir_respostas=True,
+    )
+
+    assert len(videos) == 1
+    assert videos[0].id_video == "VID_01"
+    assert len(comentarios) == 2
+
+    top_comm = comentarios[0]
+    assert top_comm.id_comentario == "COMM_TOP_1"
+    assert top_comm.id_comentario_pai is None
+    assert top_comm.origem == "principal"
+    assert top_comm.contagem_curtidas == 15
+    assert len(top_comm.hash_conteudo) == 64
+
+    reply_comm = comentarios[1]
+    assert reply_comm.id_comentario == "COMM_REPLY_1"
+    assert reply_comm.id_comentario_pai == "COMM_TOP_1"
+    assert reply_comm.origem == "resposta"
+    assert reply_comm.contagem_curtidas == 3
+
+
+def test_comentarios_desativados_retorna_vazio() -> None:
+    """Garante que vídeos com commentsDisabled retornam lista vazia sem quebrar o fluxo."""
+    dados_erro: dict[str, object] = {
+        "error": {
+            "code": 403,
+            "message": "The video has disabled comments.",
+            "errors": [{"reason": "commentsDisabled"}],
+        }
+    }
+    mock_http = SessaoHttpFalsa(
+        {"https://www.googleapis.com/youtube/v3/commentThreads": (403, dados_erro)}
+    )
+    cliente = ClienteYouTube(chave_api="CHAVE_VALIDA", sessao_http=mock_http)
+    comentarios = cliente.listar_comentarios_principais("VID_BLOQUEADO", "UC_TESTE")
+    assert comentarios == []
+
+
+def test_quota_excedida_lanca_excecao_especifica() -> None:
+    """Garante que quotaExceeded levanta QuotaExcedidaErro com retry defensivo."""
+    dados_erro: dict[str, object] = {
+        "error": {
+            "code": 403,
+            "message": "The request cannot be completed because you have exceeded your quota.",
+            "errors": [{"reason": "quotaExceeded"}],
+        }
+    }
+    mock_http = SessaoHttpFalsa(
+        {"https://www.googleapis.com/youtube/v3/channels": (403, dados_erro)}
+    )
+    cliente = ClienteYouTube(
+        chave_api="CHAVE_VALIDA",
+        tentativas=1,
+        sessao_http=mock_http,
+    )
+    with pytest.raises(QuotaExcedidaErro):
+        cliente.obter_id_playlist_uploads("UC_TESTE")

@@ -1,0 +1,114 @@
+# ==============================================================================
+# SEGREDOS E VARIÁVEIS DE AMBIENTE (NUNCA COMMITTAR)
+# ==============================================================================
+.env
+.env.*
+!.env.example
+*.env
+youtube.env
+secrets/
+*.pem
+*.key
+
+# ==============================================================================
+# AMBIENTES VIRTUAIS PYTHON
+# ==============================================================================
+.venv/
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+
+# ==============================================================================
+# BYTECODE PYTHON E CACHES DE INTERPRETAÇÃO
+# ==============================================================================
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# ==============================================================================
+# FERRAMENTAS DE TIPAGEM, TESTES, LINTERS E COBERTURA
+# ==============================================================================
+.pytest_cache/
+.mypy_cache/
+.pyright/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+.hypothesis/
+.nox/
+.tox/
+
+# ==============================================================================
+# DISTRIBUIÇÃO E PACOTES
+# ==============================================================================
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# ==============================================================================
+# VOLUMES LOCAIS DE DADOS DOCKER (SERVIÇOS DE INFRAESTRUTURA)
+# ==============================================================================
+pgdata/
+storage-data/
+grafana_data/
+prometheus_data/
+observabilidade_data/
+
+# ==============================================================================
+# DATA LAKEHOUSE & ARTEFATOS DE ML (REGRA: ZERO LOCAL DISK)
+# ==============================================================================
+*.parquet
+*.jsonl
+*.csv
+*.tsv
+*.pkl
+*.pickle
+*.joblib
+*.pt
+*.pth
+*.onnx
+mlruns/
+mlartifacts/
+
+# ==============================================================================
+# IDES, EDITORES E AMBIENTES DE DESENVOLVIMENTO
+# ==============================================================================
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.directory
+.project
+.pydevproject
+
+# ==============================================================================
+# ARQUIVOS DE SISTEMA OPERACIONAL
+# ==============================================================================
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini

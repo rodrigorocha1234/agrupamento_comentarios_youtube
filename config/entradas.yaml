@@ -1,0 +1,103 @@
+projeto:
+  nome: agrupamento_comentarios_youtube
+  idioma: pt_BR
+coleta:
+  habilitada: true
+  periodicidade: diaria
+  canais:
+    - id_canal: UCoLf24olVUtKOsSXlqv_-ag
+      ativo: true
+    - id_canal: UCrOH1V-FyMunBIMrKL0y0xQ
+      ativo: true
+    - id_canal: UCe9jrI0YQ5SM6h5QRZ9FZlA
+      ativo: true
+    - id_canal: UCLLqH87pKCK_-SjtAgWLbqg
+      ativo: true
+    - id_canal: UCGxmd2AnLNrSWFhrCcEj0lQ
+      ativo: true
+  dias_publicacao_atras: 7
+  incluir_respostas: true
+  tamanho_pagina: 100
+  limite_videos_por_canal: null
+  tentativas: 4
+  atraso_base_segundos: 2
+  chave_api_env: YOUTUBE_API_KEY
+processamento:
+  spacy_modelo: pt_core_news_lg
+  stopwords:
+    usar_spacy: true
+    adicionais: [mod, mods, jogo, video, serie, series, zera]
+    preservar: [nao, nunca, sem]
+    filtro_centroides: [que, com, para, uma, este, esse, isso, por, mais]
+  representacao:
+    tecnica: bertimbau
+    min_df: 1
+    max_df: 0.95
+    ngram_range: [1, 2]
+    sublinear_tf: true
+    norma: l2
+    modelo_transformers: neuralmind/bert-base-portuguese-cased
+    dispositivo_transformers: cpu
+    batch_size_transformers: 32
+
+  reducao:
+    ativa: true
+    tecnica: umap
+    componentes: 5
+    n_vizinhos: 15
+    distancia_minima: 0.1
+    metrica: cosine
+    random_state: 42
+  tecnicas:
+    kmeans:
+      ativo: true
+      parametros: {n_clusters: 5, random_state: 42, n_init: 10, k_automatico: true, k_min: 3, k_max: 8, max_iter: 300}
+    dbscan:
+      ativo: true
+      parametros: {eps: 0.65, min_samples: 2, metric: euclidean, algorithm: auto}
+    hdbscan:
+      ativo: true
+      parametros: {min_cluster_size: 2, min_samples: 1, metric: euclidean, cluster_selection_method: leaf}
+topicos:
+  pos_permitidas: [NOUN, PROPN, ADJ]
+  comprimento_minimo: 3
+  peso_tfidf: 0.7
+  peso_frequencia: 0.3
+  penalizacao_global: true
+  limiar_penalizacao_global: 0.35
+  fator_penalidade: 0.2
+  rotulo_ruido_padrao: sem_topico
+tendencias:
+  granularidade: diaria
+  minimo_comentarios: 5
+  crescimento_minimo_proporcao: 0.10
+  queda_minima_proporcao: 0.10
+  max_amostras_video: 0
+  max_amostras_canal: 0
+
+persistencia:
+  tipo: s3
+  bucket: youtube-comentarios
+  prefixos: {bronze: bronze, prata: prata, ouro: ouro}
+  padroes_chaves:
+    bronze: "{prefixo}/id_canal={id_canal}/id_video={id_video}/data_coleta={data_coleta}/lote={id_lote}.jsonl"
+    prata: "{prefixo}/id_canal={id_canal}/id_video={id_video}/versao={timestamp_versao}/comentarios.parquet"
+    ouro_video: "{prefixo}/id_canal={id_canal}/id_video={id_video}/tecnica={tecnica}/data={data_referencia}/topicos.parquet"
+    ouro_consolidado: "{prefixo}/id_canal={id_canal}/consolidado/tecnica={tecnica}/data={data_referencia}/topicos.parquet"
+  endpoint_env: S3_ENDPOINT_URL
+  access_key_env: AWS_ACCESS_KEY_ID
+  secret_key_env: AWS_SECRET_ACCESS_KEY
+mlflow:
+  tracking_uri_env: MLFLOW_TRACKING_URI
+  serving_url_env: MLFLOW_SERVING_URL
+api:
+  porta: 8000
+  tempo_limite_segundos: 30
+  cors_origens: ["*"]
+  top_termos_padrao: 5
+  tamanho_pagina_padrao: 10
+  tamanho_pagina_maximo: 100
+observabilidade:
+  prometheus: true
+  grafana: true
+  labels_alta_cardinalidade: false
