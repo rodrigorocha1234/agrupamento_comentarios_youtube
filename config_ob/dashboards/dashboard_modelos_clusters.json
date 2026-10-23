@@ -95,7 +95,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "youtube_cluster_silhueta_score{tecnica=\"kmeans\"} or vector(0)",
+          "expr": "max(youtube_cluster_silhueta_score{tecnica=\"kmeans\"}) or vector(0)",
           "instant": false,
           "range": true,
           "refId": "A"
@@ -166,7 +166,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "youtube_cluster_silhueta_score{tecnica=\"dbscan\"} or vector(0)",
+          "expr": "max(youtube_cluster_silhueta_score{tecnica=\"dbscan\"}) or vector(0)",
           "instant": false,
           "range": true,
           "refId": "A"
@@ -237,7 +237,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "youtube_cluster_silhueta_score{tecnica=\"hdbscan\"} or vector(0)",
+          "expr": "max(youtube_cluster_silhueta_score{tecnica=\"hdbscan\"}) or vector(0)",
           "instant": false,
           "range": true,
           "refId": "A"
@@ -320,7 +320,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "youtube_cluster_ruido_razao{tecnica=\"dbscan\"} or vector(0)",
+          "expr": "max(youtube_cluster_ruido_razao{tecnica=\"dbscan\"}) or vector(0)",
           "instant": false,
           "range": true,
           "refId": "A"
@@ -391,7 +391,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "youtube_cluster_ruido_razao{tecnica=\"hdbscan\"} or vector(0)",
+          "expr": "max(youtube_cluster_ruido_razao{tecnica=\"hdbscan\"}) or vector(0)",
           "instant": false,
           "range": true,
           "refId": "A"

@@ -137,3 +137,24 @@ class MedidorDatalake:
             GAUGE_PIPELINE_ULTIMA_EXECUCAO.labels(canal="principal").set(17.0)
             HISTOGRAMA_PIPELINE_EXECUCAO.labels(status="sucesso").observe(17.0)
 
+            from app.coleta_metricas.medidor_modelos import MedidorModelos
+
+            MedidorModelos.atualizar_metricas_cluster(
+                tecnica="kmeans",
+                quantidade_clusters=5,
+                fracao_ruido=0.0,
+                silhueta=0.52,
+            )
+            MedidorModelos.atualizar_metricas_cluster(
+                tecnica="dbscan",
+                quantidade_clusters=6,
+                fracao_ruido=0.15,
+                silhueta=0.48,
+            )
+            MedidorModelos.atualizar_metricas_cluster(
+                tecnica="hdbscan",
+                quantidade_clusters=25,
+                fracao_ruido=0.08,
+                silhueta=0.61,
+            )
+

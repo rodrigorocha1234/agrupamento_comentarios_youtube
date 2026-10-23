@@ -340,7 +340,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "sum by (origem) (rate(youtube_coleta_comentarios_total[5m])) * 60",
+          "expr": "(sum by (origem) (rate(youtube_coleta_comentarios_total[5m])) * 60) or (sum by (origem) (youtube_coleta_comentarios_total) * 0)",
           "legendFormat": "Origem: {{origem}}",
           "range": true,
           "refId": "A"
@@ -450,7 +450,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "sum by (etapa) (rate(youtube_pipeline_duracao_segundos_sum[5m])) / sum by (etapa) (rate(youtube_pipeline_duracao_segundos_count[5m]))",
+          "expr": "sum by (etapa) (youtube_pipeline_duracao_segundos_sum) / sum by (etapa) (youtube_pipeline_duracao_segundos_count)",
           "legendFormat": "{{etapa}}",
           "range": true,
           "refId": "A"

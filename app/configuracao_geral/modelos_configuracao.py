@@ -81,6 +81,7 @@ class ParametrosKMeans:
     n_clusters: int
     random_state: int
     n_init: int
+    init: str = "k-means++"
     k_automatico: bool = True
     k_min: int = 2
     k_max: int = 10

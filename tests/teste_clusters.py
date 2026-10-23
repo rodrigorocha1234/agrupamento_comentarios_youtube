@@ -103,5 +103,20 @@ def test_fabrica_agrupadores_instancia_tecnicas() -> None:
     hdb = FabricaAgrupadores.criar_agrupador("hdbscan", config.processamento)
 
     assert isinstance(km, AgrupadorKMeans)
+    assert km.obter_init() == "k-means++"
     assert isinstance(db, AgrupadorDBSCAN)
     assert isinstance(hdb, AgrupadorHDBSCAN)
+
+
+def test_kmeans_inicializacao_kmeans_plus_plus() -> None:
+    """Valida a parametrização explícita do init k-means++ e convergência."""
+    rng = np.random.default_rng(123)
+    dados = rng.normal(loc=0.0, scale=1.0, size=(30, 4))
+    agrupador = AgrupadorKMeans(n_clusters=2, init="k-means++", random_state=42, k_automatico=False)
+
+    assert agrupador.obter_init() == "k-means++"
+    rotulos, metricas = agrupador.ajustar_e_agrupar(dados)
+    assert len(rotulos) == 30
+    assert metricas.quantidade_clusters == 2
+    assert agrupador.obter_centroides() is not None
+

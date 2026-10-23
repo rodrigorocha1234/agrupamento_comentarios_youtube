@@ -40,6 +40,7 @@ class FabricaAgrupadores:
                 n_clusters=params_km.n_clusters,
                 random_state=params_km.random_state,
                 n_init=params_km.n_init,
+                init=params_km.init,
                 k_automatico=params_km.k_automatico,
                 k_min=params_km.k_min,
                 k_max=params_km.k_max,

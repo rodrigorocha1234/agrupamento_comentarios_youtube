@@ -147,6 +147,7 @@ class ProvedorConfiguracao:
                 n_clusters=int(str(km_params.get("n_clusters", 8))),
                 random_state=int(str(km_params.get("random_state", 42))),
                 n_init=int(str(km_params.get("n_init", 10))),
+                init=str(km_params.get("init", "k-means++")),
                 k_automatico=bool(km_params.get("k_automatico", True)),
                 k_min=int(str(km_params.get("k_min", 2))),
                 k_max=int(str(km_params.get("k_max", 10))),

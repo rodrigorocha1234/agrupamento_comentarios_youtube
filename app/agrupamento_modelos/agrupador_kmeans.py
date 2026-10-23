@@ -19,6 +19,7 @@ class AgrupadorKMeans:
         n_clusters: int = 8,
         random_state: int = 42,
         n_init: int = 10,
+        init: str = "k-means++",
         k_automatico: bool = True,
         k_min: int = 2,
         k_max: int = 10,
@@ -27,6 +28,7 @@ class AgrupadorKMeans:
         self._n_clusters_desejado: int = max(1, n_clusters)
         self._random_state: int = random_state
         self._n_init: int = n_init
+        self._init: str = init
         self._k_automatico: bool = k_automatico
         self._k_min: int = max(2, k_min)
         self._k_max: int = max(self._k_min, k_max)
@@ -51,6 +53,7 @@ class AgrupadorKMeans:
         self._k_otimo = k_efetivo
         self._modelo = KMeans(
             n_clusters=k_efetivo,
+            init=self._init,
             random_state=self._random_state,
             n_init=cast(str, self._n_init),
             max_iter=self._max_iter,
@@ -75,6 +78,7 @@ class AgrupadorKMeans:
             self._k_otimo = k_fallback
             self._modelo = KMeans(
                 n_clusters=k_fallback,
+                init=self._init,
                 random_state=self._random_state,
                 n_init=cast(str, self._n_init),
                 max_iter=self._max_iter,
@@ -92,6 +96,7 @@ class AgrupadorKMeans:
         for k in range(self._k_min, limite_superior + 1):
             cand_modelo = KMeans(
                 n_clusters=k,
+                init=self._init,
                 random_state=self._random_state,
                 n_init=cast(str, self._n_init),
                 max_iter=self._max_iter,
@@ -121,6 +126,7 @@ class AgrupadorKMeans:
             self._k_otimo = k_fallback
             self._modelo = KMeans(
                 n_clusters=k_fallback,
+                init=self._init,
                 random_state=self._random_state,
                 n_init=cast(str, self._n_init),
                 max_iter=self._max_iter,
@@ -132,6 +138,10 @@ class AgrupadorKMeans:
         self._modelo = melhor_modelo
         rotulos_lista = [int(r) for r in melhor_rotulos]
         return rotulos_lista, melhores_metricas
+
+    def obter_init(self) -> str:
+        """Retorna a estratégia de inicialização dos centróides (ex: 'k-means++')."""
+        return self._init
 
     def obter_centroides(self) -> np.ndarray | None:
         """Retorna as coordenadas dos centros dos clusters após o ajuste."""

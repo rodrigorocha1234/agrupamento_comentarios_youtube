@@ -1,3 +1,4 @@
+from datetime import datetime, timedelta, timezone
 import json
 import pytest
 import requests
@@ -76,6 +77,7 @@ def test_obter_id_playlist_uploads_sucesso() -> None:
 
 def test_listar_comentarios_e_respostas_com_paginacao() -> None:
     """Valida coleta exaustiva de commentThreads e de comments (respostas) com paginação."""
+    data_recente = (datetime.now(timezone.utc) - timedelta(days=1)).strftime("%Y-%m-%dT%H:%M:%SZ")
     dados_canal: dict[str, object] = {
         "items": [
             {"contentDetails": {"relatedPlaylists": {"uploads": "UU_PLAYLIST"}}}
@@ -86,11 +88,11 @@ def test_listar_comentarios_e_respostas_com_paginacao() -> None:
             {
                 "contentDetails": {
                     "videoId": "VID_01",
-                    "videoPublishedAt": "2026-10-10T12:00:00Z",
+                    "videoPublishedAt": data_recente,
                 },
                 "snippet": {
                     "title": "Video de Teste",
-                    "publishedAt": "2026-10-10T12:00:00Z",
+                    "publishedAt": data_recente,
                 },
             }
         ]
@@ -104,8 +106,8 @@ def test_listar_comentarios_e_respostas_com_paginacao() -> None:
                     "topLevelComment": {
                         "snippet": {
                             "textOriginal": "Excelente video explicativo!",
-                            "publishedAt": "2026-10-11T10:00:00Z",
-                            "updatedAt": "2026-10-11T10:00:00Z",
+                            "publishedAt": data_recente,
+                            "updatedAt": data_recente,
                             "likeCount": 15,
                         }
                     }
@@ -120,8 +122,8 @@ def test_listar_comentarios_e_respostas_com_paginacao() -> None:
                 "etag": "etag_reply_1",
                 "snippet": {
                     "textOriginal": "Concordo plenamente com a explicacao.",
-                    "publishedAt": "2026-10-11T11:00:00Z",
-                    "updatedAt": "2026-10-11T11:00:00Z",
+                    "publishedAt": data_recente,
+                    "updatedAt": data_recente,
                     "likeCount": 3,
                 },
             }

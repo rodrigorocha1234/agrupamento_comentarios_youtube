@@ -1214,6 +1214,20 @@ Após a aprovação deste plano, as fases serão executadas sequencialmente conf
 2. **Opção A (Simples e Canônica):** Renomear a propriedade no schema Pydantic `RespostaTopicoItem` de `comentarios_amostra` para `comentarios`, mantendo a coluna física interna do Parquet no S3 inalterada para garantir retrocompatibilidade com a base de dados já persistida.
 3. **Contratos e Testes:** Atualizar os testes de contrato e integração da API REST (`teste_api.py`, `teste_contratos.py`) e os exemplos na documentação HTML (`docs/index.html`).
 
+---
+
+## 53. Adendo 25 — Configuração Explícita da Inicialização KMeans++ (`@clusters` / `@arquiteto` / `@qa`)
+
+**Estado:** 🟢 **APROVADO PELO USUÁRIO**  
+**Data da Aprovação:** 2026-10-19  
+**Personas Responsáveis:** `@pm`, `@arquiteto`, `@clusters`, `@qa`  
+**Objetivo:** Expor e parametrizar explicitamente a estratégia de inicialização `k-means++` no `AgrupadorKMeans`, no schema de configuração `ParametrosKMeans`, na `FabricaAgrupadores` e no arquivo declarativo `config/entradas.yaml`, garantindo a seleção probabilística ótima de centróides iniciais, convergência acelerada e estabilidade semântica dos macro-temas.
+
+### 53.1 Racional Técnico e Arquitetural
+1. **Convergência Superior do K-Means++:** A inicialização clássica aleatória (`random`) é sensível a mínimos locais e pode convergir para agrupamentos subótimos. O algoritmo `k-means++` seleciona os centróides iniciais com probabilidade proporcional ao quadrado da distância dos pontos aos centróides já escolhidos, garantindo dispersão inicial máxima e limite matemático comprovado de erro ($O(\log k)$).
+2. **Parametrização Declarativa:** Adicionar o campo `init: k-means++` na seção `processamento.tecnicas.kmeans.parametros` do `config/entradas.yaml`, mantendo desacoplamento total via `ParametrosKMeans` e `FabricaAgrupadores`.
+
+
 
 
 
