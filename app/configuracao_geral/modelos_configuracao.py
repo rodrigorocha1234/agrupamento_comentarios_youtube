@@ -1,270 +1,271 @@
-"""Modelos tipados estritos para representação das configurações do sistema."""
+"""Modelos Pydantic fortemente tipados para validação declarativa de configurações."""
 
-from dataclasses import dataclass, field
-
-from app.configuracao_geral.tipos_enumerados import (
-    AlgoritmoVizinhos,
-    DispositivoExecucao,
-    GranularidadeTendencia,
-    InicializacaoKMeans,
-    MetricaDistancia,
-    MetodoSelecaoCluster,
-    MotorProcessamento,
-    NormaVetorizacao,
-    PeriodicidadeColeta,
-    TecnicaReducao,
-    TecnicaRepresentacao,
-    TipoFonteDados,
-    TipoPersistencia,
-    TipoProvedorVisualizacao,
-)
+from pydantic import BaseModel, ConfigDict
 
 
-@dataclass(frozen=True, slots=True)
-class ConfiguracaoProjeto:
-    """Configurações de identificação do projeto."""
+class ModeloBaseConfiguracao(BaseModel):
+    """Modelo base imutável com proibição estrita de campos desconhecidos."""
 
-    nome: str
-    idioma: str
+    model_config = ConfigDict(extra="forbid", frozen=True)
 
 
-@dataclass(frozen=True, slots=True)
-class CanalConfigurado:
-    """Definição de um canal monitorado."""
+class MetadadosProjeto(ModeloBaseConfiguracao):
+    """Identificação e versão do schema do projeto."""
 
-    id_canal: str
-    ativo: bool
+    versao_schema: str
+    nome_projeto: str
 
 
-@dataclass(frozen=True, slots=True)
-class ConfiguracaoColeta:
-    """Parâmetros da coleta incremental ou ingestão de fontes de dados."""
+class FuncionalidadesAtivas(ModeloBaseConfiguracao):
+    """Flags de funcionalidades globais do projeto."""
 
-    habilitada: bool = False
-    fonte: TipoFonteDados = TipoFonteDados.YOUTUBE
-    periodicidade: PeriodicidadeColeta = PeriodicidadeColeta.DIARIA
-    canais: list[CanalConfigurado] = field(default_factory=list[CanalConfigurado])
-    dias_publicacao_atras: int = 7
-    incluir_respostas: bool = True
+    processamento_linguagem_natural: bool = False
+    analise_temporal: bool = False
+
+
+class ProcessamentoGeral(ModeloBaseConfiguracao):
+    """Definição do motor tabular principal."""
+
+    motor: str = "pandas"
+
+
+class MachineLearningGeral(ModeloBaseConfiguracao):
+    """Framework e algoritmo base."""
+
+    framework: str = "sklearn"
+    algoritmo: str = "kmeans"
+
+
+class ConfiguracaoProjeto(ModeloBaseConfiguracao):
+    """Mapeamento completo do arquivo projeto.yaml."""
+
+    configuracao: MetadadosProjeto
+    funcionalidades: FuncionalidadesAtivas
+    processamento: ProcessamentoGeral
+    machine_learning: MachineLearningGeral
+
+
+class JogoSteam(ModeloBaseConfiguracao):
+    """Definição de jogo a ser coletado."""
+
+    appid: int
+
+
+class ParametrosRequisicaoSteam(ModeloBaseConfiguracao):
+    """Parâmetros oficiais do serviço IUserReviewsService/GetAppReviews/v1."""
+
+    key_env: str | None = None
+    filter: str = "recent"
+    languages: tuple[str, ...] = ("brazilian",)
+    day_range: int = 30
+    cursor: str = "*"
+    review_type: str = "all"
+    purchase_type: str = "all"
+    num_per_page: int = 100
+    filter_offtopic_activity: bool = True
+    display_language: str = "brazilian"
+    use_review_quality: bool = True
+    date_range_start: int | None = None
+    date_range_end: int | None = None
+    date_range_exclude: bool = False
+    playtime_min_hours: int | None = None
+    playtime_max_hours: int | None = None
+    primarily_steam_deck: bool | None = None
+    hardware_os: str | None = None
+    hardware_cpu: str | None = None
+    hardware_gpu: str | None = None
+    hardware_device_type: str | None = None
+
+
+class ModosColetaSteam(ModeloBaseConfiguracao):
+    """Estratégias de cobertura da coleta."""
+
+    historica: bool = True
+    recente: bool = True
+    atualizada: bool = True
+    reconciliacao_periodica: bool = True
+
+
+class ResilienciaColetaSteam(ModeloBaseConfiguracao):
+    """Parâmetros de retry e tolerância da API."""
+
+    max_tentativas: int = 5
+    timeout_segundos: int = 30
+    concorrencia_maxima: int = 1
+
+
+class DetalhesSteam(ModeloBaseConfiguracao):
+    """Mapeamento do bloco steam no YAML de fontes."""
+
+    periodicidade: str = "diaria"
+    jogos: tuple[JogoSteam, ...]
+    endpoint: str = "IUserReviewsService/GetAppReviews/v1"
+    parametros: ParametrosRequisicaoSteam
+    modos_coleta: ModosColetaSteam
+    resiliencia: ResilienciaColetaSteam
+
+
+class ConfiguracaoSteamApi(ModeloBaseConfiguracao):
+    """Mapeamento do arquivo steam_api.yaml."""
+
+    steam: DetalhesSteam
+
+
+class ConexaoSqlite(ModeloBaseConfiguracao):
+    """Parâmetros específicos de conexão com SQLite."""
+
+    caminho: str
+    modo_journal: str = "WAL"
+    timeout_segundos: int = 30
+
+
+class ConexaoPostgres(ModeloBaseConfiguracao):
+    """Parâmetros de conexão com PostgreSQL."""
+
+    url_env: str = "STAGING_POSTGRES_DSN"
+
+
+class ConexoesStaging(ModeloBaseConfiguracao):
+    """Opções de conexão suportadas."""
+
+    sqlite: ConexaoSqlite
+    postgres: ConexaoPostgres
+
+
+class DetalhesStaging(ModeloBaseConfiguracao):
+    """Definições operacionais do banco de staging."""
+
+    ativado: bool = True
+    tecnologia: str = "sqlite"
+    estrategia_escrita: str = "upsert_versionado"
+    conexao: ConexoesStaging
+    lote_registros: int = 500
+    preservar_historico: bool = True
+    usar_outbox: bool = True
+    retencao_dias: int = 90
+
+
+class ConfiguracaoStaging(ModeloBaseConfiguracao):
+    """Mapeamento do arquivo staging.yaml."""
+
+    staging: DetalhesStaging
+
+
+class CamadaBronzeConfiguracao(ModeloBaseConfiguracao):
+    """Configuração da camada Bronze."""
+
+    prefixo: str
+    formato: str = "json"
+    imutavel: bool = True
+
+
+class CamadaSilverConfiguracao(ModeloBaseConfiguracao):
+    """Configuração da camada Silver."""
+
+    prefixo: str
+    formato: str = "parquet"
+    reconciliar_historico: bool = True
+
+
+class CamadaGoldConfiguracao(ModeloBaseConfiguracao):
+    """Configuração da camada Gold."""
+
+    prefixo: str
+    formato: str = "parquet"
+
+
+class CamadasDatalake(ModeloBaseConfiguracao):
+    """Conjunto de camadas do Lakehouse."""
+
+    bronze: CamadaBronzeConfiguracao
+    silver: CamadaSilverConfiguracao
+    gold: CamadaGoldConfiguracao
+
+
+class DetalhesDatalake(ModeloBaseConfiguracao):
+    """Mapeamento do bloco datalake."""
+
+    ativado: bool = True
+    armazenamento: str = "s3"
+    endpoint_url_env: str = "S3_ENDPOINT_URL"
+    regiao_env: str = "AWS_DEFAULT_REGION"
+    access_key_env: str = "AWS_ACCESS_KEY_ID"
+    secret_key_env: str = "AWS_SECRET_ACCESS_KEY"
+    bucket: str = "steam-reviews"
+    camadas: CamadasDatalake
+
+
+class ConfiguracaoDatalake(ModeloBaseConfiguracao):
+    """Mapeamento do arquivo datalake.yaml."""
+
+    datalake: DetalhesDatalake
+
+
+class ServicoInferenciaMlflow(ModeloBaseConfiguracao):
+    """Configurações de serving do MLflow."""
+
+    ativado: bool = False
+    porta: int = 8080
+
+
+class DetalhesMlflow(ModeloBaseConfiguracao):
+    """Mapeamento de rastreamento do MLflow."""
+
+    ativado: bool = True
+    tracking_uri_env: str = "MLFLOW_TRACKING_URI"
+    experimento: str = "steam_reviews_clustering"
+    artefatos_destino_env: str = "MLFLOW_ARTIFACTS_DESTINATION"
+    registrar_modelos: bool = True
+    serving: ServicoInferenciaMlflow
+
+
+class ConfiguracaoMlflow(ModeloBaseConfiguracao):
+    """Mapeamento do arquivo mlflow.yaml."""
+
+    mlflow: DetalhesMlflow
+
+
+class ConfiguracaoPaginacaoIncremental(ModeloBaseConfiguracao):
+    """Parâmetros de paginação lazy."""
+
     tamanho_pagina: int = 100
-    limite_videos_por_canal: int | None = None
-    tentativas: int = 4
-    atraso_base_segundos: float = 2.0
-    chave_api_env: str = "YOUTUBE_API_KEY"
-    caminho_dados: str | None = None
-    coluna_texto: str = "texto"
-    coluna_id: str = "id"
-    coluna_temporal: str | None = None
+    maximo_paginas_por_execucao: int = 10000
+    detectar_cursor_repetido: bool = True
 
 
+class ConfiguracaoStagingIncremental(ModeloBaseConfiguracao):
+    """Parâmetros de processamento em lote no staging."""
 
-@dataclass(frozen=True, slots=True)
-class ConfiguracaoStopwords:
-    """Parâmetros de controle de stopwords e negações."""
-
-    usar_spacy: bool
-    adicionais: list[str] = field(default_factory=list[str])
-    preservar: list[str] = field(default_factory=list[str])
-    filtro_centroides: list[str] = field(default_factory=list[str])
+    tamanho_lote: int = 500
+    transacao_por_lote: bool = True
+    checkpoint_por_lote: bool = True
 
 
-@dataclass(frozen=True, slots=True)
-class ConfiguracaoRepresentacao:
-    """Parâmetros da representação vetorial (TF-IDF, spaCy ou Sentence-Transformers/BERTimbau)."""
+class ConfiguracaoPublicacaoIncremental(ModeloBaseConfiguracao):
+    """Parâmetros de publicação outbox."""
 
-    tecnica: TecnicaRepresentacao
-    min_df: int
-    max_df: float
-    ngram_range: tuple[int, int]
-    sublinear_tf: bool = True
-    norma: NormaVetorizacao = NormaVetorizacao.L2
-    modelo_transformers: str = "neuralmind/bert-base-portuguese-cased"
-    dispositivo_transformers: DispositivoExecucao = DispositivoExecucao.CPU
-    batch_size_transformers: int = 32
+    tamanho_lote: int = 500
+    retomar_apos_falha: bool = True
 
 
-@dataclass(frozen=True, slots=True)
-class ConfiguracaoReducao:
-    """Parâmetros da redução dimensionalidade."""
+class LimitesIncrementais(ModeloBaseConfiguracao):
+    """Limites de contenção e backpressure."""
 
-    ativa: bool
-    tecnica: TecnicaReducao
-    componentes: int
-    n_vizinhos: int = 15
-    distancia_minima: float = 0.0
-    metrica: MetricaDistancia = MetricaDistancia.COSINE
-    random_state: int = 42
+    maximo_registros_em_buffer: int = 1000
 
 
+class DetalhesFluxosIncrementais(ModeloBaseConfiguracao):
+    """Mapeamento do bloco fluxos_incrementais."""
 
-@dataclass(frozen=True, slots=True)
-class ParametrosKMeans:
-    """Parâmetros do algoritmo KMeans com suporte a busca automática de k ótimo."""
-
-    n_clusters: int
-    random_state: int
-    n_init: int
-    init: InicializacaoKMeans = InicializacaoKMeans.KMEANS_PLUS_PLUS
-    k_automatico: bool = True
-    k_min: int = 2
-    k_max: int = 10
-    max_iter: int = 300
+    ativado: bool = True
+    modo: str = "sincronico"
+    paginacao: ConfiguracaoPaginacaoIncremental
+    staging: ConfiguracaoStagingIncremental
+    publicacao: ConfiguracaoPublicacaoIncremental
+    limites: LimitesIncrementais
 
 
-@dataclass(frozen=True, slots=True)
-class ParametrosDBSCAN:
-    """Parâmetros do algoritmo DBSCAN."""
+class ConfiguracaoFluxosIncrementais(ModeloBaseConfiguracao):
+    """Mapeamento do arquivo fluxos_incrementais.yaml."""
 
-    eps: float
-    min_samples: int
-    metric: MetricaDistancia
-    algorithm: AlgoritmoVizinhos = AlgoritmoVizinhos.AUTO
-
-
-@dataclass(frozen=True, slots=True)
-class ParametrosHDBSCAN:
-    """Parâmetros do algoritmo HDBSCAN."""
-
-    min_cluster_size: int
-    min_samples: int
-    metric: MetricaDistancia
-    cluster_selection_method: MetodoSelecaoCluster = MetodoSelecaoCluster.EOM
-
-
-
-@dataclass(frozen=True, slots=True)
-class ConfiguracaoTecnicas:
-    """Parâmetros de cada técnica de clusterização suportada."""
-
-    kmeans_ativo: bool
-    kmeans_parametros: ParametrosKMeans
-    dbscan_ativo: bool
-    dbscan_parametros: ParametrosDBSCAN
-    hdbscan_ativo: bool
-    hdbscan_parametros: ParametrosHDBSCAN
-
-
-@dataclass(frozen=True, slots=True)
-class ConfiguracaoProcessamento:
-    """Agrupamento de parâmetros de agrupamento, redução e NLP."""
-
-    reducao: ConfiguracaoReducao
-    tecnicas: ConfiguracaoTecnicas
-    spacy_modelo: str = "pt_core_news_sm"
-    stopwords: ConfiguracaoStopwords = field(default_factory=lambda: ConfiguracaoStopwords(usar_spacy=False))
-    representacao: ConfiguracaoRepresentacao = field(
-        default_factory=lambda: ConfiguracaoRepresentacao(
-            tecnica=TecnicaRepresentacao.TFIDF,
-            min_df=1,
-            max_df=1.0,
-            ngram_range=(1, 1),
-        )
-    )
-    motor_dados: MotorProcessamento = MotorProcessamento.POLARS
-    usar_nlp: bool = False
-    eh_temporal: bool = True
-
-
-@dataclass(frozen=True, slots=True)
-class ConfiguracaoTopicos:
-    """Critérios de extração e rotulagem de tópicos não-LLM."""
-
-    pos_permitidas: list[str] = field(default_factory=lambda: ["NOUN", "PROPN", "ADJ"])
-    comprimento_minimo: int = 3
-    peso_tfidf: float = 0.7
-    peso_frequencia: float = 0.3
-    penalizacao_global: bool = True
-    limiar_penalizacao_global: float = 0.75
-    fator_penalidade: float = 0.2
-    rotulo_ruido_padrao: str = "sem_topico"
-
-
-@dataclass(frozen=True, slots=True)
-class ConfiguracaoTendencias:
-    """Critérios de cálculo de crescimento e decrescimento temporal."""
-
-    ativa: bool = True
-    minimo_comentarios: int = 5
-    crescimento_minimo_proporcao: float = 0.10
-    queda_minima_proporcao: float = 0.10
-    janela_dias: int = 1
-    max_amostras_video: int = 0
-    max_amostras_canal: int = 0
-    granularidade: GranularidadeTendencia = GranularidadeTendencia.DIARIA
-
-
-
-
-@dataclass(frozen=True, slots=True)
-class ConfiguracaoPersistencia:
-    """Parâmetros de conexão com o lakehouse S3/MinIO e modelos de chave."""
-
-    tipo: TipoPersistencia
-    bucket: str
-    prefixo_bronze: str
-    prefixo_prata: str
-    prefixo_ouro: str
-    endpoint_env: str
-    access_key_env: str
-    secret_key_env: str
-    caminho_bronze: str = ""
-    caminho_prata: str = ""
-    caminho_ouro: str = ""
-    padrao_chave_bronze: str = (
-        "{prefixo}/id_canal={id_canal}/id_video={id_video}/data_coleta={data_coleta}/lote={id_lote}.jsonl"
-    )
-    padrao_chave_prata: str = (
-        "{prefixo}/id_canal={id_canal}/id_video={id_video}/versao={timestamp_versao}/comentarios.parquet"
-    )
-    padrao_chave_ouro_video: str = (
-        "{prefixo}/id_canal={id_canal}/id_video={id_video}/tecnica={tecnica}/data={data_referencia}/topicos.parquet"
-    )
-    padrao_chave_ouro_consolidado: str = (
-        "{prefixo}/id_canal={id_canal}/consolidado/tecnica={tecnica}/data={data_referencia}/topicos.parquet"
-    )
-
-
-@dataclass(frozen=True, slots=True)
-class ConfiguracaoMLflow:
-    """Parâmetros de rastreamento e serving do MLflow."""
-
-    tracking_uri_env: str
-    serving_url_env: str
-
-
-@dataclass(frozen=True, slots=True)
-class ConfiguracaoAPI:
-    """Parâmetros do servidor HTTP FastAPI."""
-
-    porta: int
-    tempo_limite_segundos: float
-    cors_origens: list[str] = field(default_factory=lambda: ["*"])
-    top_termos_padrao: int = 5
-    tamanho_pagina_padrao: int = 10
-    tamanho_pagina_maximo: int = 100
-
-
-@dataclass(frozen=True, slots=True)
-class ConfiguracaoObservabilidade:
-    """Parâmetros de exportação e coleta de métricas."""
-
-    prometheus: bool
-    grafana: bool
-    labels_alta_cardinalidade: bool
-    provedor_visualizacao: TipoProvedorVisualizacao = TipoProvedorVisualizacao.GRAFANA
-    url_visualizacao: str = "http://localhost:3000"
-
-
-@dataclass(frozen=True, slots=True)
-class ConfiguracaoGlobal:
-    """Contêiner global fortemente tipado contendo todas as configurações."""
-
-    projeto: ConfiguracaoProjeto
-    coleta: ConfiguracaoColeta
-    processamento: ConfiguracaoProcessamento
-    topicos: ConfiguracaoTopicos
-    tendencias: ConfiguracaoTendencias
-    persistencia: ConfiguracaoPersistencia
-    mlflow: ConfiguracaoMLflow
-    api: ConfiguracaoAPI
-    observabilidade: ConfiguracaoObservabilidade
+    fluxos_incrementais: DetalhesFluxosIncrementais

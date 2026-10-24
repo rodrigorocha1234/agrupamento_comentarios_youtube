@@ -1,54 +1,46 @@
-"""Estratégia de agrupamento baseada em densidade utilizando DBSCAN."""
+"""Adaptador scikit-learn para algoritmo DBSCAN baseado em densidade e ruído."""
+
+from typing import final, override
 
 import numpy as np
-from scipy.sparse import csr_matrix
 from sklearn.cluster import DBSCAN
 
-from app.agrupamento_modelos.avaliador_qualidade import (
-    AvaliadorQualidade,
-    MetricasAgrupamento,
+from app.agrupamento_modelos.capacidades_algoritmo import (
+    CapacidadesAlgoritmo,
+    EstrategiaAgrupamento,
 )
 
 
-class AgrupadorDBSCAN:
-    """Implementa clusterização por densidade DBSCAN tratando rótulos -1 como ruído."""
+@final
+class AgrupadorDbscan(EstrategiaAgrupamento):
+    """Adaptador de DBSCAN: sem centroides, sem predição fora da amostra e com ruído (-1)."""
 
-    def __init__(
-        self,
-        eps: float = 0.5,
-        min_samples: int = 5,
-        metric: str = "cosine",
-        algorithm: str = "auto",
-    ) -> None:
-        self._eps: float = eps
-        self._min_samples: int = max(1, min_samples)
-        self._metric: str = metric
-        self._algorithm: str = algorithm
-        self._modelo: DBSCAN | None = None
-
-    def ajustar_e_agrupar(
-        self,
-        matriz: csr_matrix | np.ndarray,
-    ) -> tuple[list[int], MetricasAgrupamento]:
-        """Ajusta o DBSCAN e retorna os rótulos de cluster com identificação de ruído."""
-        n_amostras = matriz.shape[0] if matriz.shape else 0
-        if n_amostras == 0:
-            return [], AvaliadorQualidade.avaliar(matriz, [])
-
-        min_samples_efetivo = max(1, min(self._min_samples, n_amostras))
-        self._modelo = DBSCAN(
-            eps=self._eps,
-            min_samples=min_samples_efetivo,
-            metric=self._metric,
-            algorithm=self._algorithm,
+    def __init__(self, eps: float = 0.5, min_samples: int = 5) -> None:
+        self._modelo = DBSCAN(eps=eps, min_samples=min_samples)
+        self._capacidades = CapacidadesAlgoritmo(
+            nome_algoritmo="dbscan",
+            suporta_predicao_fora_da_amostra=False,
+            possui_centroides=False,
+            gera_ruido=True,
+            rotulo_ruido=-1,
         )
 
-        rotulos_arr = self._modelo.fit_predict(matriz)
-        rotulos_lista = [int(r) for r in rotulos_arr]
-        metricas = AvaliadorQualidade.avaliar(matriz, rotulos_arr)
-        return rotulos_lista, metricas
+    @property
+    @override
+    def capacidades(self) -> CapacidadesAlgoritmo:
+        return self._capacidades
 
-    def obter_modelo(self) -> DBSCAN | None:
-        """Retorna o modelo DBSCAN ajustado."""
-        return self._modelo
+    @override
+    def treinar(self, matriz_x: np.ndarray) -> np.ndarray:
+        rotulos = self._modelo.fit_predict(matriz_x)
+        return np.asarray(rotulos, dtype=np.int32)
 
+    @override
+    def predizer(self, matriz_x: np.ndarray) -> np.ndarray:
+        raise NotImplementedError(
+            "O algoritmo DBSCAN opera por densidade local e não oferece predição indutiva fora da amostra."
+        )
+
+    @override
+    def obter_centroides(self) -> np.ndarray | None:
+        return None

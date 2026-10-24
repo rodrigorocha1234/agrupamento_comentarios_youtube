@@ -1,31 +1,5 @@
-"""Pacote de orquestração do ciclo completo de pipeline."""
+"""Pacote de orquestração do pipeline de ingestão e execução."""
 
-from app.orquestracao_pipeline.despachante_alertas import DespachanteAlertas
-from app.orquestracao_pipeline.executor_ciclo import ExecutorCiclo
-from app.orquestracao_pipeline.protocolos_ciclo import (
-    ProtocoloAgregadorVisoes,
-    ProtocoloCalculadorTendencias,
-    ProtocoloCamadaBronze,
-    ProtocoloCamadaOuro,
-    ProtocoloCamadaPrata,
-    ProtocoloExecutorCiclo,
-    ProtocoloExtratorComentarios,
-    ProtocoloLematizador,
-    ProtocoloRastreadorExperimentos,
-    ProtocoloRotuladorTopicos,
-)
+from app.orquestracao_pipeline.executor_coleta import ExecutorColetaStaging
 
-__all__ = [
-    "DespachanteAlertas",
-    "ExecutorCiclo",
-    "ProtocoloExecutorCiclo",
-    "ProtocoloExtratorComentarios",
-    "ProtocoloCamadaBronze",
-    "ProtocoloCamadaPrata",
-    "ProtocoloCamadaOuro",
-    "ProtocoloLematizador",
-    "ProtocoloRotuladorTopicos",
-    "ProtocoloCalculadorTendencias",
-    "ProtocoloAgregadorVisoes",
-    "ProtocoloRastreadorExperimentos",
-]
+__all__ = ["ExecutorColetaStaging"]

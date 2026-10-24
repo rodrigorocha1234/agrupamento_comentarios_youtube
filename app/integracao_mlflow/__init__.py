@@ -1,23 +1,13 @@
-"""Pacote de integração com MLflow Tracking, Registry e Serving."""
+"""Pacote de integração com MLflow e Observer de MLOps."""
 
-from app.integracao_mlflow.adaptador_serving import (
-    AdaptadorServing,
-    AdaptadorServingErro,
-)
-from app.integracao_mlflow.rastreador_experimentos import (
-    RastreadorExperimentos,
-    RastreadorExperimentosErro,
-)
-from app.integracao_mlflow.registro_modelos import (
-    RegistroModelos,
-    RegistroModelosErro,
-)
+from app.integracao_mlflow.observador_mlflow import ObservadorMlflow
+from app.integracao_mlflow.observador_nulo import ObservadorNulo
+from app.integracao_mlflow.observador_treinamento import ObservadorTreinamento
+from app.integracao_mlflow.registro_modelos import RegistroModelos
 
 __all__ = [
-    "AdaptadorServing",
-    "AdaptadorServingErro",
-    "RastreadorExperimentos",
-    "RastreadorExperimentosErro",
+    "ObservadorMlflow",
+    "ObservadorNulo",
+    "ObservadorTreinamento",
     "RegistroModelos",
-    "RegistroModelosErro",
 ]

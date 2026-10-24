@@ -1,32 +1,19 @@
-"""Pacote de modelos e estratégias de clusterização de comentários."""
+"""Pacote de algoritmos de clustering e catálogo de capacidades."""
 
-from app.agrupamento_modelos.agrupador_dbscan import AgrupadorDBSCAN
-from app.agrupamento_modelos.agrupador_hdbscan import AgrupadorHDBSCAN
+from app.agrupamento_modelos.agrupador_dbscan import AgrupadorDbscan
+from app.agrupamento_modelos.agrupador_hdbscan import AgrupadorHdbscan
 from app.agrupamento_modelos.agrupador_kmeans import AgrupadorKMeans
-from app.agrupamento_modelos.agrupador_tabular import (
-    AgrupadorTabular,
-    ResultadoAgrupamentoTabular,
-    ResultadoTecnicaTabular,
+from app.agrupamento_modelos.capacidades_algoritmo import (
+    CapacidadesAlgoritmo,
+    EstrategiaAgrupamento,
 )
-from app.agrupamento_modelos.avaliador_qualidade import (
-    AvaliadorQualidade,
-    MetricasAgrupamento,
-)
-from app.agrupamento_modelos.fabrica_agrupadores import (
-    FabricaAgrupadores,
-    ProtocoloAgrupador,
-)
+from app.agrupamento_modelos.fabrica_agrupadores import FabricaAgrupadores
 
 __all__ = [
-    "AgrupadorDBSCAN",
-    "AgrupadorHDBSCAN",
+    "AgrupadorDbscan",
+    "AgrupadorHdbscan",
     "AgrupadorKMeans",
-    "AgrupadorTabular",
-    "AvaliadorQualidade",
+    "CapacidadesAlgoritmo",
+    "EstrategiaAgrupamento",
     "FabricaAgrupadores",
-    "MetricasAgrupamento",
-    "ProtocoloAgrupador",
-    "ResultadoAgrupamentoTabular",
-    "ResultadoTecnicaTabular",
 ]
-

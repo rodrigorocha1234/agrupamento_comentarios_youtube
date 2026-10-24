@@ -1,63 +1,17 @@
-# Equipe de agentes (personas)
+# Equipe multiagente — matriz de atribuições
 
-O orquestrador coordena papéis sequenciais ou delegados conforme capacidades reais da instalação; nenhum papel tem autorização implícita para operar serviços externos.
+Este documento é o catálogo humano da equipe, inspirado no ciclo PM → engenharia → QA → DevOps do artigo de Peterson Pereira. **Não confundir com o registro executável de agentes personalizados**: na CLI os agentes estão em `.agents/agents/<nome>/agent.md`.
 
-## @pm
-**Responsabilidade:** Requisitos, critérios de aceite e portal de aprovação; não programar antes de aprovação.
-**Entrega:** `production_artifacts/pm_entrega.md` ou código/testes conforme fase.
-**Restrição:** respeitar `AGENTS.md`, `rules/` e specs; relatar bloqueios e evidências.
+| Persona | Entrega | Limite |
+|---|---|---|
+| @pm | Escopo, critérios de aceite, aprovação | Não implementa antes do aceite |
+| @ml_architect | Contratos, SOLID/GoF, compatibilidade | Não inventa APIs universais |
+| @data_engineer | Steam, staging, outbox, Bronze/Silver/Gold | Não reimplementa infra existente |
+| @ml_engineer | Features, Pandas/Polars, sklearn/PyCaret, tuning | Sem PLN e sem leakage |
+| @business_analyst | Métricas e regras YAML pós-modelo | Não confunde rótulo com algoritmo |
+| @visualization | EDA, clusters, relatórios, Grafana | Não apresenta PCA como distância original |
+| @observability | métricas, logs, SLOs, MLflow | Sem segredo ou ID pessoal como label |
+| @qa | Unit/integration/contract/e2e e gates | Evidência verificável |
+| @devops | Compose, segurança e execução | Aprovação para mudanças invasivas |
 
-## @arquiteto
-**Responsabilidade:** Arquitetura, contratos tipados, UML associação/agregação/composição e desenho do pipeline.
-**Entrega:** `production_artifacts/arquiteto_entrega.md` ou código/testes conforme fase.
-**Restrição:** respeitar `AGENTS.md`, `rules/` e specs; relatar bloqueios e evidências.
-
-## @coleta
-**Responsabilidade:** YouTube Data API: canais, vídeos recentes, commentThreads, comments replies, paginação, quotas, atualização e histórico.
-**Entrega:** `production_artifacts/coleta_entrega.md` ou código/testes conforme fase.
-**Restrição:** respeitar `AGENTS.md`, `rules/` e specs; relatar bloqueios e evidências.
-
-## @datalake
-**Responsabilidade:** S3/MinIO bronze, prata, ouro, particionamento canal/vídeo, versionamento e idempotência.
-**Entrega:** `production_artifacts/datalake_entrega.md` ou código/testes conforme fase.
-**Restrição:** respeitar `AGENTS.md`, `rules/` e specs; relatar bloqueios e evidências.
-
-## @nlp
-**Responsabilidade:** spaCy pt-BR, stopwords, lematização, limpeza sem perder original, TF-IDF, qualidade de texto.
-**Entrega:** `production_artifacts/nlp_entrega.md` ou código/testes conforme fase.
-**Restrição:** respeitar `AGENTS.md`, `rules/` e specs; relatar bloqueios e evidências.
-
-## @clusterizacao
-**Responsabilidade:** KMeans, DBSCAN, HDBSCAN, avaliação, seleção de parâmetros, estabilidade e ruído.
-**Entrega:** `production_artifacts/clusterizacao_entrega.md` ou código/testes conforme fase.
-**Restrição:** respeitar `AGENTS.md`, `rules/` e specs; relatar bloqueios e evidências.
-
-## @tendencias
-**Responsabilidade:** Tópicos de exatamente um lema válido, ranking crescimento/queda, amostras de comentários vinculadas.
-**Entrega:** `production_artifacts/tendencias_entrega.md` ou código/testes conforme fase.
-**Restrição:** respeitar `AGENTS.md`, `rules/` e specs; relatar bloqueios e evidências.
-
-## @mlflow
-**Responsabilidade:** Experimentos, métricas, versões de modelos, registry e serving com REST API.
-**Entrega:** `production_artifacts/mlflow_entrega.md` ou código/testes conforme fase.
-**Restrição:** respeitar `AGENTS.md`, `rules/` e specs; relatar bloqueios e evidências.
-
-## @api
-**Responsabilidade:** FastAPI com agregações por canal/vídeo/técnica e adaptador HTTP MLflow.
-**Entrega:** `production_artifacts/api_entrega.md` ou código/testes conforme fase.
-**Restrição:** respeitar `AGENTS.md`, `rules/` e specs; relatar bloqueios e evidências.
-
-## @observabilidade
-**Responsabilidade:** Prometheus/Grafana/Loki/Alloy se estiverem disponíveis, métricas e alertas.
-**Entrega:** `production_artifacts/observabilidade_entrega.md` ou código/testes conforme fase.
-**Restrição:** respeitar `AGENTS.md`, `rules/` e specs; relatar bloqueios e evidências.
-
-## @qa
-**Responsabilidade:** Testes unitários/integração/contrato, type checker strict, segurança, cobertura e gates.
-**Entrega:** `production_artifacts/qa_entrega.md` ou código/testes conforme fase.
-**Restrição:** respeitar `AGENTS.md`, `rules/` e specs; relatar bloqueios e evidências.
-
-## @devops
-**Responsabilidade:** Inspeção do Compose raiz já existente; documentação de integração sem criar outro Compose.
-**Entrega:** `production_artifacts/devops_entrega.md` ou código/testes conforme fase.
-**Restrição:** respeitar `AGENTS.md`, `rules/` e specs; relatar bloqueios e evidências.
+As fronteiras são disciplina de trabalho; execução concorrente e invocação nominal dependem da superfície/versão do Antigravity. Selecione agentes pela CLI com `/agents` ou descreva a persona na tarefa do IDE.

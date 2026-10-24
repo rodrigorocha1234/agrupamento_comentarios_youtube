@@ -1,73 +1,88 @@
-"""Fábrica de estratégias de clusterização configuradas."""
+from collections.abc import Callable
+from typing import Final, Literal, final
 
-from typing import Any, Protocol, TypeVar, runtime_checkable
-import numpy as np
-from scipy.sparse import csr_matrix
-
-from app.agrupamento_modelos.agrupador_dbscan import AgrupadorDBSCAN
-from app.agrupamento_modelos.agrupador_hdbscan import AgrupadorHDBSCAN
+from app.agrupamento_modelos.agrupador_dbscan import AgrupadorDbscan
+from app.agrupamento_modelos.agrupador_hdbscan import AgrupadorHdbscan
 from app.agrupamento_modelos.agrupador_kmeans import AgrupadorKMeans
-from app.agrupamento_modelos.avaliador_qualidade import MetricasAgrupamento
-from app.configuracao_geral.modelos_configuracao import (
-    ConfiguracaoProcessamento,
-)
-from app.configuracao_geral.tipos_enumerados import TecnicaCluster
+from app.agrupamento_modelos.capacidades_algoritmo import EstrategiaAgrupamento
 
-TModelo = TypeVar("TModelo", covariant=True)
+TipoCriadorAgrupador = Callable[[dict[str, object]], EstrategiaAgrupamento]
 
 
-@runtime_checkable
-class ProtocoloAgrupador(Protocol[TModelo]):
-    """Protocolo estrutural para estratégias desacopladas de clustering."""
-
-    def ajustar_e_agrupar(
-        self,
-        matriz: csr_matrix | np.ndarray,
-    ) -> tuple[list[int], MetricasAgrupamento]: ...
-
-    def obter_modelo(self) -> TModelo | None: ...
+class ErroAlgoritmoNaoRegistrado(Exception):
+    """Exceção levantada quando um algoritmo não estiver no catálogo de registros."""
 
 
+def _extrair_int(valor: object, padrao: int) -> int:
+    if valor is None:
+        return padrao
+    try:
+        return int(str(valor))
+    except (ValueError, TypeError):
+        return padrao
+
+
+def _extrair_float(valor: object, padrao: float) -> float:
+    if valor is None:
+        return padrao
+    try:
+        return float(str(valor))
+    except (ValueError, TypeError):
+        return padrao
+
+
+@final
 class FabricaAgrupadores:
-    """Instancia os algoritmos de agrupamento conforme configuração YAML."""
+    """Registry e Factory para criação desacoplada de estratégias de clustering."""
 
-    @staticmethod
+    def __init__(self) -> None:
+        self._registro: Final[dict[str, TipoCriadorAgrupador]] = {}
+        self._registrar_padroes()
+
+    def registrar_algoritmo(self, nome: str, criador: TipoCriadorAgrupador) -> None:
+        """Registra uma nova estratégia de agrupamento."""
+        self._registro[nome.lower()] = criador
+
     def criar_agrupador(
-        nome_tecnica: TecnicaCluster | str,
-        config: ConfiguracaoProcessamento,
-    ) -> ProtocoloAgrupador[Any]:
-        """Cria e devolve o agrupador correspondente à técnica informada."""
-        nome_limpo = str(nome_tecnica).strip().lower()
+        self, nome_algoritmo: str, parametros: dict[str, object] | None = None
+    ) -> EstrategiaAgrupamento:
+        """Instancia o algoritmo correspondente sem condicionais no domínio."""
+        chave = nome_algoritmo.lower()
+        criador = self._registro.get(chave)
+        if criador is None:
+            raise ErroAlgoritmoNaoRegistrado(
+                f"Algoritmo de clustering '{nome_algoritmo}' não suportado. Opções registradas: {list(self._registro.keys())}"
+            )
+        return criador(parametros or {})
 
-        if nome_limpo == TecnicaCluster.KMEANS:
-            params_km = config.tecnicas.kmeans_parametros
+    def _registrar_padroes(self) -> None:
+        """Registra KMeans, DBSCAN e HDBSCAN."""
+
+        def _criar_kmeans(params: dict[str, object]) -> EstrategiaAgrupamento:
+            n_clusters = _extrair_int(params.get("n_clusters"), 4)
+            random_state = _extrair_int(params.get("random_state"), 42)
+            val_init = params.get("n_init", 10)
+            n_init: int | Literal["auto"] = (
+                "auto"
+                if str(val_init).lower() == "auto"
+                else _extrair_int(val_init, 10)
+            )
             return AgrupadorKMeans(
-                n_clusters=params_km.n_clusters,
-                random_state=params_km.random_state,
-                n_init=params_km.n_init,
-                init=params_km.init,
-                k_automatico=params_km.k_automatico,
-                k_min=params_km.k_min,
-                k_max=params_km.k_max,
-                max_iter=params_km.max_iter,
+                n_clusters=n_clusters, random_state=random_state, n_init=n_init
             )
 
-        if nome_limpo == TecnicaCluster.DBSCAN:
-            params_db = config.tecnicas.dbscan_parametros
-            return AgrupadorDBSCAN(
-                eps=params_db.eps,
-                min_samples=params_db.min_samples,
-                metric=params_db.metric,
-                algorithm=params_db.algorithm,
+        def _criar_dbscan(params: dict[str, object]) -> EstrategiaAgrupamento:
+            eps = _extrair_float(params.get("eps"), 0.5)
+            min_samples = _extrair_int(params.get("min_samples"), 5)
+            return AgrupadorDbscan(eps=eps, min_samples=min_samples)
+
+        def _criar_hdbscan(params: dict[str, object]) -> EstrategiaAgrupamento:
+            min_cluster_size = _extrair_int(params.get("min_cluster_size"), 20)
+            min_samples = _extrair_int(params.get("min_samples"), 5)
+            return AgrupadorHdbscan(
+                min_cluster_size=min_cluster_size, min_samples=min_samples
             )
 
-        if nome_limpo == TecnicaCluster.HDBSCAN:
-            params_hdb = config.tecnicas.hdbscan_parametros
-            return AgrupadorHDBSCAN(
-                min_cluster_size=params_hdb.min_cluster_size,
-                min_samples=params_hdb.min_samples,
-                metric=params_hdb.metric,
-                cluster_selection_method=params_hdb.cluster_selection_method,
-            )
-
-        raise ValueError(f"Técnica de clusterização desconhecida: '{nome_tecnica}'")
+        self.registrar_algoritmo("kmeans", _criar_kmeans)
+        self.registrar_algoritmo("dbscan", _criar_dbscan)
+        self.registrar_algoritmo("hdbscan", _criar_hdbscan)
