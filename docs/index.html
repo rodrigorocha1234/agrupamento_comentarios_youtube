@@ -2074,9 +2074,117 @@ sequenceDiagram
         </div>
       </div>
 
-      <!-- 5.3 e 5.4: Componentes e Máquina de Estados -->
+      <!-- 5.3 Diagrama de Atividades com Raias (Swimlanes) -->
+      <div style="margin-bottom: 2.5rem;">
+        <h3 style="font-family: var(--font-display); font-size: 1.3rem; color: #fff; margin-bottom: 0.5rem;">
+          5.3 Diagrama de Atividades com Raias (Swimlane Activity Diagram)
+        </h3>
+        <p style="color: var(--text-muted); font-size: 0.92rem; margin-bottom: 0.8rem;">
+          Mapeamento completo das <b>7 raias de responsabilidade</b> do pipeline (Agendador, Orquestrador, Ingestão, Lakehouse, NLP, Agrupamento e Serving/Telemetria):
+        </p>
+        <div class="diagram-wrapper" id="wrap-atividades">
+          <div class="diagram-toolbar">
+            <div class="diagram-title-badge">
+              <span>🏊‍♂️</span> Diagrama de Atividades com Raias (Swimlanes)
+            </div>
+            <div class="diagram-actions">
+              <span class="zoom-level-badge" id="zoom-badge-atividades">100%</span>
+              <button class="zoom-btn" onclick="zoomDiagrama('atividades', -0.2)" title="Diminuir Zoom"><span>🔍-</span></button>
+              <button class="zoom-btn" onclick="zoomDiagrama('atividades', 0.2)" title="Aumentar Zoom"><span>🔍+</span></button>
+              <button class="zoom-btn" onclick="resetZoomDiagrama('atividades')" title="Redefinir"><span>↺ Reset</span></button>
+              <button class="zoom-btn" onclick="abrirModalDiagrama('atividades', '5.3 Diagrama de Atividades com Raias (Swimlanes)')" style="background: var(--primary); color: #fff;" title="Tela Cheia"><span>⛶ Tela Cheia</span></button>
+            </div>
+          </div>
+          <div class="diagram-viewport" id="viewport-atividades" style="min-height: 520px;">
+            <div class="diagram-content-zoomable" id="target-atividades">
+              <div class="mermaid">
+flowchart TD
+    subgraph Raia1["1. Agendador / CLI (Disparo)"]
+        node_start([● Início]) --> node_conf["Carregar configurações (entradas.yaml)"]
+        node_conf --> node_disp["Disparar execução (./executar_ciclo.sh)"]
+        node_fim([◉ Fim])
+    end
+
+    subgraph Raia2["2. Orquestrador (ExecutorCiclo)"]
+        node_init["Instanciar componentes via DI"]
+        node_coord_ing["Solicitar extração de dados"]
+        node_coord_bro["Enviar lote bruto para gravação"]
+        node_coord_pra["Comandar deduplicação Parquet"]
+        node_coord_nlp["Acionar lematização e vetorização"]
+        node_coord_clu["Disparar busca e ajuste de agrupamento"]
+        node_coord_ten["Solicitar apuração de tendências"]
+        node_coord_our["Publicar partição analítica diária"]
+        node_coord_mlf["Registrar run no MLflow"]
+        node_coord_obs["Atualizar métricas Prometheus"]
+    end
+
+    subgraph Raia3["3. Ingestão de Dados (FabricaFontes)"]
+        node_res_fonte{"Tipo de Fonte?"}
+        node_col_yt["Coletar vídeos e comentários (YouTube API)"]
+        node_col_loc["Ler arquivo local (CSV / Parquet)"]
+        node_ret_ext["Retornar lista de comentários"]
+    end
+
+    subgraph Raia4["4. Data Lakehouse S3 (Camadas)"]
+        node_s3_bro["Camada Bronze: Gravar lote (.jsonl)"]
+        node_s3_pra["Camada Prata: Deduplicar e gravar (.parquet)"]
+        node_s3_our["Camada Ouro: Gravar topicos diários (.parquet)"]
+    end
+
+    subgraph Raia5["5. Motor de NLP & Vetorização"]
+        node_nlp_limp["Limpar ruídos e preservar negações"]
+        node_nlp_lema["Lematizar com POS Tagging spaCy"]
+        node_nlp_vet["Gerar matriz esparsa TF-IDF normalizada L2"]
+    end
+
+    subgraph Raia6["6. Motor de Agrupamento & Tendências"]
+        node_clu_busca["Varrer k_min a k_max no KMeans / DBSCAN"]
+        node_clu_eval["Avaliar Silhouette Score e métricas"]
+        node_clu_best["Selecionar k ótimo e extrair rótulos"]
+        node_ten_rot["Rotular tópicos canônicos (c-TF-IDF)"]
+        node_ten_delta["Calcular variação percentual Δ% vs T-1"]
+        node_ten_class{"Classificar Status"}
+        node_ten_novo["Status: Novo (+100.0%)"]
+        node_ten_cresc["Status: Crescendo (Δ% > 0)"]
+        node_ten_decresc["Status: Decrescendo (Δ% < 0)"]
+        node_ten_estavel["Status: Estável (Δ% = 0)"]
+    end
+
+    subgraph Raia7["7. Serving & Observabilidade"]
+        node_mlf_reg["MLflow: Log de parâmetros e modelo"]
+        node_prom_exp["Prometheus: Incrementar contadores e gauges"]
+        node_graf_dash["Grafana: Atualizar painéis declarativos"]
+        node_api_serv["FastAPI: Servir tópicos e séries temporais"]
+    end
+
+    node_disp --> node_init --> node_coord_ing --> node_res_fonte
+    node_res_fonte -->|youtube| node_col_yt --> node_ret_ext
+    node_res_fonte -->|local| node_col_loc --> node_ret_ext
+    node_ret_ext --> node_coord_bro --> node_s3_bro
+    node_s3_bro --> node_coord_pra --> node_s3_pra
+    node_s3_pra --> node_coord_nlp --> node_nlp_limp --> node_nlp_lema --> node_nlp_vet
+    node_nlp_vet --> node_coord_clu --> node_clu_busca --> node_clu_eval --> node_clu_best
+    node_clu_best --> node_coord_ten --> node_ten_rot --> node_ten_delta --> node_ten_class
+    node_ten_class -->|Sem histórico| node_ten_novo
+    node_ten_class -->|Subiu| node_ten_cresc
+    node_ten_class -->|Caiu| node_ten_decresc
+    node_ten_class -->|Igual| node_ten_estavel
+    node_ten_novo & node_ten_cresc & node_ten_decresc & node_ten_estavel --> node_coord_our
+    node_coord_our --> node_s3_our
+    node_s3_our --> node_coord_mlf --> node_mlf_reg
+    node_s3_our --> node_coord_obs --> node_prom_exp --> node_graf_dash
+    node_s3_our --> node_api_serv
+    node_mlf_reg & node_graf_dash & node_api_serv --> node_fim
+              </div>
+            </div>
+            <div class="diagram-tip">🖱️ Arraste para mover • Role o mouse para zoom sem perder qualidade</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 5.4 e 5.5: Componentes e Máquina de Estados -->
       <div class="pattern-grid">
-        <!-- 5.3 Componentes -->
+        <!-- 5.4 Componentes -->
         <div class="diagram-wrapper" id="wrap-componentes" style="margin: 0;">
           <div class="diagram-toolbar">
             <div class="diagram-title-badge">
@@ -4946,6 +5054,10 @@ processamento:
       if (link.getAttribute('href') === '#' + currentId) {
         link.classList.add('active');
       }
+    });
+  });
+</script>
+
 <!-- Modal Fullscreen de Zoom para Diagramas UML -->
 <div id="diagram-modal" class="diagram-modal">
   <div class="diagram-modal-header">
@@ -4976,6 +5088,7 @@ processamento:
   const diagramState = {
     classes: { scale: 1, x: 0, y: 0, isDragging: false, startX: 0, startY: 0 },
     sequencia: { scale: 1, x: 0, y: 0, isDragging: false, startX: 0, startY: 0 },
+    atividades: { scale: 1, x: 0, y: 0, isDragging: false, startX: 0, startY: 0 },
     componentes: { scale: 1, x: 0, y: 0, isDragging: false, startX: 0, startY: 0 },
     estados: { scale: 1, x: 0, y: 0, isDragging: false, startX: 0, startY: 0 },
     modal: { scale: 1, x: 0, y: 0, isDragging: false, startX: 0, startY: 0, currentId: null }
@@ -5007,7 +5120,7 @@ processamento:
   }
 
   // Setup Drag and Wheel on all diagram viewports
-  ['classes', 'sequencia', 'componentes', 'estados'].forEach(id => {
+  ['classes', 'sequencia', 'atividades', 'componentes', 'estados'].forEach(id => {
     const viewport = document.getElementById('viewport-' + id);
     if (!viewport) return;
 

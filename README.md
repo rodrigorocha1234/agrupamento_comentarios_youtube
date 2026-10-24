@@ -311,5 +311,5 @@ classDiagram
     AgrupadorTabular --> EstrategiaAnaliseClusters
 ```
 
-Para conferir os diagramas de **Sequência Ponta a Ponta**, **Componentes de Infraestrutura** e **Máquina de Estados**, acesse o documento dedicado [`docs/diagramas_uml.md`](file:///home/rodrigo/PycharmProjects/agrupamento_comentarios_youtube/docs/diagramas_uml.md).
+Para conferir os diagramas de **Atividades com Raias (Swimlanes)**, **Sequência Ponta a Ponta**, **Componentes de Infraestrutura** e **Máquina de Estados**, acesse o documento dedicado [`docs/diagramas_uml.md`](file:///home/rodrigo/PycharmProjects/agrupamento_comentarios_youtube/docs/diagramas_uml.md) e o portal web [`docs/index.html`](file:///home/rodrigo/PycharmProjects/agrupamento_comentarios_youtube/docs/index.html) com suporte a zoom vetorial e visualização em tela cheia.
 

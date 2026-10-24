@@ -1702,11 +1702,10 @@ persistencia:
 - Referência no `README.md`.
 
 ### 64.2 Critérios de Aceite
-- [ ] Diagrama de Atividades com Raias (Swimlanes) modelado em Mermaid com validação de sintaxe.
-- [ ] Diagrama integrado ao arquivo `docs/diagramas_uml.md`.
-- [ ] Diagrama integrado à seção 5 do portal `docs/index.html` com controles de zoom vetorial, arrasto e tela cheia.
-- [ ] Validação visual no navegador confirmando ausência de erros de renderização.
+- [x] Diagrama de Atividades com Raias (Swimlanes) modelado em Mermaid com validação de sintaxe.
+- [x] Diagrama integrado ao arquivo `docs/diagramas_uml.md`.
+- [x] Diagrama integrado à seção 5 do portal `docs/index.html` com controles de zoom vetorial, arrasto e tela cheia.
+- [x] Validação visual no navegador confirmando ausência de erros de renderização.
 
-
-
-
+---
+**Status Geral:** ✅ **CICLO DE ADENDO 36 CONCLUÍDO COM SUCESSO**
