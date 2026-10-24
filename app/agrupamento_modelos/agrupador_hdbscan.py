@@ -62,3 +62,8 @@ class AgrupadorHDBSCAN:
         if self._modelo is None or not hasattr(self._modelo, "probabilities_"):
             return None
         return cast(np.ndarray, self._modelo.probabilities_)
+
+    def obter_modelo(self) -> HDBSCAN | None:
+        """Retorna o modelo HDBSCAN ajustado."""
+        return self._modelo
+

@@ -3,6 +3,8 @@ projeto:
   idioma: pt_BR
 coleta:
   habilitada: true
+  # Fonte de dados: youtube, csv, parquet, jsonl ou local
+  fonte: youtube
   periodicidade: diaria
   canais:
     - id_canal: UCoLf24olVUtKOsSXlqv_-ag
@@ -23,6 +25,15 @@ coleta:
   atraso_base_segundos: 2
   chave_api_env: YOUTUBE_API_KEY
 processamento:
+  # Flag principal para alternar entre agrupamento com NLP ou agrupamento puramente numérico/tabular
+  usar_nlp: true
+  # Flag para indicar se o problema envolve dimensão temporal (série temporal/janelas) ou é estático/cross-sectional
+  eh_temporal: true
+  motor_dados: polars # Opções: polars, pandas
+
+  # =========================================================================
+  # 1. PROCESSAMENTO DE LINGUAGEM NATURAL (Ativo apenas se usar_nlp = true)
+  # =========================================================================
   spacy_modelo: pt_core_news_lg
   stopwords:
     usar_spacy: true
@@ -30,7 +41,7 @@ processamento:
     preservar: [nao, nunca, sem]
     filtro_centroides: [que, com, para, uma, este, esse, isso, por, mais]
   representacao:
-    tecnica: bertimbau
+    tecnica: bertimbau # Opções: bertimbau, tfidf, sentence_transformers, count
     min_df: 1
     max_df: 0.95
     ngram_range: [1, 2]
@@ -40,14 +51,21 @@ processamento:
     dispositivo_transformers: cpu
     batch_size_transformers: 32
 
+  # =========================================================================
+  # 2. MOTOR DE REDUÇÃO DIMENSIONAL (Aplicável a dados NLP e Não-NLP)
+  # =========================================================================
   reducao:
     ativa: true
-    tecnica: umap
+    tecnica: umap # Opções: umap, pca, svd, tsne
     componentes: 5
     n_vizinhos: 15
     distancia_minima: 0.1
     metrica: cosine
     random_state: 42
+
+  # =========================================================================
+  # 3. MOTOR DE CLUSTERIZAÇÃO (Agnóstico: aplicável a qualquer matriz numérica)
+  # =========================================================================
   tecnicas:
     kmeans:
       ativo: true
@@ -58,6 +76,7 @@ processamento:
     hdbscan:
       ativo: true
       parametros: {min_cluster_size: 2, min_samples: 1, metric: euclidean, cluster_selection_method: leaf}
+
 topicos:
   pos_permitidas: [NOUN, PROPN, ADJ]
   comprimento_minimo: 3
@@ -68,6 +87,7 @@ topicos:
   fator_penalidade: 0.2
   rotulo_ruido_padrao: sem_topico
 tendencias:
+  ativa: true # Ativa análise temporal de evolução e deltas de crescimento/queda
   granularidade: diaria
   minimo_comentarios: 5
   crescimento_minimo_proporcao: 0.10
@@ -77,8 +97,15 @@ tendencias:
 
 persistencia:
   tipo: s3
-  bucket: youtube-comentarios
-  prefixos: {bronze: bronze, prata: prata, ouro: ouro}
+  # Configuração explícita dos caminhos/prefixos das camadas do Lakehouse
+  caminhos:
+    bronze: bronze
+    prata: prata
+    ouro: ouro
+  prefixos:
+    bronze: bronze
+    prata: prata
+    ouro: ouro
   padroes_chaves:
     bronze: "{prefixo}/id_canal={id_canal}/id_video={id_video}/data_coleta={data_coleta}/lote={id_lote}.jsonl"
     prata: "{prefixo}/id_canal={id_canal}/id_video={id_video}/versao={timestamp_versao}/comentarios.parquet"
@@ -100,4 +127,7 @@ api:
 observabilidade:
   prometheus: true
   grafana: true
+  provedor_visualizacao: grafana # Opções: grafana, nenhum, custom
+  url_visualizacao: "http://localhost:3000"
   labels_alta_cardinalidade: false
+

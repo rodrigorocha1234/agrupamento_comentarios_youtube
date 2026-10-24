@@ -8,7 +8,7 @@ import sys
 from app.analise_tendencias.agregador_visoes import AgregadorVisoes
 from app.analise_tendencias.calculador_tendencias import CalculadorTendencias
 from app.coleta_youtube.cliente_youtube import ClienteYouTube
-from app.coleta_youtube.extrator_comentarios import ExtratorComentarios
+from app.coleta_youtube.fabrica_fontes import FabricaFontesDados
 from app.configuracao_geral.provedor_configuracao import ProvedorConfiguracao
 from app.gestao_dados.camada_bronze import CamadaBronze
 from app.gestao_dados.camada_ouro import CamadaOuro
@@ -90,7 +90,7 @@ def main() -> int:
     print("-----------------------------------------------------------------")
 
     cliente_yt = ClienteYouTube(chave_api=chave_api or "MOCK_KEY_LOCAL")
-    extrator = ExtratorComentarios(cliente_yt)
+    extrator = FabricaFontesDados.criar_extrator(config, cliente_youtube=cliente_yt)
     s3 = ClienteS3(
         endpoint_url=endpoint_s3,
         access_key=access_key,

@@ -3,6 +3,11 @@
 from app.agrupamento_modelos.agrupador_dbscan import AgrupadorDBSCAN
 from app.agrupamento_modelos.agrupador_hdbscan import AgrupadorHDBSCAN
 from app.agrupamento_modelos.agrupador_kmeans import AgrupadorKMeans
+from app.agrupamento_modelos.agrupador_tabular import (
+    AgrupadorTabular,
+    ResultadoAgrupamentoTabular,
+    ResultadoTecnicaTabular,
+)
 from app.agrupamento_modelos.avaliador_qualidade import (
     AvaliadorQualidade,
     MetricasAgrupamento,
@@ -16,8 +21,12 @@ __all__ = [
     "AgrupadorDBSCAN",
     "AgrupadorHDBSCAN",
     "AgrupadorKMeans",
+    "AgrupadorTabular",
     "AvaliadorQualidade",
     "FabricaAgrupadores",
     "MetricasAgrupamento",
     "ProtocoloAgrupador",
+    "ResultadoAgrupamentoTabular",
+    "ResultadoTecnicaTabular",
 ]
+

@@ -6,6 +6,7 @@ import numpy as np
 from app.agrupamento_modelos.agrupador_dbscan import AgrupadorDBSCAN
 from app.agrupamento_modelos.agrupador_hdbscan import AgrupadorHDBSCAN
 from app.agrupamento_modelos.agrupador_kmeans import AgrupadorKMeans
+from app.agrupamento_modelos.agrupador_tabular import AgrupadorTabular
 from app.agrupamento_modelos.fabrica_agrupadores import FabricaAgrupadores
 from app.configuracao_geral.provedor_configuracao import ProvedorConfiguracao
 
@@ -28,6 +29,10 @@ def test_kmeans_agrupamento_e_metricas() -> None:
     assert metricas.pontuacao_silhueta > 0.4
     assert agrupador.obter_centroides() is not None
     assert agrupador.obter_modelo() is not None
+    assert agrupador.obter_rotulos() == rotulos
+    assert len(agrupador.labels_) == 60
+    assert (agrupador.labels_ == np.array(rotulos)).all()
+
 
 
 def test_kmeans_selecao_automatica_k_otimo() -> None:
@@ -119,4 +124,48 @@ def test_kmeans_inicializacao_kmeans_plus_plus() -> None:
     assert len(rotulos) == 30
     assert metricas.quantidade_clusters == 2
     assert agrupador.obter_centroides() is not None
+
+
+def test_agrupador_tabular_dados_sinteticos() -> None:
+    """Valida o AgrupadorTabular em dados puramente numéricos carregados do YAML de exemplo."""
+    caminho_yaml = Path(__file__).resolve().parent.parent / "config" / "entradas_tabular_exemplo.yaml"
+    config = ProvedorConfiguracao(caminho_yaml).carregar()
+
+    rng = np.random.default_rng(99)
+    # 3 clusters numéricos sintéticos em 8 dimensões
+    c1 = rng.normal(loc=-10.0, scale=0.5, size=(20, 8))
+    c2 = rng.normal(loc=0.0, scale=0.5, size=(20, 8))
+    c3 = rng.normal(loc=10.0, scale=0.5, size=(20, 8))
+    dados: np.ndarray = np.vstack([c1, c2, c3])
+
+    motor_tabular = AgrupadorTabular(config.processamento)
+    resultado = motor_tabular.agrupar_matriz(dados)
+
+    assert resultado.n_amostras == 60
+    assert resultado.n_features == 8
+    assert resultado.reducao_aplicada is True
+    assert "kmeans" in resultado.resultados
+    assert "dbscan" in resultado.resultados
+    assert "hdbscan" in resultado.resultados
+
+    res_km = resultado.resultados["kmeans"]
+    assert len(res_km.rotulos) == 60
+    assert res_km.metricas.quantidade_clusters >= 2
+    assert res_km.metricas.pontuacao_silhueta is not None
+    assert res_km.metricas.pontuacao_silhueta > 0.5
+    assert len(res_km.analise_clusters) > 0
+    # Como entradas_tabular_exemplo.yaml tem eh_temporal: false, status deve ser ESTATICO
+    from app.configuracao_geral.tipos_enumerados import StatusTendencia
+    assert res_km.analise_clusters[0].status == StatusTendencia.ESTATICO
+
+    # Teste com análise temporal habilitada via indices_temporais
+    from dataclasses import replace
+    config_temporal = replace(config.processamento, eh_temporal=True)
+    motor_temporal = AgrupadorTabular(config_temporal)
+    tempos = list(range(60))
+    res_temp = motor_temporal.agrupar_matriz(dados, tecnicas=["kmeans"], indices_temporais=tempos)
+    res_km_temp = res_temp.resultados["kmeans"]
+    assert len(res_km_temp.analise_clusters) > 0
+    assert any(c.status in [StatusTendencia.CRESCENDO, StatusTendencia.DECRESCENDO, StatusTendencia.ESTAVEL, StatusTendencia.NOVO] for c in res_km_temp.analise_clusters)
+
 

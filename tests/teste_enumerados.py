@@ -4,8 +4,16 @@ import pytest
 from pydantic import BaseModel, ValidationError
 
 from app.configuracao_geral.tipos_enumerados import (
+    AlgoritmoVizinhos,
     CamadaLakehouse,
+    DispositivoExecucao,
+    GranularidadeTendencia,
+    InicializacaoKMeans,
     JanelaTemporal,
+    MetricaDistancia,
+    MetodoSelecaoCluster,
+    MotorProcessamento,
+    NormaVetorizacao,
     OrigemComentario,
     PeriodicidadeColeta,
     StatusSaude,
@@ -13,6 +21,9 @@ from app.configuracao_geral.tipos_enumerados import (
     TecnicaCluster,
     TecnicaReducao,
     TecnicaRepresentacao,
+    TipoFonteDados,
+    TipoPersistencia,
+    TipoProvedorVisualizacao,
 )
 
 
@@ -65,11 +76,13 @@ def test_valores_origem_comentario():
 def test_valores_tecnicas_vetorizacao_e_reducao():
     """Valida técnicas de NLP e redução dimensional."""
     assert TecnicaRepresentacao.TFIDF == "tfidf"
+    assert TecnicaRepresentacao.BERTIMBAU == "bertimbau"
     assert TecnicaRepresentacao.COUNT == "count"
 
     assert TecnicaReducao.PCA == "pca"
     assert TecnicaReducao.SVD == "svd"
     assert TecnicaReducao.TSNE == "tsne"
+    assert TecnicaReducao.UMAP == "umap"
 
 
 def test_valores_periodicidade_e_saude():
@@ -99,3 +112,52 @@ def test_interoperabilidade_com_pydantic():
 
     with pytest.raises(ValidationError):
         ModeloExemplo.model_validate({**dados, "tecnica": "algoritmo_inexistente"})
+
+
+def test_valores_motor_processamento() -> None:
+    """Valida motores de processamento e manipulação tabular suportados."""
+    assert MotorProcessamento.PANDAS == "pandas"
+    assert MotorProcessamento.POLARS == "polars"
+    assert isinstance(MotorProcessamento.POLARS, str)
+    assert f"motor={MotorProcessamento.POLARS}" == "motor=polars"
+
+
+def test_valores_novos_strenums_configuracao() -> None:
+    """Valida domínio e integridade de todos os novos StrEnums de configuração."""
+    assert NormaVetorizacao.L1 == "l1"
+    assert NormaVetorizacao.L2 == "l2"
+
+    assert DispositivoExecucao.CPU == "cpu"
+    assert DispositivoExecucao.CUDA == "cuda"
+
+    assert MetricaDistancia.COSINE == "cosine"
+    assert MetricaDistancia.EUCLIDEAN == "euclidean"
+
+    assert InicializacaoKMeans.KMEANS_PLUS_PLUS == "k-means++"
+    assert InicializacaoKMeans.RANDOM == "random"
+
+    assert MetodoSelecaoCluster.EOM == "eom"
+    assert MetodoSelecaoCluster.LEAF == "leaf"
+
+    assert AlgoritmoVizinhos.AUTO == "auto"
+    assert AlgoritmoVizinhos.BALL_TREE == "ball_tree"
+    assert AlgoritmoVizinhos.KD_TREE == "kd_tree"
+    assert AlgoritmoVizinhos.BRUTE == "brute"
+
+    assert GranularidadeTendencia.DIARIA == "diaria"
+    assert GranularidadeTendencia.JANELA == "janela"
+
+    assert TipoPersistencia.S3 == "s3"
+    assert TipoPersistencia.LOCAL == "local"
+
+    assert TipoFonteDados.YOUTUBE == "youtube"
+    assert TipoFonteDados.CSV == "csv"
+    assert TipoFonteDados.PARQUET == "parquet"
+    assert TipoFonteDados.JSONL == "jsonl"
+    assert TipoFonteDados.LOCAL == "local"
+
+    assert TipoProvedorVisualizacao.GRAFANA == "grafana"
+    assert TipoProvedorVisualizacao.NENHUM == "nenhum"
+    assert TipoProvedorVisualizacao.CUSTOM == "custom"
+
+

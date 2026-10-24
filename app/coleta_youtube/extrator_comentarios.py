@@ -14,7 +14,7 @@ class ExtratorComentarios:
     def extrair_canal_completo(
         self,
         id_canal: str,
-        dias_retroativos: int,
+        dias_retroativos: int = 7,
         incluir_respostas: bool = True,
         limite_videos: int | None = None,
         tamanho_pagina: int = 100,

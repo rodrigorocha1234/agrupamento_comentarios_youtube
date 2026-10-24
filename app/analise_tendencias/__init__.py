@@ -7,9 +7,22 @@ from app.analise_tendencias.detector_variacao import (
     ResultadoVariacao,
 )
 
+from app.analise_tendencias.estrategias_analise import (
+    EstrategiaAnaliseClusters,
+    EstrategiaAnaliseEstatica,
+    EstrategiaAnaliseTemporal,
+    FabricaEstrategiaAnalise,
+    ResultadoAnaliseCluster,
+)
+
 __all__ = [
     "AgregadorVisoes",
     "CalculadorTendencias",
     "DetectorVariacao",
     "ResultadoVariacao",
+    "EstrategiaAnaliseClusters",
+    "EstrategiaAnaliseEstatica",
+    "EstrategiaAnaliseTemporal",
+    "FabricaEstrategiaAnalise",
+    "ResultadoAnaliseCluster",
 ]

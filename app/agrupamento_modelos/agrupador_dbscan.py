@@ -47,3 +47,8 @@ class AgrupadorDBSCAN:
         rotulos_lista = [int(r) for r in rotulos_arr]
         metricas = AvaliadorQualidade.avaliar(matriz, rotulos_arr)
         return rotulos_lista, metricas
+
+    def obter_modelo(self) -> DBSCAN | None:
+        """Retorna o modelo DBSCAN ajustado."""
+        return self._modelo
+

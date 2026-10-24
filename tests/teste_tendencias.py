@@ -313,3 +313,46 @@ def test_modo_irrestrito_todos_comentarios() -> None:
     amostras_canal = consolidados[0].comentarios_amostra.split("|||")
     assert len(amostras_canal) == 15
 
+
+def test_estrategias_analise_temporal_e_estatica() -> None:
+    """Valida o desacoplamento comportamental entre Strategy Temporal e Strategy Estática."""
+    from app.analise_tendencias.estrategias_analise import (
+        EstrategiaAnaliseEstatica,
+        EstrategiaAnaliseTemporal,
+        FabricaEstrategiaAnalise,
+    )
+    from app.configuracao_geral.tipos_enumerados import StatusTendencia
+
+    # 1. Estratégia Temporal
+    est_temp = EstrategiaAnaliseTemporal(minimo_comentarios=5)
+    assert est_temp.eh_temporal() is True
+
+    atuais = {"cluster_0": 10, "cluster_1": 2}
+    anteriores = {"cluster_0": 5, "cluster_1": 20}
+    res_temp = est_temp.analisar_grupos(atuais, anteriores)
+
+    res_map = {r.identificador: r for r in res_temp}
+    assert res_map["cluster_0"].status == StatusTendencia.CRESCENDO
+    assert res_map["cluster_0"].percentual_variacao == 100.0
+    assert res_map["cluster_1"].status == StatusTendencia.DECRESCENDO
+    assert res_map["cluster_1"].percentual_variacao == -90.0
+
+    # 2. Estratégia Estática (sem comparação com janelas)
+    est_estat = EstrategiaAnaliseEstatica(minimo_amostras=2)
+    assert est_estat.eh_temporal() is False
+
+    res_estat = est_estat.analisar_grupos(atuais)
+    res_estat_map = {r.identificador: r for r in res_estat}
+    assert res_estat_map["cluster_0"].status == StatusTendencia.ESTATICO
+    assert res_estat_map["cluster_0"].variacao_proporcao == 0.0
+    assert res_estat_map["cluster_0"].proporcao == round(10 / 12, 4)
+    assert res_estat_map["cluster_1"].status == StatusTendencia.ESTATICO
+    assert res_estat_map["cluster_1"].proporcao == round(2 / 12, 4)
+
+    # 3. Fábrica de Estratégias
+    fab_temp = FabricaEstrategiaAnalise.criar_estrategia(True)
+    assert isinstance(fab_temp, EstrategiaAnaliseTemporal)
+
+    fab_estat = FabricaEstrategiaAnalise.criar_estrategia(False)
+    assert isinstance(fab_estat, EstrategiaAnaliseEstatica)
+

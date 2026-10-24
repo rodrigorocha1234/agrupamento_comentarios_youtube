@@ -697,8 +697,203 @@
         margin-left: 0;
         padding: 2rem 1.5rem;
       }
+    /* Mermaid styling adjustments & Zoom Tools */
+    .mermaid {
+      background: transparent;
+      border: none;
+      padding: 0;
+      margin: 0;
+      overflow: visible;
+      text-align: center;
+    }
+
+    .diagram-wrapper {
+      position: relative;
+      background: var(--code-bg);
+      border: 1px solid var(--bg-card-border);
+      border-radius: var(--radius-md);
+      margin: 1.5rem 0;
+      overflow: hidden;
+      box-shadow: 0 4px 25px rgba(0, 0, 0, 0.35);
+    }
+
+    .diagram-toolbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.6rem 1rem;
+      background: rgba(15, 23, 42, 0.95);
+      border-bottom: 1px solid var(--bg-card-border);
+      backdrop-filter: blur(8px);
+      z-index: 10;
+    }
+
+    .diagram-title-badge {
+      font-family: var(--font-mono);
+      font-size: 0.8rem;
+      color: var(--secondary);
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+
+    .diagram-actions {
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+    }
+
+    .zoom-btn {
+      background: var(--bg-surface-elevated);
+      color: var(--text-main);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: var(--radius-sm);
+      padding: 0.35rem 0.65rem;
+      font-size: 0.78rem;
+      font-family: var(--font-mono);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.3rem;
+      transition: all 0.2s ease;
+      user-select: none;
+    }
+
+    .zoom-btn:hover {
+      background: var(--primary);
+      color: #fff;
+      border-color: var(--primary-light);
+    }
+
+    .zoom-level-badge {
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      min-width: 48px;
+      text-align: center;
+    }
+
+    .diagram-viewport {
+      position: relative;
+      overflow: hidden;
+      min-height: 440px;
+      cursor: grab;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 2rem 1.5rem;
+      user-select: none;
+      background: radial-gradient(circle at center, rgba(30, 41, 59, 0.25) 0%, transparent 75%);
+    }
+
+    .diagram-viewport:active {
+      cursor: grabbing;
+    }
+
+    .diagram-content-zoomable {
+      transform-origin: center center;
+      transition: transform 0.08s ease-out;
+      width: 100%;
+      display: flex;
+      justify-content: center;
+    }
+
+    .diagram-content-zoomable svg {
+      max-width: 100%;
+      height: auto;
+      display: block;
+      margin: 0 auto;
+    }
+
+    .diagram-tip {
+      position: absolute;
+      bottom: 0.6rem;
+      left: 1rem;
+      font-size: 0.75rem;
+      color: var(--text-dim);
+      font-family: var(--font-mono);
+      pointer-events: none;
+      background: rgba(15, 23, 42, 0.75);
+      padding: 0.2rem 0.6rem;
+      border-radius: 4px;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    /* Modal Fullscreen */
+    .diagram-modal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(7, 11, 20, 0.95);
+      backdrop-filter: blur(14px);
+      z-index: 99999;
+      flex-direction: column;
+    }
+
+    .diagram-modal.active {
+      display: flex;
+    }
+
+    .diagram-modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.8rem 1.5rem;
+      background: rgba(15, 23, 42, 0.95);
+      border-bottom: 1px solid var(--bg-card-border);
+    }
+
+    .diagram-modal-body {
+      flex: 1;
+      overflow: hidden;
+      position: relative;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      cursor: grab;
+      padding: 1rem;
+    }
+
+    .diagram-modal-body:active {
+      cursor: grabbing;
+    }
+
+    .diagram-modal-content {
+      transform-origin: center center;
+      transition: transform 0.08s ease-out;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .diagram-modal-content svg {
+      max-width: 95%;
+      max-height: 95%;
+      height: auto;
     }
   </style>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <script>
+    document.addEventListener("DOMContentLoaded", function() {
+      if (typeof mermaid !== "undefined") {
+        mermaid.initialize({
+          startOnLoad: true,
+          theme: "dark",
+          securityLevel: "loose",
+          themeVariables: {
+            darkMode: true,
+            background: "#070b14",
+            primaryColor: "#6366f1",
+            primaryTextColor: "#f8fafc",
+            lineColor: "#94a3b8"
+          }
+        });
+      }
+    });
+  </script>
 </head>
 <body>
 
@@ -720,6 +915,7 @@
       <li><a href="#pipeline-nlp" class="nav-link"><span>🧠</span> Engenharia de NLP <span class="nav-badge">spaCy + N-Grams</span></a></li>
       <li><a href="#discussao-tfidf-vs-hibrida" class="nav-link"><span>⚖️</span> TF-IDF vs. Híbrida <span class="nav-badge">Trade-offs & Análise</span></a></li>
       <li><a href="#design-patterns" class="nav-link"><span>📐</span> Padrões de Projeto <span class="nav-badge">SOLID</span></a></li>
+      <li><a href="#diagramas-uml" class="nav-link"><span>📊</span> Diagramas UML <span class="nav-badge">Classes & Fluxo</span></a></li>
       <li><a href="#regras-negocio" class="nav-link"><span>📜</span> Regras de Negócio <span class="nav-badge">6 Regras</span></a></li>
       <li><a href="#tecnicas-agrupamento" class="nav-link"><span>🎯</span> Técnicas de Agrupamento <span class="nav-badge">KMeans, DBSCAN, HDBSCAN</span></a></li>
       <li><a href="#guia-negocio" class="nav-link"><span>💼</span> Interpretação para Negócio <span class="nav-badge">Decisão & ROI</span></a></li>
@@ -1723,6 +1919,231 @@ print(f"Top 5 termos do vocabulário: {vocabulario[:5]}")
             <div><span>Exceções Permitidas:</span> __init__.py, __main__.py, conftest.py</div>
           </div>
         </div>
+      </div>
+    </section>
+
+    <!-- 5. Diagramas UML do Sistema (Modelagem Visual com Zoom Vetorial) -->
+    <section id="diagramas-uml">
+      <div class="section-header">
+        <span class="section-tag">Engenharia & Modelagem UML</span>
+        <h2 class="section-title">5. Diagramas UML da Arquitetura do Sistema</h2>
+        <p class="section-desc">
+          Modelagem canônica interativa com suporte a <b>zoom vetorial sem perda de qualidade</b> e navegação em tela cheia. Documenta os padrões <b>Adapter</b>, <b>Factory</b>, <b>Strategy</b>, <b>Null Object</b>, <b>Protocols</b> e <b>Generics</b>.
+        </p>
+      </div>
+
+      <!-- 5.1 Diagrama de Classes UML -->
+      <div style="margin-bottom: 2.5rem;">
+        <h3 style="font-family: var(--font-display); font-size: 1.3rem; color: #fff; margin-bottom: 0.5rem;">
+          5.1 Diagrama de Classes UML (Class Diagram)
+        </h3>
+        <p style="color: var(--text-muted); font-size: 0.92rem; margin-bottom: 0.8rem;">
+          Desacoplamento de interfaces estruturais (<code>Protocol</code>), adaptadores de fontes de dados e observabilidade, estratégias de clusterização e Lakehouse:
+        </p>
+        <div class="diagram-wrapper" id="wrap-classes">
+          <div class="diagram-toolbar">
+            <div class="diagram-title-badge">
+              <span>🏛️</span> Diagrama de Classes UML
+            </div>
+            <div class="diagram-actions">
+              <span class="zoom-level-badge" id="zoom-badge-classes">100%</span>
+              <button class="zoom-btn" onclick="zoomDiagrama('classes', -0.2)" title="Diminuir Zoom"><span>🔍-</span></button>
+              <button class="zoom-btn" onclick="zoomDiagrama('classes', 0.2)" title="Aumentar Zoom"><span>🔍+</span></button>
+              <button class="zoom-btn" onclick="resetZoomDiagrama('classes')" title="Redefinir"><span>↺ Reset</span></button>
+              <button class="zoom-btn" onclick="abrirModalDiagrama('classes', '5.1 Diagrama de Classes UML')" style="background: var(--primary); color: #fff;" title="Tela Cheia"><span>⛶ Tela Cheia</span></button>
+            </div>
+          </div>
+          <div class="diagram-viewport" id="viewport-classes">
+            <div class="diagram-content-zoomable" id="target-classes">
+              <div class="mermaid">
+flowchart TD
+    subgraph Ingestao["1. Ingestão & Fontes de Dados (Adapter & Factory)"]
+        ProtExt["«Protocol»<br/><b>ProtocoloExtratorComentarios</b><br/>+extrair_canal_completo()<br/>+obter_detalhes_canal()"]
+        FabExt["«Factory»<br/><b>FabricaFontesDados</b><br/>+criar_extrator(config)"]
+        ExtYT["«Adapter»<br/><b>ExtratorComentarios</b><br/>+extrair_canal_completo()"]
+        ExtLocal["«Adapter»<br/><b>ExtratorArquivoLocal</b><br/>+extrair_canal_completo()"]
+        FabExt -.->|cria| ProtExt
+        ProtExt -.->|implementa| ExtYT
+        ProtExt -.->|implementa| ExtLocal
+    end
+
+    subgraph Agrupamento["2. Agrupamento & Modelos (Strategy & Generic)"]
+        FabAgrup["«Factory»<br/><b>FabricaAgrupadores</b><br/>+criar_kmeans()<br/>+criar_dbscan()<br/>+criar_hdbscan()"]
+        KMeansCls["«Strategy»<br/><b>AgrupadorKMeans</b><br/>+labels_: np.ndarray<br/>+ajustar_e_agrupar()<br/>+obter_rotulos()"]
+        DBSCANCls["«Strategy»<br/><b>AgrupadorDBSCAN</b><br/>+ajustar_e_agrupar()"]
+        HDBSCANCls["«Strategy»<br/><b>AgrupadorHDBSCAN</b><br/>+ajustar_e_agrupar()<br/>+obter_probabilidades()"]
+        AgrupTab["«Generic Class»<br/><b>AgrupadorTabular[TModelo]</b><br/>+ajustar(matriz_ou_df)"]
+        FabAgrup -.->|cria| KMeansCls & DBSCANCls & HDBSCANCls
+        AgrupTab -->|compõe| KMeansCls & DBSCANCls & HDBSCANCls
+    end
+
+    subgraph Tendencias["3. Estratégias de Análise de Clusters (Strategy)"]
+        ProtTend["«Protocol Generic»<br/><b>EstrategiaAnaliseClusters[TId]</b><br/>+eh_temporal(): bool<br/>+analisar_grupos()"]
+        Estatica["«Strategy»<br/><b>EstrategiaAnaliseEstatica</b><br/>+eh_temporal(): false"]
+        Temporal["«Strategy»<br/><b>EstrategiaAnaliseTemporal</b><br/>+eh_temporal(): true"]
+        ProtTend -.->|implementa| Estatica & Temporal
+        AgrupTab -->|delega| ProtTend
+    end
+
+    subgraph Observabilidade["4. Observabilidade & Visualização (Adapter & Factory)"]
+        ProtVis["«Protocol»<br/><b>ProtocoloProvedorVisualizacao</b><br/>+verificar_disponibilidade()<br/>+obter_url_dashboard()"]
+        FabVis["«Factory»<br/><b>FabricaProvedorVisualizacao</b><br/>+criar_provedor(config)"]
+        VisGraf["«Adapter»<br/><b>ProvedorVisualizacaoGrafana</b><br/>+verificar_disponibilidade()<br/>+obter_url_dashboard()"]
+        VisNulo["«Null Object»<br/><b>ProvedorVisualizacaoNulo</b><br/>+verificar_disponibilidade(): false"]
+        FabVis -.->|cria| ProtVis
+        ProtVis -.->|implementa| VisGraf & VisNulo
+    end
+
+    subgraph Orquestracao["5. Orquestração Central (Facade)"]
+        ExecCiclo["«Facade»<br/><b>ExecutorCiclo</b><br/>+executar_ciclo_canal()"]
+        ExecCiclo -->|extrai| ProtExt
+        ExecCiclo -->|agrupa| AgrupTab
+        ExecCiclo -->|telemetria| ProtVis
+    end
+              </div>
+            </div>
+            <div class="diagram-tip">🖱️ Arraste para mover • Role o mouse para zoom sem perder qualidade</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 5.2 Diagrama de Sequência UML -->
+      <div style="margin-bottom: 2.5rem;">
+        <h3 style="font-family: var(--font-display); font-size: 1.3rem; color: #fff; margin-bottom: 0.5rem;">
+          5.2 Diagrama de Sequência UML (Execução Ponta a Ponta)
+        </h3>
+        <p style="color: var(--text-muted); font-size: 0.92rem; margin-bottom: 0.8rem;">
+          Fluxo de controle e orquestração síncrona do pipeline analítico disparado por <code>ExecutorCiclo.executar_ciclo_canal()</code>:
+        </p>
+        <div class="diagram-wrapper" id="wrap-sequencia">
+          <div class="diagram-toolbar">
+            <div class="diagram-title-badge">
+              <span>⚡</span> Sequência de Execução Ponta a Ponta
+            </div>
+            <div class="diagram-actions">
+              <span class="zoom-level-badge" id="zoom-badge-sequencia">100%</span>
+              <button class="zoom-btn" onclick="zoomDiagrama('sequencia', -0.2)" title="Diminuir Zoom"><span>🔍-</span></button>
+              <button class="zoom-btn" onclick="zoomDiagrama('sequencia', 0.2)" title="Aumentar Zoom"><span>🔍+</span></button>
+              <button class="zoom-btn" onclick="resetZoomDiagrama('sequencia')" title="Redefinir"><span>↺ Reset</span></button>
+              <button class="zoom-btn" onclick="abrirModalDiagrama('sequencia', '5.2 Diagrama de Sequência UML')" style="background: var(--primary); color: #fff;" title="Tela Cheia"><span>⛶ Tela Cheia</span></button>
+            </div>
+          </div>
+          <div class="diagram-viewport" id="viewport-sequencia">
+            <div class="diagram-content-zoomable" id="target-sequencia">
+              <div class="mermaid">
+sequenceDiagram
+    autonumber
+    actor CLI as Agendador / CLI
+    participant Exec as ExecutorCiclo
+    participant Fonte as FabricaFontes / Extrator
+    participant Bronze as Camada Bronze (S3)
+    participant Prata as Camada Prata (S3)
+    participant NLP as spaCy / Vetorizador
+    participant ML as Agrupador KMeans
+    participant Tend as CalculadorTendencias
+    participant Ouro as Camada Ouro (S3)
+    participant MLflow as MLflow Tracking
+    participant Obs as ProvedorGrafana
+
+    CLI->>Exec: executar_ciclo_canal(id_canal)
+    Exec->>Fonte: extrair_canal_completo()
+    Fonte-->>Exec: videos, comentarios
+    Exec->>Bronze: gravar_lote_comentarios() (JSONL S3)
+    Bronze-->>Exec: s3_bronze_ok
+    Exec->>Prata: gravar_snapshot_comentarios() (Parquet S3)
+    Prata-->>Exec: s3_prata_ok
+    Exec->>Prata: ler_comentarios_video()
+    Prata-->>Exec: registros_deduplicados
+    Exec->>NLP: lematizar_e_vetorizar(comentarios)
+    NLP-->>Exec: matriz_esparsa_L2
+    Exec->>ML: ajustar_e_agrupar(matriz_esparsa)
+    Note over ML: Busca de k otimo via Silhueta
+    ML-->>Exec: rotulos, metricas
+    Exec->>Tend: calcular_tendencias_video(rotulos)
+    Tend-->>Exec: topicos_variacao_percentual
+    Exec->>Ouro: gravar_topicos_ouro() (Parquet S3)
+    Ouro-->>Exec: s3_ouro_ok
+    Exec->>MLflow: registrar_execucao(metricas, modelo)
+    MLflow-->>Exec: run_id
+    Exec->>Obs: verificar_disponibilidade()
+    Exec-->>CLI: resumo_execucao
+              </div>
+            </div>
+            <div class="diagram-tip">🖱️ Arraste para mover • Role o mouse para zoom sem perder qualidade</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 5.3 e 5.4: Componentes e Máquina de Estados -->
+      <div class="pattern-grid">
+        <!-- 5.3 Componentes -->
+        <div class="diagram-wrapper" id="wrap-componentes" style="margin: 0;">
+          <div class="diagram-toolbar">
+            <div class="diagram-title-badge">
+              <span>🧩</span> 5.3 Componentes
+            </div>
+            <div class="diagram-actions">
+              <button class="zoom-btn" onclick="zoomDiagrama('componentes', 0.2)"><span>🔍+</span></button>
+              <button class="zoom-btn" onclick="resetZoomDiagrama('componentes')"><span>↺</span></button>
+              <button class="zoom-btn" onclick="abrirModalDiagrama('componentes', '5.3 Diagrama de Componentes')"><span>⛶</span></button>
+            </div>
+          </div>
+          <div class="diagram-viewport" id="viewport-componentes" style="min-height: 380px;">
+            <div class="diagram-content-zoomable" id="target-componentes">
+              <div class="mermaid">
+flowchart TD
+    Ingestao["Ingestão (YouTube / Local)"] --> Bronze["Lakehouse Bronze (:9000)"]
+    Bronze --> Prata["Lakehouse Prata (:9000)"]
+    Prata --> NLP["NLP & Vetorização L2"]
+    NLP --> Agrupamento["KMeans / DBSCAN / HDBSCAN"]
+    Agrupamento --> Tendencias["Tendências Temporais Δ%"]
+    Tendencias --> Ouro["Lakehouse Ouro (:9000)"]
+    Ouro --> FastAPI["FastAPI Serving (:8000)"]
+    Agrupamento --> MLflow["MLflow Registry (:5000)"]
+    FastAPI & Lakehouse --> Prometheus["Prometheus (:9090)"]
+    Prometheus --> Grafana["Grafana Dashboards (:3000)"]
+              </div>
+            </div>
+            <div class="diagram-tip">🖱️ Arraste / Zoom</div>
+          </div>
+        </div>
+
+        <!-- 5.4 Estados -->
+        <div class="diagram-wrapper" id="wrap-estados" style="margin: 0;">
+          <div class="diagram-toolbar">
+            <div class="diagram-title-badge">
+              <span>🔄</span> 5.4 Máquina de Estados
+            </div>
+            <div class="diagram-actions">
+              <button class="zoom-btn" onclick="zoomDiagrama('estados', 0.2)"><span>🔍+</span></button>
+              <button class="zoom-btn" onclick="resetZoomDiagrama('estados')"><span>↺</span></button>
+              <button class="zoom-btn" onclick="abrirModalDiagrama('estados', '5.4 Máquina de Estados (Tendências)')"><span>⛶</span></button>
+            </div>
+          </div>
+          <div class="diagram-viewport" id="viewport-estados" style="min-height: 380px;">
+            <div class="diagram-content-zoomable" id="target-estados">
+              <div class="mermaid">
+stateDiagram-v2
+    [*] --> AnaliseT0: Apuração no Dia de Referência (T0)
+    AnaliseT0 --> Novo: Sem ocorrências em T-1 [+100.0%]
+    AnaliseT0 --> Crescendo: Volume T0 > Volume T-1 (Δ% > 0)
+    AnaliseT0 --> Decrescendo: Volume T0 < Volume T-1 (Δ% < 0)
+    AnaliseT0 --> Estavel: Volume T0 == Volume T-1 (Δ% = 0)
+    Novo --> [*]
+    Crescendo --> [*]
+    Decrescendo --> [*]
+    Estavel --> [*]
+              </div>
+            </div>
+            <div class="diagram-tip">🖱️ Arraste / Zoom</div>
+          </div>
+        </div>
+      </div>
+
+      <div style="margin-top: 1.5rem; text-align: center;">
+        <a href="diagramas_uml.md" target="_blank" class="btn btn-secondary">
+          📄 Visualizar Documento Técnico Completo (docs/diagramas_uml.md) ↗
+        </a>
       </div>
     </section>
 
@@ -4525,9 +4946,186 @@ processamento:
       if (link.getAttribute('href') === '#' + currentId) {
         link.classList.add('active');
       }
+<!-- Modal Fullscreen de Zoom para Diagramas UML -->
+<div id="diagram-modal" class="diagram-modal">
+  <div class="diagram-modal-header">
+    <div style="display: flex; align-items: center; gap: 0.6rem;">
+      <span style="font-size: 1.2rem;">📊</span>
+      <span id="modal-diagram-title" style="font-family: var(--font-display); font-size: 1.05rem; color: #fff; font-weight: 600;">
+        Diagrama em Alta Definição
+      </span>
+      <span id="modal-zoom-badge" class="zoom-level-badge">100%</span>
+    </div>
+    <div class="diagram-actions">
+      <button class="zoom-btn" onclick="modalZoom(-0.25)" title="Diminuir Zoom"><span>🔍-</span></button>
+      <button class="zoom-btn" onclick="modalZoom(0.25)" title="Aumentar Zoom"><span>🔍+</span></button>
+      <button class="zoom-btn" onclick="modalReset()" title="Resetar"><span>↺ 100%</span></button>
+      <button class="zoom-btn" onclick="fecharModalDiagrama()" style="background: var(--accent-rose); border-color: var(--accent-rose); color: #fff;"><span>✕ Fechar</span></button>
+    </div>
+  </div>
+  <div class="diagram-modal-body" id="modal-viewport">
+    <div class="diagram-modal-content" id="modal-content"></div>
+    <div class="diagram-tip">🖱️ Arraste para mover • Role o mouse para zoom livre até 500% sem perda de qualidade</div>
+  </div>
+</div>
+
+<script>
+  // =========================================================================
+  // SISTEMA DE ZOOM VETORIAL E PAN INTERATIVO PARA DIAGRAMAS
+  // =========================================================================
+  const diagramState = {
+    classes: { scale: 1, x: 0, y: 0, isDragging: false, startX: 0, startY: 0 },
+    sequencia: { scale: 1, x: 0, y: 0, isDragging: false, startX: 0, startY: 0 },
+    componentes: { scale: 1, x: 0, y: 0, isDragging: false, startX: 0, startY: 0 },
+    estados: { scale: 1, x: 0, y: 0, isDragging: false, startX: 0, startY: 0 },
+    modal: { scale: 1, x: 0, y: 0, isDragging: false, startX: 0, startY: 0, currentId: null }
+  };
+
+  function updateDiagramTransform(id) {
+    const state = diagramState[id];
+    const target = document.getElementById('target-' + id);
+    if (!target) return;
+    target.style.transform = `translate(${state.x}px, ${state.y}px) scale(${state.scale})`;
+    const badge = document.getElementById('zoom-badge-' + id);
+    if (badge) badge.innerText = Math.round(state.scale * 100) + '%';
+  }
+
+  function zoomDiagrama(id, delta) {
+    const state = diagramState[id];
+    if (!state) return;
+    state.scale = Math.min(Math.max(state.scale + delta, 0.4), 3.5);
+    updateDiagramTransform(id);
+  }
+
+  function resetZoomDiagrama(id) {
+    const state = diagramState[id];
+    if (!state) return;
+    state.scale = 1;
+    state.x = 0;
+    state.y = 0;
+    updateDiagramTransform(id);
+  }
+
+  // Setup Drag and Wheel on all diagram viewports
+  ['classes', 'sequencia', 'componentes', 'estados'].forEach(id => {
+    const viewport = document.getElementById('viewport-' + id);
+    if (!viewport) return;
+
+    viewport.addEventListener('mousedown', (e) => {
+      const state = diagramState[id];
+      state.isDragging = true;
+      state.startX = e.clientX - state.x;
+      state.startY = e.clientY - state.y;
     });
+
+    window.addEventListener('mousemove', (e) => {
+      const state = diagramState[id];
+      if (!state || !state.isDragging) return;
+      state.x = e.clientX - state.startX;
+      state.y = e.clientY - state.startY;
+      updateDiagramTransform(id);
+    });
+
+    window.addEventListener('mouseup', () => {
+      const state = diagramState[id];
+      if (state) state.isDragging = false;
+    });
+
+    // Wheel zoom
+    viewport.addEventListener('wheel', (e) => {
+      e.preventDefault();
+      const delta = e.deltaY < 0 ? 0.15 : -0.15;
+      zoomDiagrama(id, delta);
+    }, { passive: false });
+  });
+
+  // Modal Fullscreen Logic
+  function abrirModalDiagrama(id, titulo) {
+    const modal = document.getElementById('diagram-modal');
+    const modalTitle = document.getElementById('modal-diagram-title');
+    const modalContent = document.getElementById('modal-content');
+    const sourceEl = document.getElementById('target-' + id);
+    if (!modal || !sourceEl) return;
+
+    modalTitle.innerText = titulo;
+    modalContent.innerHTML = sourceEl.innerHTML;
+    
+    // Reset modal state
+    diagramState.modal.scale = 1.1;
+    diagramState.modal.x = 0;
+    diagramState.modal.y = 0;
+    diagramState.modal.currentId = id;
+    updateModalTransform();
+
+    modal.classList.add('active');
+    document.body.style.overflow = 'hidden';
+  }
+
+  function fecharModalDiagrama() {
+    const modal = document.getElementById('diagram-modal');
+    if (!modal) return;
+    modal.classList.remove('active');
+    document.body.style.overflow = '';
+  }
+
+  function updateModalTransform() {
+    const state = diagramState.modal;
+    const content = document.getElementById('modal-content');
+    const badge = document.getElementById('modal-zoom-badge');
+    if (!content) return;
+    content.style.transform = `translate(${state.x}px, ${state.y}px) scale(${state.scale})`;
+    if (badge) badge.innerText = Math.round(state.scale * 100) + '%';
+  }
+
+  function modalZoom(delta) {
+    const state = diagramState.modal;
+    state.scale = Math.min(Math.max(state.scale + delta, 0.4), 5.0);
+    updateModalTransform();
+  }
+
+  function modalReset() {
+    const state = diagramState.modal;
+    state.scale = 1;
+    state.x = 0;
+    state.y = 0;
+    updateModalTransform();
+  }
+
+  // Modal Drag & Wheel
+  const modalViewport = document.getElementById('modal-viewport');
+  if (modalViewport) {
+    modalViewport.addEventListener('mousedown', (e) => {
+      const state = diagramState.modal;
+      state.isDragging = true;
+      state.startX = e.clientX - state.x;
+      state.startY = e.clientY - state.y;
+    });
+
+    window.addEventListener('mousemove', (e) => {
+      const state = diagramState.modal;
+      if (!state || !state.isDragging) return;
+      state.x = e.clientX - state.startX;
+      state.y = e.clientY - state.startY;
+      updateModalTransform();
+    });
+
+    window.addEventListener('mouseup', () => {
+      diagramState.modal.isDragging = false;
+    });
+
+    modalViewport.addEventListener('wheel', (e) => {
+      e.preventDefault();
+      const delta = e.deltaY < 0 ? 0.2 : -0.2;
+      modalZoom(delta);
+    }, { passive: false });
+  }
+
+  // Close modal on Escape
+  window.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') fecharModalDiagrama();
   });
 </script>
 
 </body>
 </html>
+

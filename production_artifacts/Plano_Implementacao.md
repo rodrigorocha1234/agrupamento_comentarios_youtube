@@ -1227,13 +1227,485 @@ Após a aprovação deste plano, as fases serão executadas sequencialmente conf
 1. **Convergência Superior do K-Means++:** A inicialização clássica aleatória (`random`) é sensível a mínimos locais e pode convergir para agrupamentos subótimos. O algoritmo `k-means++` seleciona os centróides iniciais com probabilidade proporcional ao quadrado da distância dos pontos aos centróides já escolhidos, garantindo dispersão inicial máxima e limite matemático comprovado de erro ($O(\log k)$).
 2. **Parametrização Declarativa:** Adicionar o campo `init: k-means++` na seção `processamento.tecnicas.kmeans.parametros` do `config/entradas.yaml`, mantendo desacoplamento total via `ParametrosKMeans` e `FabricaAgrupadores`.
 
+---
 
+## 54. Adendo 26 — Flag Declarativa para Seleção do Motor de Processamento Tabular (`pandas` vs `polars`) (`@arquiteto` / `@pm` / `@qa`)
 
+**Estado:** 🟢 **APROVADO PELO USUÁRIO (EXECUÇÃO LIBERADA)**  
+**Data da Aprovação:** 2026-10-23  
+**Personas Responsáveis:** `@pm`, `@arquiteto`, `@qa`  
+**Objetivo:** Introduzir no arquivo declarativo `config/entradas.yaml` uma flag de configuração explícita (`processamento.motor_dados`) permitindo ao usuário/engenheiro selecionar o motor de processamento e manipulação tabular desejado (`pandas` ou `polars`), refletindo a escolha nos contratos tipados (`MotorProcessamento`), modelos de configuração (`ConfiguracaoProcessamento`) e testes unitários automatizados.
 
+### 54.1 Motivação e Racional Arquitetural
+1. **Flexibilidade de Engenharia de Dados:** `polars` oferece execução multithreaded vetorizada em Rust com uso eficiente de memória (zero-copy via Apache Arrow), ideal para grandes volumes de comentários e agregação analítica de séries temporais. Por outro lado, `pandas` mantém compatibilidade clássica com o ecossistema Scikit-Learn e ferramentas legadas.
+2. **Contrato Tipado e Estrito:**
+   - Adicionar o Enum canônico `MotorProcessamento` em `app/configuracao_geral/tipos_enumerados.py` com as opções `PANDAS = "pandas"` e `POLARS = "polars"`.
+   - Adicionar o campo `motor_dados: MotorProcessamento` em `ConfiguracaoProcessamento` em `app/configuracao_geral/modelos_configuracao.py` (com default `MotorProcessamento.POLARS`).
+   - Mapear no `ProvedorConfiguracao` com fallback defensivo seguro.
+3. **Parametrização no YAML:**
+   - Adicionar em `config/entradas.yaml` sob a chave `processamento`:
+     ```yaml
+     processamento:
+       motor_dados: polars # Opções: pandas, polars
+     ```
+4. **Validação e Testes:**
+---
 
+## 55. Adendo 27 — Flag Declarativa para Habilitação de Processamento de Linguagem Natural (`usar_nlp`) (`@arquiteto` / `@pm` / `@qa`)
 
+**Estado:** 🟢 **APROVADO PELO USUÁRIO (EXECUÇÃO LIBERADA)**  
+**Data da Aprovação:** 2026-10-23  
+**Personas Responsáveis:** `@pm`, `@arquiteto`, `@nlp`, `@qa`  
+**Objetivo:** Introduzir no arquivo declarativo `config/entradas.yaml` e nos modelos tipados de configuração uma flag explícita (`processamento.usar_nlp`), com valor **padrão `false`**, desacoplando o motor de clusterização comparativa de dependências obrigatórias de processamento de texto (spaCy, TF-IDF, BERTimbau, lematização), permitindo sua reutilização direta em outros projetos analíticos e tabulares puramente numéricos.
 
+### 55.1 Motivação e Racional Arquitetural
+1. **Reutilização Agnóstica do Motor de Agrupamento:** O motor de clusterização (`AgrupadorKMeans`, `AgrupadorDBSCAN`, `AgrupadorHDBSCAN` e `FabricaAgrupadores`) foi concebido para operar sobre qualquer matriz matemática de características $\mathbb{R}^{N \times D}$ (`np.ndarray` ou `csr_matrix`). No entanto, o pipeline atual acoplava a etapa de NLP como obrigatória.
+2. **Desacoplamento Declarativo:**
+   - Adicionar o campo booleano `usar_nlp: bool = False` em `ConfiguracaoProcessamento` em `app/configuracao_geral/modelos_configuracao.py` (com valor padrão `False` estritamente alinhado à diretriz do usuário).
+   - No `config/entradas.yaml` deste projeto (agrupamento de comentários do YouTube), registrar explicitamente `usar_nlp: true` para manter a integridade operacional da análise de texto deste repositório.
+   - No `ProvedorConfiguracao`, interpretar a chave `usar_nlp` com conversão booleana segura e fallback defensivo padrão para `False`.
+3. **Parametrização no YAML:**
+   ```yaml
+   processamento:
+     usar_nlp: true # Flag para habilitar NLP (tokenização/embeddings). Padrão global do motor = false
+     motor_dados: polars
+     spacy_modelo: pt_core_news_lg
+     ...
+   ```
+4. **Validação e Testes:**
+   - Teste unitário em `tests/teste_configuracao.py` validando que:
+     a) O YAML padrão do YouTube carrega `usar_nlp == True`.
+     b) Em arquivos legados ou sem a chave, o valor padrão retornado é estritamente `False`.
+     c) Configurações com `usar_nlp: false` carregam com precisão.
+   - Verificação completa de tipagem estrita no Pyright (0 erros) e suíte Pytest.
 
+---
+
+## 56. Adendo 28 — Conversão Integral de Literais de String em Tipos Enumerados Fortes (`StrEnum`) (`@arquiteto` / `@qa`)
+
+**Estado:** 🟢 **APROVADO PELO USUÁRIO (EXECUÇÃO LIBERADA)**  
+**Data da Aprovação:** 2026-10-23  
+**Personas Responsáveis:** `@pm`, `@arquiteto`, `@qa`  
+**Objetivo:** Substituir sistematicamente todos os tipos `str` com domínio finito e discreto na camada de configuração (`app/configuracao_geral/modelos_configuracao.py`) e no provedor de configuração por tipos enumerados canônicos (`StrEnum`) centralizados em `app/configuracao_geral/tipos_enumerados.py`, eliminando strings mágicas (*stringly-typed*), prevenindo erros de digitação e garantindo validação em tempo de compilação/análise estática.
+
+### 56.1 Mapeamento e Novos Enums (`app/configuracao_geral/tipos_enumerados.py`)
+1. **`TecnicaRepresentacao`:** Expandir para incluir `BERTIMBAU = "bertimbau"` além de `TFIDF = "tfidf"` e `COUNT = "count"`.
+2. **`TecnicaReducao`:** Expandir para incluir `UMAP = "umap"` além de `PCA`, `SVD`, `TSNE`.
+3. **`PeriodicidadeColeta`:** Utilizar no campo `ConfiguracaoColeta.periodicidade` (`DIARIA = "diaria"`, `SEMANAL = "semanal"`).
+4. **`NormaVetorizacao`:** Criar enum com `L1 = "l1"`, `L2 = "l2"`.
+5. **`DispositivoExecucao`:** Criar enum com `CPU = "cpu"`, `CUDA = "cuda"`.
+6. **`MetricaDistancia`:** Criar enum com `COSINE = "cosine"`, `EUCLIDEAN = "euclidean"`.
+7. **`InicializacaoKMeans`:** Criar enum com `KMEANS_PLUS_PLUS = "k-means++"`, `RANDOM = "random"`.
+8. **`MetodoSelecaoCluster`:** Criar enum com `EOM = "eom"`, `LEAF = "leaf"`.
+9. **`AlgoritmoVizinhos`:** Criar enum com `AUTO = "auto"`, `BALL_TREE = "ball_tree"`, `KD_TREE = "kd_tree"`, `BRUTE = "brute"`.
+10. **`GranularidadeTendencia`:** Criar enum com `DIARIA = "diaria"`, `JANELA = "janela"`.
+11. **`TipoPersistencia`:** Criar enum com `S3 = "s3"`, `LOCAL = "local"`.
+
+---
+
+## 57. Adendo 29 — Generalização do Motor de Agrupamento para Projetos Não-NLP e Tabulares Numéricos (`@arquiteto` / `@pm` / `@qa`)
+
+**Estado:** 🟢 **APROVADO PELO USUÁRIO (EXECUÇÃO LIBERADA)**  
+**Data da Aprovação:** 2026-10-23  
+**Personas Responsáveis:** `@pm`, `@arquiteto`, `@qa`  
+**Objetivo:** Adaptar a arquitetura de configuração (YAML e Python) e desacoplar o motor de agrupamento comparativo (KMeans, DBSCAN, HDBSCAN e redução UMAP/PCA/SVD) de dependências obrigatórias de texto/YouTube, viabilizando o reuso direto em qualquer projeto analítico tabular puramente numérico (com `usar_nlp: false`) sem necessidade de declarar chaves de NLP (`stopwords`, `spacy_modelo`, `topicos`, `coleta`).
+
+### 57.1 Diagnóstico do Acoplamento Atual
+1. **Obrigatoriedade no Provedor:** `ProvedorConfiguracao` exigia a presença ou sub-blocos de `stopwords`, `representacao` e `topicos` mesmo quando `usar_nlp: false`.
+2. **Ausência de Ponto de Entrada Agnóstico:** O motor de clusterização (`FabricaAgrupadores`, `AgrupadorKMeans`, etc.) já é matematicamente agnóstico, mas a execução fim-a-fim estava concentrada no `ExecutorCiclo` específico de vídeos e comentários.
+3. **Estrutura Declarativa do YAML:** O arquivo `config/entradas.yaml` continha parâmetros de NLP misturados aos parâmetros gerais de redução e agrupamento.
+
+### 57.2 Solução Arquitetural Proposta
+1. **Modularização e Opcionalidade no YAML:**
+   - Permitir a omissão total das seções de NLP (`spacy_modelo`, `stopwords`, `representacao`, `topicos`, `coleta`) quando `usar_nlp: false`.
+   - Organizar `config/entradas.yaml` separando claramente o que é **Motor de Agrupamento & Redução** (comum a qualquer projeto) do que é **Específico de NLP / YouTube**.
+   - Disponibilizar `config/entradas_tabular_exemplo.yaml` como modelo pronto para projetos numéricos (ex: CRM, sensores, finanças).
+2. **Provedor e Modelos de Configuração Resilientes:**
+   - No `ProvedorConfiguracao`, injetar valores padrão neutros e defensivos caso as seções de texto não existam no YAML.
+   - Tornar `ConfiguracaoTopicos` opcional ou com defaults neutros quando não aplicável.
+3. **Novo Ponto de Entrada Reutilizável: `AgrupadorTabular` (`app/agrupamento_modelos/agrupador_tabular.py`):**
+   - Classe reutilizável para outros projetos que expõe `agrupar_matriz(matriz, tecnicas=None) -> ResultadoAgrupamentoTabular`.
+   - Aceita `np.ndarray`, `csr_matrix`, ou DataFrames do Pandas / Polars (conforme a flag `motor_dados`).
+   - Aplica opcionalmente redução dimensional (UMAP, PCA ou SVD) se configurada.
+   - Executa as técnicas ativas (`KMeans`, `DBSCAN`, `HDBSCAN`) e calcula as métricas (`Silhouette`, `Davies-Bouldin`, `Calinski-Harabasz`, ruído).
+4. **Validação e Testes:**
+   - Teste unitário em `tests/teste_configuracao.py` carregando o YAML puramente tabular sem qualquer chave de texto.
+   - Novo teste unitário em `tests/teste_clusters.py` validando o `AgrupadorTabular` com matriz puramente numérica.
+   - Verificação completa de conformidade com Pytest e 0 erros no Pyright strict.
+
+---
+
+## 58. Adendo 30 — Suporte Declarativo à Dimensão Temporal vs. Estática com Padrões de Projeto (`@arquiteto` / `@pm` / `@qa`)
+
+**Estado:** 🟢 **APROVADO PELO USUÁRIO (EXECUÇÃO LIBERADA)**  
+**Data da Aprovação:** 2026-10-23  
+**Personas Responsáveis:** `@pm`, `@arquiteto`, `@qa`  
+**Objetivo:** Introduzir uma flag declarativa no arquivo YAML e nos modelos Python para definir se o problema analítico envolve dimensão temporal (`eh_temporal: true | false`), segregando o código através dos padrões de projeto **Strategy** e **Factory** para permitir que o motor funcione tanto em problemas temporais (análise de tendências por janelas, deltas de crescimento/queda) quanto em problemas estáticos / cross-sectional (segmentação de clientes, categorização estática, matrizes numéricas sem eixo temporal).
+
+### 58.1 Motivação e Diagnóstico
+1. **Acoplamento Temporal Atual:**
+   - O pipeline e o submódulo `app/analise_tendencias` assumem obrigatoriamente a presença de timestamps (`publicado_em`) e particionam os dados em duas janelas (atual vs anterior) para calcular taxas de crescimento/queda.
+   - Em problemas estáticos (ex: segmentação de clientes em CRM, agrupamento de sensores sem série temporal, clustering estático de documentos), não existem janelas temporais de comparação, tornando o cálculo de tendências inadequado ou gerando ruído de execução.
+2. **Separação Arquitetural Requerida:**
+   - Criar uma abstração clara onde o comportamento pós-clusterização seja governado por uma estratégia desacoplada: **Temporal** (com janelas, deltas e status de variação) vs **Estática** (com distribuição global, proporções e perfis estáticos sem eixo de tempo).
+
+### 58.2 Arquitetura Proposta e Padrões de Projeto
+
+```
+               [ Configuração: eh_temporal ]
+                             │
+                             ▼
+                ┌─────────────────────────┐
+                │ FabricaEstrategiaAnalise│
+                └────────────┬────────────┘
+                             │
+              ┌──────────────┴──────────────┐
+              ▼                             ▼
+   ┌──────────────────────┐      ┌─────────────────────┐
+   │EstrategiaAnaliseTempo│      │EstrategiaAnaliseEsta│
+   │  ral (Strategy)      │      │  tica (Strategy)    │
+   ├──────────────────────┤      ├─────────────────────┤
+   │ - Janelas temporais  │      │ - Distribuição pura │
+   │ - Deltas cresc/queda │      │ - Sem janelas tempo │
+   │ - Status de tendência│      │ - Status estático   │
+   └──────────────────────┘      └─────────────────────┘
+```
+
+1. **Padrão Strategy (`EstrategiaAnaliseClusters`):**
+   - Criação de `app/analise_tendencias/estrategias_analise.py`:
+     - Protocolo `EstrategiaAnaliseClusters`: define contrato único para consolidar métricas e resultados dos agrupamentos.
+     - `EstrategiaAnaliseTemporal`: encapsula o cálculo de tendências entre janelas temporais (crescendo, queda, estável, novo) utilizando `DetectorVariacao` e `CalculadorTendencias`.
+     - `EstrategiaAnaliseEstatica`: consolida a distribuição estática dos clusters (contagem total, proporção global, termos representativos) marcando o status como estático sem exigir timestamps.
+2. **Padrão Factory (`FabricaEstrategiaAnalise`):**
+   - Centraliza a instanciação da estratégia adequada com base no parâmetro `config.processamento.eh_temporal` (ou `config.tendencias.ativa`).
+3. **Parametrização no YAML:**
+   - Em `config/entradas.yaml`:
+     ```yaml
+     processamento:
+       usar_nlp: true
+       eh_temporal: true  # Flag declarativa para problemas temporais vs estáticos
+       motor_dados: polars
+     ```
+     e sob `tendencias`:
+     ```yaml
+     tendencias:
+       ativa: true        # Ativada quando eh_temporal: true
+     ```
+   - Em `config/entradas_tabular_exemplo.yaml`:
+     ```yaml
+     usar_nlp: false
+     eh_temporal: false   # Problema de agrupamento estático (ex: segmentação de clientes)
+     ```
+4. **Integração no `AgrupadorTabular` e no Pipeline:**
+   - `AgrupadorTabular` aceita opcionalmente vetor de timestamps. Se `eh_temporal: true` e timestamps forem fornecidos, computa a distribuição temporal dos clusters; se `eh_temporal: false`, opera de forma puramente estática.
+   - `ExecutorCiclo` consome `FabricaEstrategiaAnalise`, gravando no lakehouse conforme a estratégia ativa.
+
+### 58.3 Critérios de Aceite e Testes
+- [x] Modelos de configuração atualizados com `eh_temporal: bool` em `ConfiguracaoProcessamento` e `ativa: bool` em `ConfiguracaoTendencias`.
+- [x] Provedor de configuração carrega e valida a flag sem quebras.
+- [x] Padrão Strategy implementado com `EstrategiaAnaliseTemporal` e `EstrategiaAnaliseEstatica`.
+- [x] `FabricaEstrategiaAnalise` instanciando a estratégia correta conforme a configuração.
+- [x] Testes unitários cobrindo ambas as estratégias e o carregamento do YAML estático (`eh_temporal: false`).
+- [x] Conformidade estrita no Pyright (0 erros) e 100% de testes passando no Pytest.
+
+---
+
+## 59. Adendo 31 — Tipagem Avançada e Polimorfismo Estrutural com `Protocol`, `Generic` e `TypeVar` (`@arquiteto` / `@qa`)
+
+**Estado:** 🟢 **APROVADO PELO USUÁRIO (EXECUÇÃO LIBERADA)**  
+**Data da Aprovação:** 2026-10-23  
+**Personas Responsáveis:** `@pm`, `@arquiteto`, `@qa`  
+**Objetivo:** Elevar o rigor de tipagem estática e o desacoplamento arquitetural no motor de clusterização, estratégias analíticas e camada de representação/lakehouse utilizando `typing.Protocol` (polimorfismo estrutural estático), `typing.Generic` e `typing.TypeVar` (tipagem parametrizada para modelos treinados, matrizes e identificadores de cluster), permitindo reaproveitamento type-safe em projetos arbitrários.
+
+### 59.1 Mapeamento e Aplicação de Genéricos e Protocolos
+
+1. **Agrupadores e Modelos Treinados (`app/agrupamento_modelos/`):**
+   - Definir `TModelo = TypeVar("TModelo", covariant=True)`
+   - Evoluir `ProtocoloAgrupador(Protocol[TModelo])` com:
+     - `def ajustar_e_agrupar(self, matriz: csr_matrix | np.ndarray) -> tuple[list[int], MetricasAgrupamento]: ...`
+     - `def obter_modelo(self) -> TModelo | None: ...`
+   - Agrupadores específicos implementam o protocolo com modelos concretos:
+     - `AgrupadorKMeans` implementa `ProtocoloAgrupador[KMeans]`
+     - `AgrupadorDBSCAN` implementa `ProtocoloAgrupador[DBSCAN]`
+     - `AgrupadorHDBSCAN` implementa `ProtocoloAgrupador[HDBSCAN]`
+2. **Resultados e Motor Tabular (`AgrupadorTabular`):**
+   - Parametrizar `ResultadoTecnicaTabular[TModelo](Generic[TModelo])` para que o tipo de `modelo` seja preservado no retorno sem necessidade de casts ou `Any`.
+   - Parametrizar `ResultadoAgrupamentoTabular[TModelo](Generic[TModelo])`.
+   - Métodos `agrupar_matriz` e `agrupar_dataframe` com type bounds em `TMatriz = TypeVar("TMatriz", bound=np.ndarray | csr_matrix)`.
+3. **Estratégias Analíticas (`app/analise_tendencias/estrategias_analise.py`):**
+   - Parametrizar `TIdentificador = TypeVar("TIdentificador", bound=str)`
+   - `ResultadoAnaliseCluster[TIdentificador](Generic[TIdentificador])`
+   - `EstrategiaAnaliseClusters(Protocol[TIdentificador])` com assinaturas genéricas para dicionários de contagens.
+4. **Redutores Dimensionais (`app/representacao_texto/`):**
+   - Definir formalmente `ProtocoloRedutorDimensional(Protocol)` para desacoplar UMAP, PCA e SVD.
+
+### 59.2 Critérios de Aceite e Testes
+- [x] `ProtocoloAgrupador` parametrizado com `Generic[TModelo]` e `TypeVar`.
+- [x] `ResultadoTecnicaTabular` e `ResultadoAgrupamentoTabular` tipados com `Generic[TModelo]`.
+- [x] `EstrategiaAnaliseClusters` e `ResultadoAnaliseCluster` parametrizados com `Generic[TIdentificador]`.
+- [x] `ProtocoloRedutorDimensional` formalizado com `Protocol`.
+- [x] Conformidade total no Pyright (0 erros em modo strict) e 100% dos testes passando no Pytest.
+
+---
+
+## 60. Adendo 32 — Configuração Declarativa Explícita dos Caminhos das Camadas Bronze, Prata e Ouro no YAML (`@datalake` / `@arquiteto`)
+
+**Estado:** 🟢 **APROVADO PELO USUÁRIO (EXECUÇÃO LIBERADA)**  
+**Data da Aprovação:** 2026-10-23  
+**Personas Responsáveis:** `@pm`, `@arquiteto`, `@datalake`, `@qa`  
+**Objetivo:** Configurar de forma declarativa e explícita no arquivo YAML (`config/entradas.yaml` e `config/entradas_tabular_exemplo.yaml`) a definição de caminhos para as três camadas do Lakehouse (`bronze`, `prata` e `ouro`) sob a chave `caminhos:` (em formato legível multilinha, além de suportar a chave histórica `prefixos:`), garantindo que o provedor de configuração e os modelos Python exponham `caminho_bronze`, `caminho_prata`, `caminho_ouro` (e retrocompatibilidade com `prefixo_*`) tanto para armazenamento em nuvem/S3 quanto para diretórios locais em projetos gerais.
+
+### 60.1 Estrutura Declarativa Proposta no YAML
+
+Em `config/entradas.yaml` e `config/entradas_tabular_exemplo.yaml`:
+```yaml
+persistencia:
+  tipo: s3 # Opções: s3, local
+  bucket: youtube-comentarios
+
+  # Configuração explícita dos caminhos/prefixos das camadas do Lakehouse
+  caminhos:
+    bronze: bronze
+    prata: prata
+    ouro: ouro
+
+  # Padrões Hive-style customizáveis interpolando os caminhos configurados
+  padroes_chaves:
+    bronze: "{prefixo}/id_canal={id_canal}/id_video={id_video}/data_coleta={data_coleta}/lote={id_lote}.jsonl"
+    prata: "{prefixo}/id_canal={id_canal}/id_video={id_video}/versao={timestamp_versao}/comentarios.parquet"
+    ouro_video: "{prefixo}/id_canal={id_canal}/id_video={id_video}/tecnica={tecnica}/data={data_referencia}/topicos.parquet"
+    ouro_consolidado: "{prefixo}/id_canal={id_canal}/consolidado/tecnica={tecnica}/data={data_referencia}/topicos.parquet"
+```
+
+### 60.2 Adaptações na Camada de Configuração Python
+1. **`ConfiguracaoPersistencia` (`app/configuracao_geral/modelos_configuracao.py`):**
+   - Suporte aos atributos `caminho_bronze: str`, `caminho_prata: str`, `caminho_ouro: str`.
+   - Manutenção de `prefixo_bronze`, `prefixo_prata`, `prefixo_ouro` sincronizados para retrocompatibilidade sem breaking changes.
+2. **`ProvedorConfiguracao` (`app/configuracao_geral/provedor_configuracao.py`):**
+   - Ler prioritariamente de `pers_dict.get("caminhos")`, com fallback defensivo para `pers_dict.get("prefixos")`.
+3. **Testes Unitários:**
+   - Validar leitura da seção `caminhos` em `tests/teste_configuracao.py`.
+   - Garantir 0 erros de tipagem estrita no Pyright e 100% no Pytest.
+
+### 60.3 Critérios de Aceite
+- [x] YAML `config/entradas.yaml` atualizado com o bloco explícito `caminhos:` formatado em múltiplas linhas.
+- [x] YAML `config/entradas_tabular_exemplo.yaml` atualizado com o bloco `caminhos:`.
+- [x] `ConfiguracaoPersistencia` expondo `caminho_bronze`, `caminho_prata`, `caminho_ouro`.
+- [x] `ProvedorConfiguracao` parseando a chave `caminhos` com interoperabilidade perfeita.
+- [x] Testes unitários atualizados e 100% aprovados sem erros no Pyright.
+
+---
+
+## 61. Adendo 33 — Abstração de Fontes de Dados com Padrões Adapter e Factory (`@coleta` / `@arquiteto` / `@qa`)
+
+**Estado:** 🟢 **APROVADO PELO USUÁRIO (EXECUÇÃO LIBERADA)**  
+**Data da Aprovação:** 2026-10-23  
+**Personas Responsáveis:** `@pm`, `@arquiteto`, `@coleta`, `@qa`  
+**Objetivo:** Permitir a alternância e substituição transparente da fonte de dados (YouTube Data API, arquivos CSV, Parquet, JSONL ou armazenamento local) sem impactar o pipeline analítico, o lakehouse ou os algoritmos de agrupamento, aplicando os padrões de projeto **Adapter** e **Factory** governados de forma declarativa pelo arquivo YAML através da flag `coleta.fonte`.
+
+### 61.1 Arquitetura Proposta e Padrões de Projeto
+
+```
+                    [ Configuração YAML: coleta.fonte ]
+                                   │
+                                   ▼
+                       ┌───────────────────────┐
+                       │   FabricaFontesDados  │  <-- Factory Pattern
+                       └───────────┬───────────┘
+                                   │
+                 ┌─────────────────┴─────────────────┐
+                 ▼                                   ▼
+    ┌─────────────────────────┐         ┌─────────────────────────┐
+    │   ExtratorComentarios   │         │   ExtratorArquivoLocal  │  <-- Adapter Pattern
+    │      (YouTube API)      │         │  (CSV, Parquet, JSONL)  │
+    └────────────┬────────────┘         └────────────┬────────────┘
+                 │                                   │
+                 └─────────────────┬─────────────────┘
+                                   ▼
+                     ProtocoloExtratorComentarios
+                                   │
+                                   ▼
+                             ExecutorCiclo
+```
+
+1. **Enum `TipoFonteDados` (`app/configuracao_geral/tipos_enumerados.py`):**
+   - Valores canônicos: `YOUTUBE = "youtube"`, `CSV = "csv"`, `PARQUET = "parquet"`, `JSONL = "jsonl"`, `LOCAL = "local"`.
+2. **Padrão Adapter (`app/coleta_youtube/extrator_arquivo_local.py`):**
+   - Implementa `ProtocoloExtratorComentarios` para permitir ingestão de arquivos tabulares ou de texto locais sem acoplamento ao YouTube.
+   - Lê os dados utilizando o motor configurado (`Polars` ou `Pandas`).
+   - Mapeia as colunas de forma flexível (ex: `coluna_texto`, `coluna_id`, `coluna_data`) gerando instâncias de `ComentarioColetado` e `MetadadosVideo`.
+3. **Padrão Factory (`app/coleta_youtube/fabrica_fontes.py`):**
+   - Cria polimorficamente a instância correta da fonte de dados com base em `config.coleta.fonte`:
+     - `TipoFonteDados.YOUTUBE` -> `ExtratorComentarios(ClienteYouTube(...))`
+     - `TipoFonteDados.CSV` / `PARQUET` / `JSONL` / `LOCAL` -> `ExtratorArquivoLocal(...)`
+4. **Parametrização no YAML:**
+   - Em `config/entradas.yaml`:
+     ```yaml
+     coleta:
+       habilitada: true
+       fonte: youtube # Opções: youtube, csv, parquet, jsonl, local
+       periodicidade: diaria
+       canais: ...
+     ```
+   - Em `config/entradas_tabular_exemplo.yaml`:
+     ```yaml
+     coleta:
+       habilitada: true
+       fonte: csv # Opções: csv, parquet, jsonl, local
+       caminho_dados: "dados/amostra_tabular.csv"
+       coluna_texto: "texto"
+       coluna_id: "id"
+       coluna_temporal: "data"
+     ```
+5. **Integração no Injetor Principal (`app/orquestracao_pipeline/__main__.py`):**
+   - Delegar a criação da fonte de dados para `FabricaFontesDados.criar_extrator(config)`.
+
+### 61.2 Critérios de Aceite
+- [x] Enum `TipoFonteDados` adicionado a `tipos_enumerados.py`.
+- [x] `ConfiguracaoColeta` e `ProvedorConfiguracao` atualizados com `fonte`, `caminho_dados`, etc.
+- [x] ExtratorArquivoLocal implementado respeitando ProtocoloExtratorComentarios.
+- [x] FabricaFontesDados implementada com suporte a YouTube e arquivos locais.
+- [x] Arquivos YAML config/entradas.yaml e config/entradas_tabular_exemplo.yaml atualizados com fonte:.
+- [x] Testes unitários com arquivos sintéticos CSV e validação no Pytest e Pyright.
+
+## 62. Adendo 34 — Isolamento e Abstração do Provedor de Visualização / Grafana (`@observabilidade` / `@arquiteto` / `@qa`)
+
+**Estado:** 🟢 **APROVADO PELO USUÁRIO (EXECUÇÃO LIBERADA)**  
+**Data da Aprovação:** 2026-10-23  
+**Personas Responsáveis:** `@pm`, `@arquiteto`, `@observabilidade`, `@qa`  
+**Objetivo:** Isolar todos os elementos, rotas, consultas e lógicas específicos do **Grafana** em uma classe desacoplada (`ProvedorVisualizacaoGrafana`), estabelecendo uma interface/protocolo canônico (`ProtocoloProvedorVisualizacao`) e uma fábrica (`FabricaProvedorVisualizacao`) orientada pelos arquivos YAML. Isso permite que a ferramenta de dashboard/visualização possa ser substituída futuramente (por Datadog, Kibana, Metabase, Streamlit ou outro provedor) sem qualquer impacto ou retrabalho no núcleo do pipeline analítico, nos medidores Prometheus ou na API FastAPI.
+
+### 62.1 Arquitetura e Padrões de Projeto (Adapter / Strategy + Factory)
+
+```
+             [ Configuração YAML: observabilidade.provedor_visualizacao ]
+                                          │
+                                          ▼
+                         ┌─────────────────────────────────┐
+                         │   FabricaProvedorVisualizacao   │  <-- Factory Pattern
+                         └────────────────┬────────────────┘
+                                          │
+                  ┌───────────────────────┴───────────────────────┐
+                  ▼                                               ▼
+   ┌───────────────────────────────┐               ┌───────────────────────────────┐
+   │  ProvedorVisualizacaoGrafana  │               │   ProvedorVisualizacaoNulo    │
+   │   (Dashboards, UIDs, APIs)    │               │     (Null Object Pattern)     │
+   └──────────────┬────────────────┘               └──────────────┬────────────────┘
+                  │                                               │
+                  └───────────────────────┬───────────────────────┘
+                                          ▼
+                            ProtocoloProvedorVisualizacao  <-- Adapter/Contract
+                                          │
+                                          ▼
+                         Serviços do Pipeline & API FastAPI
+```
+
+1. **Enum `TipoProvedorVisualizacao` (`app/configuracao_geral/tipos_enumerados.py`):**
+   - Valores: `GRAFANA = "grafana"`, `NENHUM = "nenhum"`, `CUSTOM = "custom"`.
+2. **Protocolo Estrutural (`ProtocoloProvedorVisualizacao` em `app/coleta_metricas/protocolo_visualizacao.py`):**
+   - Define o contrato desacoplado:
+     - `tipo_provedor -> TipoProvedorVisualizacao`
+     - `url_base -> str`
+     - `verificar_disponibilidade() -> bool`
+     - `obter_url_dashboard(slug_ou_uid: str) -> str`
+     - `listar_dashboards() -> list[dict[str, Any]]`
+     - `obter_metadados_painel(uid: str) -> dict[str, Any]`
+3. **Classe Isolada do Grafana (`ProvedorVisualizacaoGrafana` em `app/coleta_metricas/provedor_grafana.py`):**
+   - Centraliza o mapeamento dos 4 dashboards provisionados:
+     - `yt-pipe-operacional` (Pipeline Operacional e Ingestão)
+     - `yt-datalake-lakehouse` (Data Lakehouse e Armazenamento S3)
+     - `yt-api-fastapi` (API FastAPI e Serving)
+     - `yt-clusters-modelos` (Qualidade de Agrupamento e Modelos ML)
+   - Contém lógica de verificação de integridade da API Grafana (`GET /api/health`).
+   - Consulta metadados declarativos dos dashboards e resolve URLs de acesso direto.
+4. **Fábrica Polimórfica (`FabricaProvedorVisualizacao` em `app/coleta_metricas/fabrica_visualizacao.py`):**
+   - Instancia o provedor configurado no YAML (`grafana` -> `ProvedorVisualizacaoGrafana`, `nenhum` -> `ProvedorVisualizacaoNulo`).
+5. **Atualização dos Arquivos de Configuração YAML (`config/entradas.yaml` e `config/entradas_tabular_exemplo.yaml`):**
+   ```yaml
+   observabilidade:
+     prometheus: true
+     grafana: true
+     provedor_visualizacao: grafana # Opções: grafana, nenhum, custom
+     url_visualizacao: "http://localhost:3000"
+     labels_alta_cardinalidade: false
+   ```
+
+### 62.2 Critérios de Aceite
+- [x] Enum `TipoProvedorVisualizacao` adicionado a `app/configuracao_geral/tipos_enumerados.py`.
+- [x] Modelos de configuração atualizados com `provedor_visualizacao` e `url_visualizacao`.
+- [x] `ProtocoloProvedorVisualizacao` implementado com contratos de tipagem estrita (mypy/pyright).
+- [x] `ProvedorVisualizacaoGrafana` implementado encapsulando todas as rotas e regras do Grafana.
+- [x] `ProvedorVisualizacaoNulo` e `FabricaProvedorVisualizacao` implementados.
+- [x] Arquivos YAML atualizados com suporte explícito a `provedor_visualizacao`.
+- [x] Testes unitários cobrindo o provedor Grafana, o provedor nulo e a fábrica.
+- [x] Validação estrita com Pyright (0 erros) e Pytest (100% de aprovação).
+
+## 63. Adendo 35 — Diagramas UML e Atualização Abrangente da Documentação (`@arquiteto` / `@qa`)
+
+**Estado:** 🟢 **APROVADO PELO USUÁRIO (EXECUÇÃO LIBERADA)**  
+**Data da Aprovação:** 2026-10-23  
+**Personas Responsáveis:** `@pm`, `@arquiteto`, `@qa`  
+**Objetivo:** Elaborar os diagramas UML canônicos do sistema (Classes, Sequência, Componentes e Máquina de Estados) representando fielmente todos os padrões de projeto consolidados (Adapter, Factory, Strategy, Null Object, Protocols, Generics e TypeVar), e atualizar de forma integrada a documentação do projeto nos arquivos `docs/diagramas_uml.md`, `README.md` e no portal web interativo `docs/index.html`.
+
+### 63.1 Diagramas UML Planejados
+
+1. **Diagrama de Classes UML (Class Diagram):**
+   - **Ingestão e Fontes de Dados:** `ProtocoloExtratorComentarios`, `FabricaFontesDados`, `ExtratorComentarios`, `ExtratorArquivoLocal`, `ClienteYouTube`.
+   - **Agrupamento e Modelos ML:** `FabricaAgrupadores`, `AgrupadorKMeans`, `AgrupadorDBSCAN`, `AgrupadorHDBSCAN`, `AgrupadorTabular[TModelo]`.
+   - **Estratégias de Análise de Clusters:** `EstrategiaAnaliseClusters[TId]`, `EstrategiaAnaliseTemporal`, `EstrategiaAnaliseEstatica`.
+   - **Data Lakehouse:** `ProtocoloCamadaBronze`, `ProtocoloCamadaPrata`, `ProtocoloCamadaOuro`, `CamadaBronze`, `CamadaPrata`, `CamadaOuro`, `ClienteStorageS3`.
+   - **Visualização e Dashboards:** `ProtocoloProvedorVisualizacao`, `FabricaProvedorVisualizacao`, `ProvedorVisualizacaoGrafana`, `ProvedorVisualizacaoNulo`.
+   - **Modelos de Domínio e Enums:** `ComentarioColetado`, `MetadadosVideo`, `RegistroTopicoOuro`, `TipoFonteDados`, `TipoProvedorVisualizacao`, `MotorProcessamento`, `TecnicaCluster`.
+
+2. **Diagrama de Sequência UML (Sequence Diagram):**
+   - Orquestração do ciclo completo via `ExecutorCiclo.executar_ciclo_canal(id_canal)`.
+   - Passo a passo: Resolução da fonte via Factory -> Extração de registros -> Gravação Bronze S3 -> Normalização e Deduplicação Prata Parquet -> Processamento/NLP/Vetorização -> Agrupamento com seleção de k ótimo -> Classificação de Tendências -> Publicação Ouro Parquet -> Registro MLflow -> Instrumentação Prometheus e Provedor de Visualização.
+
+3. **Diagrama de Componentes UML (Component Diagram):**
+   - Interconexão dos subsistemas: Ingestão, Lakehouse (S3 RustFS), Processamento NLP / Vetorização, Motor de Clusterização, Análise de Tendências, Serving (FastAPI / MLflow) e Observabilidade (Prometheus / Grafana / Loki / Alloy).
+
+4. **Diagrama de Estados UML (State Machine Diagram):**
+   - Ciclo de vida do comentário (`Bruto` -> `Deduplicado` -> `Vetorizado` -> `Clusterizado` -> `Auditado`).
+   - Ciclo de transição de status de tendências temporais (`novo` -> `crescendo` / `decrescendo` / `estavel`).
+
+### 63.2 Atualizações na Documentação
+- Criação do documento canônico `docs/diagramas_uml.md` contendo todos os diagramas em formato Mermaid renderizável e explicações arquiteturais detalhadas.
+- Atualização do `README.md` com os diagramas de classes e de sequência em Mermaid.
+- Inserção de uma seção dedicada no portal interativo `docs/index.html` com suporte à visualização visual dos diagramas.
+
+### 63.3 Critérios de Aceite
+- [x] Diagrama de Classes UML completo documentado com sintaxe Mermaid válida.
+- [x] Diagrama de Sequência do pipeline documentado com sintaxe Mermaid válida.
+- [x] Diagrama de Componentes da arquitetura documentado com sintaxe Mermaid válida.
+- [x] Diagrama de Estados do ciclo de vida dos dados documentado com sintaxe Mermaid válida.
+- [x] Arquivo `docs/diagramas_uml.md` criado e estruturado.
+- [x] `README.md` atualizado com os novos diagramas UML.
+- [x] Portal `docs/index.html` atualizado com a seção e navegação para os diagramas UML.
+
+## 64. Adendo 36 — Diagrama de Atividades com Raias / Swimlanes (`@arquiteto` / `@qa`)
+
+**Estado:** 🟢 **APROVADO PELO USUÁRIO (EXECUÇÃO LIBERADA)**  
+**Data da Aprovação:** 2026-10-23  
+**Personas Responsáveis:** `@pm`, `@arquiteto`, `@qa`  
+**Objetivo:** Elaborar o **Diagrama de Atividades com Raias (Swimlane Activity Diagram)** representando visualmente o fluxo operacional do pipeline distribuído por papéis de responsabilidade clara:
+1. **Raia 1 (Agendador / CLI):** Parametrização e disparo da execução.
+2. **Raia 2 (Orquestrador - `ExecutorCiclo`):** Mediação do ciclo de vida e coordenação dos estágios.
+3. **Raia 3 (Ingestão de Dados - `FabricaFontesDados` / `Extrator`):** Resolução da fonte e coleta paginada com resiliência.
+4. **Raia 4 (Data Lakehouse S3 - Bronze, Prata e Ouro):** Persistência imutável, deduplicação Parquet e particionamento diário.
+5. **Raia 5 (Motor de NLP e Vetorização):** Higienização textual, lematização spaCy e geração de matrizes esparsas L2.
+6. **Raia 6 (Motor de Agrupamento e Tendências):** Otimização de k ótimo, clusterização comparativa e variação percentual.
+7. **Raia 7 (Serving e Observabilidade - FastAPI / MLflow / Grafana):** Registro de modelos, métricas Prometheus e serving REST.
+
+### 64.1 Atualizações na Documentação
+- Inclusão do diagrama de atividades com raias em `docs/diagramas_uml.md`.
+- Inserção do diagrama na seção 5 do portal web `docs/index.html` com suporte completo a controles de zoom vetorial e modal em tela cheia.
+- Referência no `README.md`.
+
+### 64.2 Critérios de Aceite
+- [ ] Diagrama de Atividades com Raias (Swimlanes) modelado em Mermaid com validação de sintaxe.
+- [ ] Diagrama integrado ao arquivo `docs/diagramas_uml.md`.
+- [ ] Diagrama integrado à seção 5 do portal `docs/index.html` com controles de zoom vetorial, arrasto e tela cheia.
+- [ ] Validação visual no navegador confirmando ausência de erros de renderização.
 
 
 

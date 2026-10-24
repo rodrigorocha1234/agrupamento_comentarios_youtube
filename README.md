@@ -244,9 +244,72 @@ O Lakehouse utiliza particionamento temporal em formato Hive (`data=AAAA-MM-DD`)
 
 O projeto adere estritamente às seguintes diretrizes arquiteturais:
 - **Regra de Nomenclatura:** Todo módulo e pacote em `app/` e `tests/` possui **exatamente duas palavras separadas por sublinhado** (ex.: `agrupador_kmeans.py`, `provedor_configuracao.py`, `tipos_enumerados.py`).
-- **Strategy Pattern:** Desacoplamento polimórfico dos algoritmos de clusterização (`AgrupadorKMeans`, `AgrupadorDBSCAN`, `AgrupadorHDBSCAN`).
-- **Factory Pattern:** Instanciação centralizada parametrizada via YAML (`FabricaAgrupadores`, `FabricaRepresentacao`).
-- **Adapter Pattern:** Adaptação do protocolo REST do MLflow Model Serving para a interface interna da API (`AdaptadorServing`).
+- **Adapter Pattern:**
+  - **Fontes de Dados:** `ExtratorArquivoLocal` e `ExtratorComentarios` adaptam formatos heterogêneos (YouTube API, CSV, Parquet, JSONL) ao contrato `ProtocoloExtratorComentarios`.
+  - **Observabilidade:** `ProvedorVisualizacaoGrafana` isola o Grafana sob o contrato `ProtocoloProvedorVisualizacao`.
+  - **Model Serving:** `AdaptadorServing` adapta o protocolo REST do MLflow Model Serving para a interface interna da API.
+- **Factory Pattern:** Instanciação centralizada parametrizada via YAML (`FabricaFontesDados`, `FabricaAgrupadores`, `FabricaProvedorVisualizacao`).
+- **Strategy Pattern:** Desacoplamento polimórfico dos algoritmos de clusterização (`AgrupadorKMeans`, `AgrupadorDBSCAN`, `AgrupadorHDBSCAN`) e de análise de distribuição (`EstrategiaAnaliseTemporal` e `EstrategiaAnaliseEstatica`).
+- **Null Object Pattern:** `ProvedorVisualizacaoNulo` para execução segura sem grafana ou visualização desativada.
 - **Facade / Orchestrator & Dependency Inversion (DIP):** Coordenação linear e transacional do pipeline completo desacoplada via interface estrutural (`ProtocoloExecutorCiclo` implementado por `ExecutorCiclo`). Inversão de dependências com protocolos para extração, camadas do Lakehouse, lematização e cálculo de tendências.
-- **Type-Safe Enumerations:** Classes canônicas `StrEnum` garantindo interoperabilidade com Pydantic v2 e zero erros de digitação.
+- **Type-Safe Enumerations & Generics:** Classes canônicas `StrEnum` com interoperabilidade Pydantic v2 e componentes genéricos parametrizados com `TypeVar` e `Generic[T]`.
 - **Princípios SOLID:** 100% de conformidade com SRP, OCP, LSP, ISP e DIP (Inversão de Dependências via `typing.Protocol` com `@runtime_checkable`).
+
+---
+
+## 📊 Diagramas UML do Sistema
+
+A documentação visual completa do sistema com diagramas interativos Mermaid está disponível em:
+👉 **[Documentação Completa de Diagramas UML (docs/diagramas_uml.md)](file:///home/rodrigo/PycharmProjects/agrupamento_comentarios_youtube/docs/diagramas_uml.md)**
+
+### Diagrama de Classes Simplificado (Arquitetura Central)
+
+```mermaid
+classDiagram
+    direction TB
+    class ProtocoloExtratorComentarios {
+        <<Protocol>>
+        +extrair_canal_completo()
+    }
+    class FabricaFontesDados {
+        <<Factory>>
+        +criar_extrator(config)$
+    }
+    class ExtratorComentarios {
+        <<Adapter>>
+    }
+    class ExtratorArquivoLocal {
+        <<Adapter>>
+    }
+    class ProtocoloProvedorVisualizacao {
+        <<Protocol>>
+        +verificar_disponibilidade()
+        +obter_url_dashboard()
+    }
+    class ProvedorVisualizacaoGrafana {
+        <<Adapter>>
+    }
+    class FabricaProvedorVisualizacao {
+        <<Factory>>
+        +criar_provedor(config)$
+    }
+    class AgrupadorTabular~TModelo~ {
+        <<Generic>>
+        +ajustar()
+    }
+    class EstrategiaAnaliseClusters~TId~ {
+        <<Protocol Generic>>
+        +eh_temporal()
+        +analisar_grupos()
+    }
+
+    ProtocoloExtratorComentarios <|.. ExtratorComentarios
+    ProtocoloExtratorComentarios <|.. ExtratorArquivoLocal
+    FabricaFontesDados ..> ProtocoloExtratorComentarios
+    ProtocoloProvedorVisualizacao <|.. ProvedorVisualizacaoGrafana
+    FabricaProvedorVisualizacao ..> ProtocoloProvedorVisualizacao
+    AgrupadorTabular --> EstrategiaAnaliseClusters
+```
+
+Para conferir os diagramas de **Sequência Ponta a Ponta**, **Componentes de Infraestrutura** e **Máquina de Estados**, acesse o documento dedicado [`docs/diagramas_uml.md`](file:///home/rodrigo/PycharmProjects/agrupamento_comentarios_youtube/docs/diagramas_uml.md).
+

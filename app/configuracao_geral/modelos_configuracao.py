@@ -2,6 +2,23 @@
 
 from dataclasses import dataclass, field
 
+from app.configuracao_geral.tipos_enumerados import (
+    AlgoritmoVizinhos,
+    DispositivoExecucao,
+    GranularidadeTendencia,
+    InicializacaoKMeans,
+    MetricaDistancia,
+    MetodoSelecaoCluster,
+    MotorProcessamento,
+    NormaVetorizacao,
+    PeriodicidadeColeta,
+    TecnicaReducao,
+    TecnicaRepresentacao,
+    TipoFonteDados,
+    TipoPersistencia,
+    TipoProvedorVisualizacao,
+)
+
 
 @dataclass(frozen=True, slots=True)
 class ConfiguracaoProjeto:
@@ -21,18 +38,24 @@ class CanalConfigurado:
 
 @dataclass(frozen=True, slots=True)
 class ConfiguracaoColeta:
-    """Parâmetros da coleta incremental da YouTube Data API."""
+    """Parâmetros da coleta incremental ou ingestão de fontes de dados."""
 
-    habilitada: bool
-    periodicidade: str
-    canais: list[CanalConfigurado]
-    dias_publicacao_atras: int
-    incluir_respostas: bool
-    tamanho_pagina: int
-    limite_videos_por_canal: int | None
-    tentativas: int
-    atraso_base_segundos: float
-    chave_api_env: str
+    habilitada: bool = False
+    fonte: TipoFonteDados = TipoFonteDados.YOUTUBE
+    periodicidade: PeriodicidadeColeta = PeriodicidadeColeta.DIARIA
+    canais: list[CanalConfigurado] = field(default_factory=list[CanalConfigurado])
+    dias_publicacao_atras: int = 7
+    incluir_respostas: bool = True
+    tamanho_pagina: int = 100
+    limite_videos_por_canal: int | None = None
+    tentativas: int = 4
+    atraso_base_segundos: float = 2.0
+    chave_api_env: str = "YOUTUBE_API_KEY"
+    caminho_dados: str | None = None
+    coluna_texto: str = "texto"
+    coluna_id: str = "id"
+    coluna_temporal: str | None = None
+
 
 
 @dataclass(frozen=True, slots=True)
@@ -49,14 +72,14 @@ class ConfiguracaoStopwords:
 class ConfiguracaoRepresentacao:
     """Parâmetros da representação vetorial (TF-IDF, spaCy ou Sentence-Transformers/BERTimbau)."""
 
-    tecnica: str
+    tecnica: TecnicaRepresentacao
     min_df: int
     max_df: float
     ngram_range: tuple[int, int]
     sublinear_tf: bool = True
-    norma: str = "l2"
+    norma: NormaVetorizacao = NormaVetorizacao.L2
     modelo_transformers: str = "neuralmind/bert-base-portuguese-cased"
-    dispositivo_transformers: str = "cpu"
+    dispositivo_transformers: DispositivoExecucao = DispositivoExecucao.CPU
     batch_size_transformers: int = 32
 
 
@@ -65,11 +88,11 @@ class ConfiguracaoReducao:
     """Parâmetros da redução dimensionalidade."""
 
     ativa: bool
-    tecnica: str
+    tecnica: TecnicaReducao
     componentes: int
     n_vizinhos: int = 15
     distancia_minima: float = 0.0
-    metrica: str = "cosine"
+    metrica: MetricaDistancia = MetricaDistancia.COSINE
     random_state: int = 42
 
 
@@ -81,7 +104,7 @@ class ParametrosKMeans:
     n_clusters: int
     random_state: int
     n_init: int
-    init: str = "k-means++"
+    init: InicializacaoKMeans = InicializacaoKMeans.KMEANS_PLUS_PLUS
     k_automatico: bool = True
     k_min: int = 2
     k_max: int = 10
@@ -94,8 +117,8 @@ class ParametrosDBSCAN:
 
     eps: float
     min_samples: int
-    metric: str
-    algorithm: str = "auto"
+    metric: MetricaDistancia
+    algorithm: AlgoritmoVizinhos = AlgoritmoVizinhos.AUTO
 
 
 @dataclass(frozen=True, slots=True)
@@ -104,8 +127,9 @@ class ParametrosHDBSCAN:
 
     min_cluster_size: int
     min_samples: int
-    metric: str
-    cluster_selection_method: str = "eom"
+    metric: MetricaDistancia
+    cluster_selection_method: MetodoSelecaoCluster = MetodoSelecaoCluster.EOM
+
 
 
 @dataclass(frozen=True, slots=True)
@@ -122,24 +146,34 @@ class ConfiguracaoTecnicas:
 
 @dataclass(frozen=True, slots=True)
 class ConfiguracaoProcessamento:
-    """Agrupamento de parâmetros de NLP e modelos."""
+    """Agrupamento de parâmetros de agrupamento, redução e NLP."""
 
-    spacy_modelo: str
-    stopwords: ConfiguracaoStopwords
-    representacao: ConfiguracaoRepresentacao
     reducao: ConfiguracaoReducao
     tecnicas: ConfiguracaoTecnicas
+    spacy_modelo: str = "pt_core_news_sm"
+    stopwords: ConfiguracaoStopwords = field(default_factory=lambda: ConfiguracaoStopwords(usar_spacy=False))
+    representacao: ConfiguracaoRepresentacao = field(
+        default_factory=lambda: ConfiguracaoRepresentacao(
+            tecnica=TecnicaRepresentacao.TFIDF,
+            min_df=1,
+            max_df=1.0,
+            ngram_range=(1, 1),
+        )
+    )
+    motor_dados: MotorProcessamento = MotorProcessamento.POLARS
+    usar_nlp: bool = False
+    eh_temporal: bool = True
 
 
 @dataclass(frozen=True, slots=True)
 class ConfiguracaoTopicos:
     """Critérios de extração e rotulagem de tópicos não-LLM."""
 
-    pos_permitidas: list[str]
-    comprimento_minimo: int
-    peso_tfidf: float
-    peso_frequencia: float
-    penalizacao_global: bool
+    pos_permitidas: list[str] = field(default_factory=lambda: ["NOUN", "PROPN", "ADJ"])
+    comprimento_minimo: int = 3
+    peso_tfidf: float = 0.7
+    peso_frequencia: float = 0.3
+    penalizacao_global: bool = True
     limiar_penalizacao_global: float = 0.75
     fator_penalidade: float = 0.2
     rotulo_ruido_padrao: str = "sem_topico"
@@ -149,13 +183,15 @@ class ConfiguracaoTopicos:
 class ConfiguracaoTendencias:
     """Critérios de cálculo de crescimento e decrescimento temporal."""
 
-    minimo_comentarios: int
-    crescimento_minimo_proporcao: float
-    queda_minima_proporcao: float
+    ativa: bool = True
+    minimo_comentarios: int = 5
+    crescimento_minimo_proporcao: float = 0.10
+    queda_minima_proporcao: float = 0.10
     janela_dias: int = 1
     max_amostras_video: int = 0
     max_amostras_canal: int = 0
-    granularidade: str = "diaria"
+    granularidade: GranularidadeTendencia = GranularidadeTendencia.DIARIA
+
 
 
 
@@ -163,7 +199,7 @@ class ConfiguracaoTendencias:
 class ConfiguracaoPersistencia:
     """Parâmetros de conexão com o lakehouse S3/MinIO e modelos de chave."""
 
-    tipo: str
+    tipo: TipoPersistencia
     bucket: str
     prefixo_bronze: str
     prefixo_prata: str
@@ -171,6 +207,9 @@ class ConfiguracaoPersistencia:
     endpoint_env: str
     access_key_env: str
     secret_key_env: str
+    caminho_bronze: str = ""
+    caminho_prata: str = ""
+    caminho_ouro: str = ""
     padrao_chave_bronze: str = (
         "{prefixo}/id_canal={id_canal}/id_video={id_video}/data_coleta={data_coleta}/lote={id_lote}.jsonl"
     )
@@ -212,6 +251,8 @@ class ConfiguracaoObservabilidade:
     prometheus: bool
     grafana: bool
     labels_alta_cardinalidade: bool
+    provedor_visualizacao: TipoProvedorVisualizacao = TipoProvedorVisualizacao.GRAFANA
+    url_visualizacao: str = "http://localhost:3000"
 
 
 @dataclass(frozen=True, slots=True)

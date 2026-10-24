@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta, timezone
 import json
+from pathlib import Path
 import pytest
 import requests
 
@@ -202,3 +203,103 @@ def test_quota_excedida_lanca_excecao_especifica() -> None:
     )
     with pytest.raises(QuotaExcedidaErro):
         cliente.obter_id_playlist_uploads("UC_TESTE")
+
+
+def test_extrator_arquivo_local_e_fabrica_fontes(tmp_path: Path) -> None:
+    """Valida o carregamento polimórfico de fontes locais (CSV) via Adapter e Factory."""
+    import pandas as pd
+    from app.coleta_youtube.extrator_arquivo_local import ExtratorArquivoLocal
+    from app.coleta_youtube.fabrica_fontes import FabricaFontesDados
+    from app.configuracao_geral.modelos_configuracao import (
+        ConfiguracaoColeta,
+        ConfiguracaoGlobal,
+        ConfiguracaoProcessamento,
+        ConfiguracaoProjeto,
+        ConfiguracaoReducao,
+        ConfiguracaoTecnicas,
+        ConfiguracaoTopicos,
+        ConfiguracaoTendencias,
+        ConfiguracaoPersistencia,
+        ConfiguracaoMLflow,
+        ConfiguracaoAPI,
+        ConfiguracaoObservabilidade,
+        ParametrosDBSCAN,
+        ParametrosHDBSCAN,
+        ParametrosKMeans,
+    )
+    from app.configuracao_geral.tipos_enumerados import (
+        AlgoritmoVizinhos,
+        TipoFonteDados,
+        TipoPersistencia,
+        TecnicaReducao,
+        InicializacaoKMeans,
+        MetricaDistancia,
+        MetodoSelecaoCluster,
+    )
+    from app.orquestracao_pipeline.protocolos_ciclo import ProtocoloExtratorComentarios
+
+    # Cria CSV de teste
+    csv_file = tmp_path / "comentarios_teste.csv"
+    df = pd.DataFrame({
+        "id": ["c1", "c2", "c3"],
+        "texto": ["Adorei o vídeo!", "Muito bom", "Poderia ser melhor"],
+        "curtidas": [10, 5, 1],
+        "id_video": ["v1", "v1", "v2"],
+    })
+    df.to_csv(csv_file, index=False)
+
+    config_coleta = ConfiguracaoColeta(
+        habilitada=True,
+        fonte=TipoFonteDados.CSV,
+        caminho_dados=str(csv_file),
+        coluna_texto="texto",
+        coluna_id="id",
+    )
+
+    # 1. Teste direto do Adaptador
+    extrator_local = ExtratorArquivoLocal(config_coleta)
+    assert isinstance(extrator_local, ProtocoloExtratorComentarios)
+
+    videos, comentarios = extrator_local.extrair_canal_completo("canal_local")
+    assert len(videos) == 2
+    assert len(comentarios) == 3
+    assert comentarios[0].texto_original == "Adorei o vídeo!"
+    assert comentarios[0].id_comentario == "c1"
+    nome_canal, _ = extrator_local.obter_detalhes_canal("canal_local")
+    assert "Fonte Local" in nome_canal
+
+    # 2. Teste via Fábrica de Fontes
+    config_global = ConfiguracaoGlobal(
+        projeto=ConfiguracaoProjeto(nome="teste_fonte", idioma="pt_BR"),
+        coleta=config_coleta,
+        processamento=ConfiguracaoProcessamento(
+            reducao=ConfiguracaoReducao(ativa=False, tecnica=TecnicaReducao.PCA, componentes=2),
+            tecnicas=ConfiguracaoTecnicas(
+                kmeans_ativo=True,
+                kmeans_parametros=ParametrosKMeans(n_clusters=2, random_state=42, n_init=2, init=InicializacaoKMeans.KMEANS_PLUS_PLUS),
+                dbscan_ativo=False,
+                dbscan_parametros=ParametrosDBSCAN(eps=0.5, min_samples=2, metric=MetricaDistancia.EUCLIDEAN, algorithm=AlgoritmoVizinhos.AUTO),
+                hdbscan_ativo=False,
+                hdbscan_parametros=ParametrosHDBSCAN(min_cluster_size=2, min_samples=1, metric=MetricaDistancia.EUCLIDEAN, cluster_selection_method=MetodoSelecaoCluster.EOM),
+            ),
+        ),
+        topicos=ConfiguracaoTopicos(),
+        tendencias=ConfiguracaoTendencias(),
+        persistencia=ConfiguracaoPersistencia(
+            tipo=TipoPersistencia.S3,
+            bucket="teste",
+            prefixo_bronze="b",
+            prefixo_prata="p",
+            prefixo_ouro="o",
+            endpoint_env="E",
+            access_key_env="A",
+            secret_key_env="S",
+        ),
+        mlflow=ConfiguracaoMLflow(tracking_uri_env="U", serving_url_env="S"),
+        api=ConfiguracaoAPI(porta=8000, tempo_limite_segundos=10.0),
+        observabilidade=ConfiguracaoObservabilidade(prometheus=True, grafana=True, labels_alta_cardinalidade=False),
+    )
+
+    fonte_fab = FabricaFontesDados.criar_extrator(config_global)
+    assert isinstance(fonte_fab, ExtratorArquivoLocal)
+

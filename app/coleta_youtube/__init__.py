@@ -11,6 +11,9 @@ from app.coleta_youtube.tratador_erros import (
     VideoIndisponivelErro,
 )
 
+from app.coleta_youtube.extrator_arquivo_local import ExtratorArquivoLocal
+from app.coleta_youtube.fabrica_fontes import FabricaFontesDados
+
 __all__ = [
     "ChaveApiAusenteErro",
     "ClienteYouTube",
@@ -18,6 +21,8 @@ __all__ = [
     "ComentarioColetado",
     "ComentariosDesativadosErro",
     "ExtratorComentarios",
+    "ExtratorArquivoLocal",
+    "FabricaFontesDados",
     "MetadadosVideo",
     "QuotaExcedidaErro",
     "VideoIndisponivelErro",

@@ -28,7 +28,7 @@ class AgrupadorKMeans:
         self._n_clusters_desejado: int = max(1, n_clusters)
         self._random_state: int = random_state
         self._n_init: int = n_init
-        self._init: str = init
+        self._init: str = str(init)
         self._k_automatico: bool = k_automatico
         self._k_min: int = max(2, k_min)
         self._k_max: int = max(self._k_min, k_max)
@@ -36,6 +36,7 @@ class AgrupadorKMeans:
         self._modelo: KMeans | None = None
         self._k_otimo: int = self._n_clusters_desejado
         self._historico_k: dict[int, float] = {}
+        self._rotulos: list[int] = []
 
     def ajustar_e_agrupar(
         self,
@@ -44,10 +45,13 @@ class AgrupadorKMeans:
         """Ajusta o KMeans aos dados (otimizando k ou usando valor fixo) e retorna rótulos e métricas."""
         n_amostras = matriz.shape[0] if matriz.shape else 0
         if n_amostras == 0:
+            self._rotulos = []
             return [], AvaliadorQualidade.avaliar(matriz, [])
 
         if self._k_automatico and n_amostras >= 3:
-            return self._executar_busca_k_otimo(matriz, n_amostras)
+            rotulos, metricas = self._executar_busca_k_otimo(matriz, n_amostras)
+            self._rotulos = rotulos
+            return rotulos, metricas
 
         k_efetivo = max(1, min(self._n_clusters_desejado, n_amostras))
         self._k_otimo = k_efetivo
@@ -64,7 +68,9 @@ class AgrupadorKMeans:
         metricas = AvaliadorQualidade.avaliar(matriz, rotulos_arr)
         if metricas.pontuacao_silhueta is not None:
             self._historico_k = {k_efetivo: metricas.pontuacao_silhueta}
+        self._rotulos = rotulos_lista
         return rotulos_lista, metricas
+
 
     def _executar_busca_k_otimo(
         self,
@@ -160,3 +166,15 @@ class AgrupadorKMeans:
     def obter_historico_k(self) -> dict[int, float]:
         """Retorna a pontuação de silhueta calculada para cada k testado na busca."""
         return dict(self._historico_k)
+
+    def obter_rotulos(self) -> list[int]:
+        """Retorna os rótulos (labels) de cluster atribuídos a cada amostra ajustada."""
+        return list(self._rotulos)
+
+    @property
+    def labels_(self) -> np.ndarray:
+        """Propriedade padrão compatível com Scikit-Learn que retorna o array de rótulos (labels_)."""
+        if self._modelo is not None and hasattr(self._modelo, "labels_"):
+            return cast(np.ndarray, self._modelo.labels_)
+        return np.array(self._rotulos, dtype=int)
+

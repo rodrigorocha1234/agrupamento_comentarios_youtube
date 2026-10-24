@@ -1,6 +1,6 @@
 """Fábrica de estratégias de clusterização configuradas."""
 
-from typing import Protocol
+from typing import Any, Protocol, TypeVar, runtime_checkable
 import numpy as np
 from scipy.sparse import csr_matrix
 
@@ -13,14 +13,19 @@ from app.configuracao_geral.modelos_configuracao import (
 )
 from app.configuracao_geral.tipos_enumerados import TecnicaCluster
 
+TModelo = TypeVar("TModelo", covariant=True)
 
-class ProtocoloAgrupador(Protocol):
+
+@runtime_checkable
+class ProtocoloAgrupador(Protocol[TModelo]):
     """Protocolo estrutural para estratégias desacopladas de clustering."""
 
     def ajustar_e_agrupar(
         self,
         matriz: csr_matrix | np.ndarray,
     ) -> tuple[list[int], MetricasAgrupamento]: ...
+
+    def obter_modelo(self) -> TModelo | None: ...
 
 
 class FabricaAgrupadores:
@@ -30,7 +35,7 @@ class FabricaAgrupadores:
     def criar_agrupador(
         nome_tecnica: TecnicaCluster | str,
         config: ConfiguracaoProcessamento,
-    ) -> ProtocoloAgrupador:
+    ) -> ProtocoloAgrupador[Any]:
         """Cria e devolve o agrupador correspondente à técnica informada."""
         nome_limpo = str(nome_tecnica).strip().lower()
 
