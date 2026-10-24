@@ -1,0 +1,4 @@
+persistencia:
+  salvar_pipeline: true
+  salvar_artefatos: true
+  atribuir_novos_registros: true

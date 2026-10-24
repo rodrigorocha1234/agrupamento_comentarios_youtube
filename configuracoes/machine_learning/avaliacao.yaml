@@ -1,0 +1,7 @@
+avaliacao:
+  metricas_internas:
+    - silhouette
+    - davies_bouldin
+    - calinski_harabasz
+  analise_ruido: true
+  analise_estabilidade: false

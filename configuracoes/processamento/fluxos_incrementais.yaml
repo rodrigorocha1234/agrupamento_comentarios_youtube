@@ -1,0 +1,16 @@
+fluxos_incrementais:
+  ativado: true
+  modo: sincronico
+  paginacao:
+    tamanho_pagina: 100
+    maximo_paginas_por_execucao: 10000
+    detectar_cursor_repetido: true
+  staging:
+    tamanho_lote: 500
+    transacao_por_lote: true
+    checkpoint_por_lote: true
+  publicacao:
+    tamanho_lote: 500
+    retomar_apos_falha: true
+  limites:
+    maximo_registros_em_buffer: 1000

@@ -1,0 +1,5 @@
+transformacao_atributos:
+  ativado: false
+  transformacoes:
+    - coluna: last_played
+      tecnica: converter_dias_desde_referencia

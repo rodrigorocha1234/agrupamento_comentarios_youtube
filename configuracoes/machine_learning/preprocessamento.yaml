@@ -1,0 +1,14 @@
+preprocessamento:
+  imputacao:
+    ativado: true
+    tecnica: median
+  escalonamento:
+    ativado: true
+    tecnica: standard_scaler
+  reducao:
+    ativado: false
+    tecnica: pca
+    n_componentes: 2
+  outliers:
+    ativado: false
+    tecnica: isolation_forest

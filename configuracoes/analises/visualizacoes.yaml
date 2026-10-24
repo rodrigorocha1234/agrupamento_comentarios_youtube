@@ -1,0 +1,18 @@
+visualizacoes:
+  destino: grafana
+  renderizador: plotly
+  dispersao_2d:
+    ativado: true
+    eixo_x: playtime_at_review
+    eixo_y: comment_count
+    colorir_por: cluster
+  distribuicao_clusters:
+    ativado: true
+  perfil_clusters:
+    ativado: true
+  resumo_clusters:
+    ativado: true
+  distancias_centroides:
+    ativado: false
+  evolucao_temporal:
+    ativado: false

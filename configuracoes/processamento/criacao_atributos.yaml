@@ -1,0 +1,7 @@
+criacao_atributos:
+  ativado: false
+  operacoes:
+    - nome: horas_ate_review
+      tecnica: dividir_constante
+      origem: playtime_at_review
+      valor: 60

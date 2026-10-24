@@ -1,0 +1,11 @@
+configuracao:
+  versao_schema: '1.0'
+  nome_projeto: steam_reviews_clustering
+funcionalidades:
+  processamento_linguagem_natural: false
+  analise_temporal: false
+processamento:
+  motor: pandas
+machine_learning:
+  framework: sklearn
+  algoritmo: kmeans

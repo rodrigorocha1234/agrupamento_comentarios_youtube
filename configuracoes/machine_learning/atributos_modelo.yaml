@@ -1,0 +1,23 @@
+atributos_modelo:
+  treinamento:
+    - num_reviews
+    - playtime_forever
+    - playtime_last_two_weeks
+    - playtime_at_review
+    - dias_desde_ultima_atividade
+  avaliacao:
+    - voted_up
+    - votes_up
+    - votes_funny
+    - weighted_vote_score
+    - comment_count
+    - steam_purchase
+    - received_for_free
+    - written_during_early_access
+  identificacao:
+    - appid
+    - recommendationid
+    - steamid
+  temporais:
+    - timestamp_created
+    - timestamp_updated

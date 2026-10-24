@@ -1,0 +1,8 @@
+otimizacao:
+  ativado: false
+  metodo: random_search
+  metricas_objetivo:
+    - silhouette
+  limites:
+    n_iter: 10
+    faixa_clusters: [3, 8]
