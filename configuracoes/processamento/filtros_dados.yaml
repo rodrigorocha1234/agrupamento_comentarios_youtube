@@ -1,7 +1,0 @@
-filtros_dados:
-  ativado: false
-  combinacao: and
-  condicoes:
-    - coluna: playtime_at_review
-      operador: maior_igual
-      valor: 120

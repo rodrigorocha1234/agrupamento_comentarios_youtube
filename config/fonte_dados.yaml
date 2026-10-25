@@ -1,0 +1,37 @@
+fonte:
+  tipo: steam_api
+  endpoint: "https://api.steampowered.com/IUserReviewsService/GetAppReviews/v1/"
+  timeout_segundos: 30
+  tentativas_maximas: 5
+  espera_base_segundos: 1.0
+  appids: []
+  segredo:
+    variavel_ambiente: STEAM_API_KEY
+
+parametros_api:
+  filter: recent
+  language: brazilian
+  day_range: null
+  cursor: "*"
+  review_type: all
+  purchase_type: all
+  num_per_page: 100
+  filter_offtopic_activity: false
+  language_display: brazilian
+  use_review_quality: false
+  date_range_start: null
+  date_range_end: null
+  exclude: null
+  playtime_min_hours: null
+  playtime_max_hours: null
+  primarily_steam_deck: null
+  hardware_os: null
+  hardware_cpu: null
+  hardware_gpu: null
+  hardware_device_type: null
+
+coleta:
+  incremental: true
+  checkpoint_habilitado: true
+  deduplicar_por: recommendationid
+  intervalo_minutos: 1440

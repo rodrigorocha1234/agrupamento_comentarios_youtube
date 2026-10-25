@@ -1,0 +1,32 @@
+processamento:
+  motor: pandas # pandas | polars
+  cabecalho: true
+  colunas:
+    habilitado: true
+    incluir:
+      - recommendationid
+      - appid
+      - review
+      - timestamp_created
+      - timestamp_updated
+      - voted_up
+      - votes_up
+      - votes_funny
+      - weighted_vote_score
+      - comment_count
+      - steamid
+      - num_reviews
+      - playtime_forever
+      - playtime_last_two_weeks
+      - playtime_at_review
+      - last_played
+  filtros:
+    habilitado: false
+    combinacao: and
+    condicoes: []
+  transformacoes:
+    habilitado: false
+    operacoes: []
+  validacao:
+    falhar_se_colunas_ausentes: true
+    remover_duplicatas: true

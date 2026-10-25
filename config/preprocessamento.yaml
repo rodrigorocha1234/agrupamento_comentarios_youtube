@@ -1,0 +1,22 @@
+preprocessamento:
+  habilitado: true
+  valores_ausentes:
+    estrategia: median # mean | median | most_frequent | constant | knn
+    valor_constante: 0
+  escalonamento:
+    estrategia: standard # standard | minmax | robust | maxabs | none
+  transformacoes_numericas:
+    habilitado: false
+    estrategia: log1p # log1p | power | quantile
+  outliers:
+    habilitado: false
+    estrategia: iqr # iqr | isolation_forest | lof
+    acao: sinalizar # remover | sinalizar
+  selecao_atributos:
+    habilitado: false
+    estrategia: variancia # variancia | correlacao | manual
+    parametros: {}
+  reducao_dimensional:
+    habilitado: false
+    estrategia: pca # pca | truncated_svd
+    componentes: 2

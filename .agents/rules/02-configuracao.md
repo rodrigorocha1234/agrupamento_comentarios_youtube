@@ -1,9 +1,8 @@
----
-trigger: always_on
-description: Configuração declarativa do Steam Reviews Clustering v4.1.
----
-# Configuração declarativa
-- Toda mudança de comportamento parametrizável por YAML validado, com versão/hash e `ConfYAML` como ponto único de leitura.
-- Não usar `eval`/`exec` ou expressões Python arbitrárias do YAML. DSL declarativa por operadores registrados.
-- Segredos somente por variáveis de ambiente ou cofre; `extra=forbid` e validação cruzada entre arquivos.
-Fonte de verdade: `documentacao/especificacao_original_v4_1.md`.
+# Configuração
+
+- Toda opção variável do projeto deve ser configurável em YAML, com defaults documentados.
+- Centralizar leitura e validação YAML em `ConfYAML` (módulo sugerido: `conf_yaml.py`).
+- Validar estrutura, tipos, enums, limites e referências entre configurações antes de executar o pipeline.
+- Colunas, filtros, transformações, engenharia de atributos e regras de negócio devem poder ser ativados/desativados por configuração.
+- Transformações devem apontar para operações registradas e validadas; não executar código arbitrário do YAML.
+- Manter arquivos YAML separados por responsabilidade.

@@ -1,0 +1,23 @@
+observabilidade:
+  prometheus:
+    habilitado: true
+    caminho_metricas: /metrics
+  grafana:
+    habilitado: true
+    dashboards:
+      - coleta_steam
+      - qualidade_dados
+      - pipeline
+      - experimentos_clustering
+      - perfil_clusters
+      - api_infraestrutura
+  logs:
+    engine: loki
+    alloy_habilitado: true
+  metricas:
+    latencia_percentis: [0.50, 0.95, 0.99]
+    coletar_throughput: true
+    coletar_erros: true
+    coletar_retries: true
+    coletar_freshness: true
+    coletar_qualidade_dados: true

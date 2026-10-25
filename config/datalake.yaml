@@ -1,0 +1,17 @@
+datalake:
+  habilitado: true
+  tipo: s3 # s3 | rustfs
+  formato: parquet
+  bucket: "${DATA_BUCKET:-steam-reviews}"
+  endpoint_url: "${S3_ENDPOINT_URL:-http://127.0.0.1:9000}"
+  regiao: "${AWS_DEFAULT_REGION:-us-east-1}"
+  bronze:
+    prefixo: bronze
+  silver:
+    prefixo: silver
+  gold:
+    prefixo: gold
+  metadados:
+    incluir_timestamp_coleta: true
+    incluir_appid: true
+    incluir_versao_schema: true

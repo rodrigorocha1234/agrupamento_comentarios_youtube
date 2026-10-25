@@ -1,0 +1,9 @@
+regras_negocio:
+  habilitado: false
+  regras: []
+  # Exemplo futuro:
+  # - nome: cluster_com_alto_engajamento
+  #   habilitado: false
+  #   condicao_registrada: alto_engajamento
+  #   parametros:
+  #     minimo_playtime: 120

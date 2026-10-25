@@ -1,193 +1,234 @@
-# Especificação Técnica — Steam Reviews Clustering v4.1
-## Incremento 1: Fundação Arquitetural, Configuração Declarativa, Ingestão Lazy Steam, Staging Transacional e Data Lake
+# Especificação Técnica — Plataforma de Clustering de Avaliações Steam
 
-- **Status:** Proposta Técnica para Aprovação Humana (Approval Gate)
-- **Autor / Persona:** `@pm` em conjunto com `@ml_architect`, `@data_engineer` e `@devops`
-- **Data:** 24/10/2026
-- **Fonte de Verdade:** [`documentacao/especificacao_original_v4_1.md`](file:///home/rodrigo/PycharmProjects/agrupamento_comentarios_youtube/documentacao/especificacao_original_v4_1.md)
-- **Inventário de Referência:** [`production_artifacts/inventario.md`](file:///home/rodrigo/PycharmProjects/agrupamento_comentarios_youtube/production_artifacts/inventario.md)
+**Status:** Proposta Técnica Completa — Aguardando Aprovação do Usuário  
+**Versão:** 1.0.0  
+**Data:** 2026-10-24  
+**Repositório:** `agrupamento_comentarios_youtube` (Projeto Steam Reviews Clustering)
 
 ---
 
-## 1. Visão Geral e Objetivos do Incremento
+## 1. Visão Geral e Objetivos
 
-Este documento formaliza a arquitetura e os requisitos para o **Incremento 1** do projeto **Steam Reviews Clustering**. O objetivo primordial é estabelecer os alicerces estáveis da plataforma de dados, garantindo conformidade absoluta com as regras permanentes descritas no `AGENTS.md` e na especificação v4.1:
+### 1.1 Objetivo do Projeto
+Construir uma plataforma reutilizável, modular e desacoplada para ingestão, processamento e agrupamento não supervisionado (clustering) de avaliações da Steam a partir de atributos estritamente estruturados, configurável via arquivos YAML, com Processamento de Linguagem Natural (PLN) desativado por padrão.
 
-1. **Configuração Declarativa e Imutável:** Estabelecer a fachada única `ConfYAML` em `conf_yaml.py`, apoiada por modelos Pydantic estritos, eliminando qualquer uso de `eval`, `exec` ou caminhos com fallbacks implícitos.
-2. **Arquitetura Orientada a Contratos:** Construir as interfaces de domínio sem acoplamento a bibliotecas de infraestrutura externa, aplicando os padrões GoF (Strategy, Factory/Registry, Adapter, Repository, Unit of Work, Observer, Facade).
-3. **Coleta Steam com Geradores e Backpressure:** Implementar a extração paginada lazy da API Steam (`IUserReviewsService/GetAppReviews/v1`) via `Iterator[PaginaReviews]`, impedindo a materialização de grandes volumes na memória RAM.
-4. **Staging Transacional com SQLite:** Persistir registros brutos e metadados de controle em banco transacional SQLite local com modo WAL, transações atômicas por lote e controle de checkpoints.
-5. **Padrão Outbox e Publicação no Data Lake:** Desacoplar a gravação do banco transacional da escrita no RustFS S3 (Bronze original e Silver normalizado), garantindo reexecução idempotente e consistência eventual sem transações distribuídas frágeis.
-6. **Eliminação Conflitante de PLN:** Assegurar que o texto das reviews seja armazenado exclusivamente para consulta humana e auditoria, sem qualquer extração de embeddings, lematização ou sentimento nesta etapa.
+### 1.2 Personas e Usuários
+1. **Engenheiros de Dados:** Consomem dados da Steam Web API via ingestão incremental, gerenciam o Data Lakehouse (camadas Bronze, Silver e Gold) e monitoram a saúde operacional da coleta.
+2. **Cientistas de Dados / Engenheiros de ML:** Experimentam algoritmos de clustering (KMeans, DBSCAN, HDBSCAN), ajustam hiperparâmetros e avaliam métricas intrínsecas via MLflow Tracking.
+3. **Analistas de Negócio / Decisores de Produto:** Analisam o perfil dos grupos de jogadores (horas de jogo, votos, engajamento) por meio de dashboards visuais no Grafana e artefatos analíticos (gráficos interativos e tabelas de consulta humana das reviews originais).
 
----
-
-## 2. Escopo do Incremento Atual
-
-### 2.1. O Que Está no Escopo (Fase 1)
-- **Módulo de Configuração:**
-  - Fachada `ConfYAML` (`app/configuracao_geral/conf_yaml.py`) e modelos Pydantic tipados (`extra="forbid"`).
-  - Estrutura completa de 21 arquivos YAML declarativos na pasta `configuracoes/`.
-  - Validação cruzada e geração de hash de versão da configuração.
-  - Recriação de `.env.example` com placeholders seguros para a Steam e infraestrutura.
-- **Contratos e Domínio (`app/dominio_contratos/`):**
-  - Entidades imutáveis tipadas (`dataclass(frozen=True, slots=True)`): `ReviewSteam`, `AutorSteam`, `PaginaReviews`, `MetadadosColeta`.
-  - Protocolos de abstração: `ClienteSteam`, `GeradorPaginas`, `RepositorioStaging`, `UnidadeTrabalho`, `PublicadorOutbox`, `ArmazenamentoLake`.
-- **Ingestão e Cliente Steam (`app/extracao_steam/`):**
-  - Adaptador HTTP para o serviço `IUserReviewsService/GetAppReviews/v1`.
-  - Suporte a filtros documentados da API, conversão de enums numéricos e envio via `input_json`.
-  - Gerador paginado lazy via cursor (`*`), detecção de loops, controle de backoff exponencial e tratamento de HTTP 429.
-  - Modos de coleta: Histórica, Recente, Atualizada e Reconciliação Periódica.
-- **Staging Transacional (`app/persistencia_staging/`):**
-  - Adaptador SQLite (`AdaptadorSQLite`) com suporte a WAL e `busy_timeout`.
-  - Esquema DDL com 7 tabelas relacionais (`execucoes_coleta`, `paginas_recebidas`, `reviews_atuais`, `reviews_historico`, `autores_observados`, `marcadores_coleta`, `eventos_publicacao`).
-  - Implementação de `Unit of Work` e `RepositorioStaging` com processamento em lotes (`itertools.batched`).
-- **Data Lake e Outbox (`app/gestao_datalake/`):**
-  - Despachante de outbox para leitura de eventos pendentes.
-  - Adaptador de armazenamento S3/RustFS utilizando `boto3`.
-  - Escrita de particionamento da camada Bronze (`bronze/steam/reviews/appid=.../pagina_*.json`).
-  - Escrita da camada Silver normalizada em formato Parquet (`pyarrow`).
-- **Observabilidade Básica e Qualidade:**
-  - Exportação de métricas Prometheus (`steam_pages_consumed_total`, `staging_batches_committed_total`, etc.).
-  - Quality Gate inicial de validação estrutural de schemas e unicidade.
-  - Suíte de testes automatizados com `pytest` e type checking estrito com `pyright`.
-
-### 2.2. Fora de Escopo Deste Incremento (Fases Subsequentes)
-- **Fase 2:** Engenharia de atributos tabulares, motor Polars alternativo, pipelines de pré-processamento (imputação, escalonamento, PCA), algoritmos KMeans, DBSCAN e HDBSCAN.
-- **Fase 3:** Tuning de hiperparâmetros, avaliação silhouette/Davies-Bouldin, integração com tracking do MLflow e serving de modelos preditivos.
-- **Fase 4:** Motor declarativo de regras de negócio pós-treino (Specification/Composite) e relatórios analíticos em Grafana.
-- **Fase 5:** Adaptador para PostgreSQL como banco de staging em produção, análise temporal com alinhamento de clusters e módulos de expansão.
+### 1.3 Princípios de Design e Restrições Mandatórias
+- **Python 3.12+ e Tipagem Estrita:** Código em modo estrito (`pyright`), sem uso de `Any`, `typing.Any` ou `from typing import *`. Uso de `Protocol`, `Generic`, `TypeVar`, `Literal`, `@override` e tipagem completa.
+- **Nomenclatura em Português:** Módulos, classes, funções e exceções de domínio nomeados em português do Brasil, preservando nomes próprios de bibliotecas externas (`scikit-learn`, `MLflow`, `FastAPI`).
+- **Armazenamento Remoto Exclusivo no RustFS/S3:** A gestão do Data Lakehouse (camadas Bronze, Silver e Gold) ocorre estritamente no serviço RustFS/S3 integrado no Docker Compose (bucket `steam-reviews`). É expressamente vedada a criação de datalake ou persistência de dados em disco local.
+- **PLN Desativado por Padrão:** O texto da avaliação (`review`) é persistido nas camadas Bronze e Silver para consulta humana, mas é rigorosamente excluído da matriz de treino.
+- **Isolamento de Identificadores:** Identificadores (`steamid`, `recommendationid`, `appid`) nunca compõem os atributos de treino.
+- **Segurança na Configuração YAML:** Nenhuma execução dinâmica de código (`eval`, `exec`) é permitida. As transformações e filtros utilizam um catálogo seguro de operações mapeadas internamente.
+- **Reutilização da Infraestrutura Existente:** Integração direta com a stack Docker Compose já ativa (PostgreSQL, RustFS/S3, MLflow Server, Prometheus, Loki, Alloy e Grafana), sem criação de uma segunda stack.
 
 ---
 
-## 3. Diretrizes Arquiteturais e Padrões GoF Obrigatórios
+## 2. Arquitetura de Software e Padrões de Projeto
 
-1. **Regra de Nomenclatura e Pacotes:**
-   - Todos os nomes próprios (classes, funções, métodos, atributos, exceções) serão em língua portuguesa.
-   - Todo módulo ou pacote próprio conterá **exatamente duas palavras** separadas por `_` (exceções: `__init__.py`, `__main__.py`, `conftest.py`).
-2. **Tipagem Estrita sem `Any`:**
-   - Proibição absoluta do uso de `Any` ou `typing.Any`.
-   - Utilização intensiva de `Protocol`, `TypeVar`, `Generic`, `tuple`, `override` e `final`.
-   - `pyright` configurado em modo `strict` em todos os diretórios do projeto.
-3. **Proibição de Condicionais de Domínio por String/Tecnologia (No-If):**
-   - Não utilizar `if/elif` comparando nomes de banco ("sqlite", "postgres") ou tecnologias. A resolução será feita via **Registry** e **Factory**. Condicionais de fluxo de controle, validação de limites ou verificação de parada de iteradores são expressamente legítimas.
-4. **Preservação Textual sem PLN:**
-   - Os textos das avaliações e respostas de desenvolvedores serão preservados integralmente nas camadas Bronze e Staging apenas para fins de consulta do analista humano. Nenhum vetor de palavras, modelo BERT ou SpaCy será instanciado.
-
----
-
-## 4. Estrutura Física do Projeto no Incremento 1
-
-A organização das pastas no diretório `app/` respeitará rigorosamente o padrão de duas palavras:
-
-```text
-app/
-├── configuracao_geral/
-│   ├── __init__.py
-│   ├── conf_yaml.py                   # Fachada única de configuração tipada
-│   ├── modelos_configuracao.py        # Modelos Pydantic strict das configurações
-│   └── validador_compatibilidade.py   # Validação semântica e cruzada entre YAMLs
-├── dominio_contratos/
-│   ├── __init__.py
-│   ├── modelos_dados.py               # Dataclasses imutáveis do domínio (Review, Autor, Pagina)
-│   ├── protocolos_extracao.py         # Interfaces de clientes e fontes de coleta
-│   ├── protocolos_staging.py          # Interfaces de repositório, UoW e persistência
-│   └── protocolos_datalake.py         # Interfaces de publicação outbox e S3
-├── extracao_steam/
-│   ├── __init__.py
-│   ├── cliente_http.py                # Cliente de baixo nível requests/urllib com retry e backoff
-│   ├── adaptador_steam.py             # Implementação do serviço IUserReviewsService
-│   ├── gerador_paginas.py             # Iterator/Generator lazy paginado por cursor
-│   └── controlador_resiliencia.py     # Gestão de HTTP 429, jitter e pausas
-├── persistencia_staging/
-│   ├── __init__.py
-│   ├── conexao_sqlite.py              # Gestão da conexão SQLite (WAL, timeouts)
-│   ├── esquema_tabelas.py             # DDL e criação das 7 tabelas do staging
-│   ├── unidade_trabalho.py            # Unit of Work para demarcação transacional
-│   ├── repositorio_sqlite.py          # Implementação de RepositorioStaging em SQLite
-│   └── fabrica_staging.py             # Registry e Factory para instanciar persistência
-├── gestao_datalake/
-│   ├── __init__.py
-│   ├── cliente_rustfs.py              # Conector S3 / RustFS via boto3
-│   ├── escritor_bronze.py             # Persistência de JSON original imutável
-│   ├── escritor_prata.py              # Normalização tabular em Parquet
-│   └── despachante_outbox.py          # Consumidor de eventos da tabela de outbox
-└── observabilidade_metricas/
-    ├── __init__.py
-    ├── registro_telemetria.py         # Métricas Prometheus instrumentadas
-    └── validador_qualidade.py         # Quality Gate de tipos, integridade e duplicatas
-```
-
----
-
-## 5. Modelagem e Estrutura do Staging Relacional (SQLite)
-
-O banco de dados SQLite local operará em modo **WAL (Write-Ahead Logging)** com as seguintes 7 tabelas relacionais mínimas:
-
-1. `execucoes_coleta`: Registra cada sessão de coleta com `id_execucao` (UUID), `appid`, `estrategia`, `data_inicio`, `data_fim`, `status`, `total_paginas`, `total_reviews`, `erros`.
-2. `paginas_recebidas`: Identificador idempotente da página, `id_execucao`, `appid`, `cursor_entrada`, `cursor_saida`, `hash_conteudo`, `total_registros`, `data_coleta`.
-3. `reviews_atuais`: Registro atualizado indexado por `(appid, recommendationid)`, contendo `steamid`, `language`, `review_texto` (consulta humana), timestamps, métricas numéricas (`playtime_forever`, `playtime_at_review`, etc.), `hash_semantico`, `data_ultima_coleta`.
-4. `reviews_historico`: Tabela de snapshots versionados com chave `(appid, recommendationid, versao_registro)` para manter a linhagem das atualizações feitas pelos usuários ao longo do tempo.
-5. `autores_observados`: Métricas do autor (`steamid`, `appid`, `num_games_owned`, `num_reviews`, `playtime_forever`, `data_observacao`).
-6. `marcadores_coleta`: Checkpoints de rastreamento por `appid` + `estrategia`, guardando o último cursor estável, instante de atualização e status.
-7. `eventos_publicacao`: Tabela de **outbox** transacional (`id_evento`, `tipo_evento`, `chave_origem`, `payload_referencia`, `status_publicacao`, `tentativas`, `data_criacao`, `data_publicacao`).
-
----
-
-## 6. Fluxo de Execução com Backpressure
+A arquitetura do sistema adota princípios SOLID e padrões de projeto GoF com baixo acoplamento:
 
 ```mermaid
-sequenceDiagram
-    autonumber
-    participant App as Orquestrador / CLI
-    participant Config as ConfYAML
-    participant API as Steam API
-    participant Gen as GeradorPaginas (Iterator)
-    participant Staging as RepositorioStaging (SQLite)
-    participant UoW as UnidadeTrabalho
-    participant Outbox as DespachanteOutbox
-    participant Lake as RustFS S3 (Bronze/Silver)
+flowchart TD
+    subgraph Ingestao [Ingestão & Data Lakehouse no RustFS/S3]
+        A[Steam Web API] -->|Cursor / HTTP| B[ColetorSteam]
+        B -->|Payload Bruto| C[(Bronze: RustFS S3)]
+        C -->|Normalização & Limpeza| D[(Silver: RustFS S3)]
+    end
 
-    App->>Config: Carregar configurações validadas
-    App->>Gen: Iniciar iterar_paginas(appid, cursor='*')
-    loop Para cada página retornada (lazy)
-        Gen->>API: GET GetAppReviews/v1 (input_json)
-        API-->>Gen: JSON da página + próximo cursor
-        Gen-->>App: yield PaginaReviews
-        App->>UoW: Iniciar transação de lote
-        App->>Staging: Gravar página, reviews e eventos de outbox
-        App->>UoW: Commit transacional + atualizar checkpoint
+    subgraph Preparacao [Engenharia de Atributos & Preparação]
+        D -->|Seleção Segura & Filtros| E[PreparadorDados]
+        E -->|Transformações Seguras| F[EngenheiroAtributos]
+        F -->|Matriz de Treino & Identificadores| G[(Gold: RustFS S3)]
     end
-    App->>Outbox: Processar eventos pendentes da outbox
-    loop Para cada lote de eventos
-        Outbox->>Lake: Gravar JSON imutável (Bronze)
-        Outbox->>Lake: Normalizar e gravar Parquet (Silver)
-        Outbox->>Staging: Marcar evento como publicado
+
+    subgraph Modelagem [Clustering & Rastreamento]
+        G --> H[FabricaClustering]
+        H -->|Strategy| I[MotorClustering - KMeans / DBSCAN / HDBSCAN]
+        I --> J[AvaliadorClusters]
+        J -->|Métricas & Artefatos| K[RastreadorMLflow - Observer]
     end
+
+    subgraph Entrega [Análises, API & Observabilidade]
+        I --> L[AnalisadorClusters]
+        L -->|HTML Plotly / Perfis| M[Artefatos Analíticos]
+        I --> N[ServicoAPI - FastAPI]
+        B & E & I & N -->|Métricas & Logs| O[Prometheus / Loki / Grafana]
+    end
+```
+
+### 2.1 Padrões de Projeto Adotados
+1. **Strategy (`MotorClusteringProtocol`):** Encapsula os algoritmos de clustering (KMeans, DBSCAN, HDBSCAN nativo do scikit-learn). Permite trocar o algoritmo via configuração sem alterar o pipeline.
+2. **Factory (`FabricaClustering`):** Resolve e instancia a estratégia correta com base no arquivo `clustering.yaml`.
+3. **Adapter (`MotorProcessamentoProtocol`):** Abstrai operações tabulares para o motor padrão `Pandas`, permitindo futura extensão para `Polars` através da mesma interface.
+4. **Repository (`RepositorioS3Lakehouse`):** Isola operações de I/O das camadas Bronze, Silver e Gold diretamente no RustFS/S3 (bucket `steam-reviews`), sem persistência no disco local.
+5. **Observer (`ObservadorMLflow`):** Notificado durante o ciclo de modelagem para registrar hiperparâmetros, métricas, modelos e artefatos analíticos no MLflow Server.
+6. **Facade (`FachadaPipeline`):** Ponto de entrada unificado que orquestra a execução end-to-end do fluxo (coleta, saneamento, engenharia, treinamento, avaliação e exportação).
+
+---
+
+## 3. Contratos de Dados e Esquema do Data Lakehouse
+
+### 3.1 Esquema da Camada Silver
+Campos estruturados normalizados a partir do endpoint `IUserReviewsService/GetAppReviews/v1/`:
+
+| Coluna | Tipo | Finalidade | No Treino? |
+| :--- | :--- | :--- | :--- |
+| `recommendationid` | `str` | Chave primária única da review (deduplicação) | **Não** (Identificador) |
+| `appid` | `int` | Identificador do jogo na Steam | **Não** (Identificador) |
+| `steamid` | `str` | Identificador do autor | **Não** (Identificador) |
+| `review` | `str` | Texto da avaliação | **Não** (Apenas consulta humana) |
+| `timestamp_created` | `datetime` | Data/hora de publicação | **Não** (Metadado/Avaliação) |
+| `timestamp_updated` | `datetime` | Data/hora da última alteração | **Não** (Metadado/Avaliação) |
+| `voted_up` | `bool` | Recomendação positiva (`True`) ou negativa (`False`) | Opcional (Booleano codificado 0/1) |
+| `votes_up` | `int` | Quantidade de votos úteis | **Sim** (Atributo numérico) |
+| `votes_funny` | `int` | Quantidade de votos engraçados | **Sim** (Atributo numérico) |
+| `weighted_vote_score` | `float` | Score de relevância ponderada | **Sim** (Atributo numérico) |
+| `comment_count` | `int` | Quantidade de comentários | **Sim** (Atributo numérico) |
+| `num_reviews` | `int` | Total de reviews já feitas pelo autor | **Sim** (Atributo numérico) |
+| `playtime_forever` | `int` | Tempo total de jogo do autor (minutos) | **Sim** (Atributo numérico) |
+| `playtime_last_two_weeks`| `int` | Tempo de jogo nas últimas 2 semanas (minutos) | **Sim** (Atributo numérico) |
+| `playtime_at_review` | `int` | Tempo de jogo no momento da review (minutos) | **Sim** (Atributo numérico) |
+| `last_played` | `datetime` | Data/hora da última sessão de jogo | **Não** (Metadado/Avaliação) |
+
+### 3.2 Catálogo Seguro de Transformações (Sem `eval`/`exec`)
+O pré-processamento (`preprocessamento.yaml`) e engenharia de atributos utilizam um registro fechado e tipado:
+- **Imputação:** `media`, `mediana`, `mais_frequente`, `constante` (via `SimpleImputer`).
+- **Escalonamento:** `padrao` (`StandardScaler`), `robusto` (`RobustScaler`), `minmax` (`MinMaxScaler`), `maxabs` (`MaxAbsScaler`).
+- **Transformações Numéricas:** `log1p` (`np.log1p`), `power` (`PowerTransformer`), `quantile` (`QuantileTransformer`).
+- **Detecção/Tratamento de Outliers:** `iqr` (Intervalo Interquartil com corte configurável), `isolation_forest`. Ação: sinalizar coluna booleana ou filtrar.
+- **Redução Dimensional:** `pca` (`PCA`), `truncated_svd` (`TruncatedSVD`) para projeções 2D/3D.
+
+---
+
+## 4. Matriz de Compatibilidade dos Algoritmos de Clustering
+
+| Capacidade / Algoritmo | KMeans | DBSCAN | HDBSCAN |
+| :--- | :--- | :--- | :--- |
+| **Origem** | `sklearn.cluster.KMeans` | `sklearn.cluster.DBSCAN` | `sklearn.cluster.HDBSCAN` |
+| **Possui Centroides?** | Sim (`cluster_centers_`) | Não | Não |
+| **Trata Ruído / Outliers?** | Não (atribui 100% dos pontos) | Sim (rótulo `-1`) | Sim (rótulo `-1`) |
+| **Suporta Previsão Out-of-Sample?**| Sim (`predict`) | Não (transdutivo puro) | Sim (via `approximate_predict` do sklearn) |
+| **Determinação de Clusters** | Fixado pelo usuário (`k`) | Baseado em densidade (`eps`, `min_samples`) | Hierárquico por densidade (`min_cluster_size`) |
+| **Métricas Aplicáveis** | Silhouette, Davies-Bouldin, Calinski-Harabasz | Silhouette (pontos sem ruído), Taxa de Ruído | Silhouette (pontos sem ruído), Taxa de Ruído |
+
+> [!IMPORTANT]
+> O módulo `AvaliadorClusters` calcula métricas como Silhouette apenas para amostras não rotuladas como ruído (`rótulo != -1`), reportando separadamente a proporção de ruído. Caso haja apenas um cluster ou apenas ruído, o sistema emite diagnóstico seguro sem levantar exceção fatal.
+
+---
+
+## 5. Estrutura Proposta de Módulos em `app/`
+
+```
+app/
+├── __init__.py
+├── conf_yaml.py                  # Modelos Pydantic v2 estritos e leitor centralizado ConfYAML
+├── excecoes.py                   # Hierarquia de exceções de domínio em português
+├── contratos/
+│   ├── __init__.py
+│   ├── fonte_dados.py           # Protocol para fontes de dados
+│   ├── motor_processamento.py   # Protocol para motores tabulares (Pandas/Polars)
+│   ├── motor_clustering.py      # Protocol para algoritmos de clustering
+│   ├── repositorio.py           # Protocol para persistência de dados
+│   └── observador.py            # Protocol para rastreamento (Observer)
+├── extracao_steam/
+│   ├── __init__.py
+│   ├── cliente_steam_api.py     # Cliente HTTP com cursor, retries e rate limit
+│   └── coletor_steam.py         # Orquestrador da coleta incremental
+├── gestao_datalake/
+│   ├── __init__.py
+│   └── repositorio_s3_lakehouse.py   # Repositório remoto no RustFS/S3 (sem I/O local)
+├── processamento_dados/
+│   ├── __init__.py
+│   ├── catalogo_operacoes.py    # Registro de operações seguras (sem eval/exec)
+│   ├── motor_pandas.py          # Implementação tabular Pandas
+│   └── motor_polars.py          # Implementação tabular Polars (Strategy)
+├── preprocessamento_ml/
+│   ├── __init__.py
+│   ├── preparador_dados.py      # Filtros, limpeza e validação de schema
+│   ├── engenheiro_atributos.py  # Seleção segura e transformações numéricas
+│   └── transformadores.py       # Imputador, escalonador e redutor PCA
+├── treinamento_pipeline/
+│   ├── __init__.py
+│   ├── motores_sklearn.py       # Strategies para KMeans, DBSCAN e HDBSCAN
+│   ├── fabrica_clustering.py    # Factory para resolver algoritmo a partir do YAML
+│   ├── avaliador_clusters.py    # Métricas adaptativas (Silhouette, Ruído, etc.)
+│   └── rastreador_mlflow.py     # Observer que reporta ao MLflow Server
+├── analise_clusters/
+│   ├── __init__.py
+│   ├── gerador_graficos.py      # Gráficos interativos Plotly (dispersão, boxplot, perfil)
+│   └── analisador_clusters.py   # Perfil de jogadores, correlações e tabela de reviews
+├── servico_api/
+│   ├── __init__.py
+│   ├── aplicacao_fastapi.py     # Fábrica da aplicação FastAPI
+│   ├── esquemas_api.py          # Modelos de requisição e resposta Pydantic
+│   └── rotas.py                 # Endpoints /health, /ready, /metrics, /clusters, /predict
+└── fachada_pipeline.py          # Facade unificada de orquestração do fluxo completo
 ```
 
 ---
 
-## 7. Critérios de Aceite Mensuráveis (Definition of Done)
+## 6. Observabilidade e Telemetria
 
-1. **Conformidade de Tipagem:** `pyright` executado no modo `strict` em todo o código criado com **0 erros** e nenhuma ocorrência de `Any`.
-2. **Padrão de Nomenclatura:** Todos os módulos e pacotes com exatamente 2 palavras separadas por `_`. Classes e métodos exclusivamente em português.
-3. **Consumo Lazy e Memória Constante:** O gerador de páginas consome a Steam página a página, sem acumular listas completas na memória. Teste com 1.000 reviews simuladas consome buffer constante.
-4. **Atomicidade e Idempotência no Staging:** Ingestão interrompida e retomada não gera duplicidades na chave `(appid, recommendationid)` e retoma a partir do último checkpoint confirmado.
-5. **Gravação no Data Lake via Outbox:** Publicação de lotes no RustFS S3 com arquivo JSON em `bronze/` e tabela normalizada em `silver/`, com status de outbox devidamente atualizado.
-6. **Cobertura de Testes Automatizados:** Suíte de testes unitários e de integração cobrindo:
-   - Validação da fachada `ConfYAML` e rejeição de chaves inválidas.
-   - Padrão iterator do gerador Steam e tratamento de cursor repetido.
-   - Rollback transacional da `UnidadeTrabalho` em caso de falha no lote.
-   - Processamento e idempotência da outbox.
+### 6.1 Métricas Prometheus
+- **Operacionais:**
+  - `steam_coleta_duracao_segundos` (Histogram p50/p95/p99)
+  - `steam_coleta_requisicoes_total` (Counter por status e appid)
+  - `steam_coleta_erros_total` (Counter de retries e timeouts)
+  - `steam_reviews_coletadas_total` (Counter de avaliações processadas)
+  - `pipeline_etapa_duracao_segundos` (Histogram por etapa: extracao, silver, gold, treino)
+- **Analíticas / ML:**
+  - `clustering_silhouette_score` (Gauge)
+  - `clustering_davies_bouldin_index` (Gauge)
+  - `clustering_calinski_harabasz_score` (Gauge)
+  - `clustering_proporcao_ruido` (Gauge para DBSCAN/HDBSCAN)
+  - `clustering_quantidade_clusters` (Gauge)
+
+### 6.2 Dashboards Grafana
+Provisionamento automático em `config_ob/dashboards/`:
+1. `dashboard_operacional_coleta.json`: Latência, requisições, retries, freshness e contagem de reviews.
+2. `dashboard_qualidade_datalake.json`: Volume em Bronze/Silver/Gold, duplicatas descartadas e integridade de schema.
+3. `dashboard_experimentos_clustering.json`: Histórico de modelos treinados, métricas de agrupamento e proporção de ruído.
+4. `dashboard_perfil_clusters.json`: Comparativo de horas jogadas, votos e sentimento (`voted_up`) entre os clusters.
 
 ---
 
-## 8. Avaliação de Riscos e Estratégias de Mitigação
+## 7. Plano de Entregáveis Incrementais e Critérios de Aceitação
 
-| Risco Identificado | Impacto | Estratégia de Mitigação |
-|---|---|---|
-| **Rate Limit da Steam (HTTP 429)** | Alto | Implementação de `ControladorResiliencia` com backoff exponencial, jitter aleatório e pausa automática de até 300 segundos em caso de 429. |
-| **Concorrência no SQLite** | Médio | Configuração de modo WAL (`PRAGMA journal_mode=WAL;`), timeout estendido (`busy_timeout=30000`) e garantia de escritor único por processo de ingestão. |
-| **Permissões nas pastas montadas** | Médio | Pastas `app/` e `configuracoes/` atualmente pertencem a `root:root`. Criar os arquivos pelo ambiente seguro ou sugerir ajuste de permissões locais (`chown`) caso necessário. |
-| **Vazamento acidental de segredos** | Crítico | Chave da Steam referenciada via `key_env: STEAM_API_KEY`, resolvida em runtime e mascarada em todos os registros de logs e métricas. |
+### Fase 1: Configuração Centralizada & Contratos Base
+- **Entregáveis:** `conf_yaml.py`, `excecoes.py`, `contratos/` com Protocols estritos e validação completa dos 13 arquivos YAML.
+- **Critérios de Aceitação:** 100% de cobertura nos testes de leitura/validação YAML; rejeição automática de parâmetros espúrios e ausência de `eval`/`exec`; aprovação no `pyright --mode strict`.
+
+### Fase 2: Ingestão Steam API & Camadas Bronze/Silver no RustFS/S3
+- **Entregáveis:** `cliente_steam_api.py`, `coletor_steam.py`, `repositorio_s3_lakehouse.py`.
+- **Critérios de Aceitação:** Paginação por cursor funcional; suporte a múltiplos `appid`; retries com backoff exponencial; deduplicação idempotente por `recommendationid`; persistência direta no bucket `steam-reviews` do RustFS/S3 (sem I/O local) com particionamento e metadados nas camadas Bronze e Silver. Testes unitários com mocks de API e chamadas S3.
+
+### Fase 3: Engenharia de Atributos & Pré-processamento Seguro
+- **Entregáveis:** `preparador_dados.py`, `engenheiro_atributos.py`, `catalogo_operacoes.py`, `motor_pandas.py`.
+- **Critérios de Aceitação:** Separação estrita de identificadores e texto; transformações seguras via catálogo tipado; gravação da camada Gold (matriz X pronta para treino). Testes de sanidade de schema e imputação.
+
+### Fase 4: Motor de Clustering, Avaliação e MLflow Tracking
+- **Entregáveis:** `motores_sklearn.py`, `fabrica_clustering.py`, `avaliador_clusters.py`, `rastreador_mlflow.py`.
+- **Critérios de Aceitação:** Execução de KMeans, DBSCAN e HDBSCAN; cálculo adaptativo de métricas com isolamento de ruído; registro bem-sucedido de parâmetros, métricas e modelo no MLflow Server (`http://mlflow-server:5000`); testes unitários e de casos de borda (ruído total, cluster único).
+
+### Fase 5: Análises de Negócio, API FastAPI e Observabilidade
+- **Entregáveis:** `analisador_clusters.py`, `gerador_graficos.py`, `servico_api/`, dashboards Grafana em `config_ob/dashboards/`, `fachada_pipeline.py`.
+- **Critérios de Aceitação:** Gráficos interativos em HTML e perfil de cluster; API FastAPI expondo `/health`, `/ready`, `/metrics`, `/clusters` e `/predict` (condicionado ao algoritmo); instrumentação Prometheus ativa; testes de integração ponta a ponta.
+
+---
+
+## 8. Estratégia de Testes e QA
+
+1. **Testes Unitários:** Cada módulo terá suite correspondente em `tests/` (`teste_conf_yaml.py`, `teste_coletor_steam.py`, `teste_preparador.py`, `teste_clustering.py`, `teste_avaliador.py`, `teste_api.py`).
+2. **Casos de Borda Obrigatórios:**
+   - Resposta vazia da Steam API.
+   - Presença de duplicatas e identificadores nulos.
+   - Atributos com variância zero ou dados totalmente ausentes.
+   - DBSCAN classificando 100% dos dados como ruído (`-1`).
+   - Algoritmo que produz um único cluster (tratamento gracioso de métricas).
+   - Tentativa de chamar `/predict` em algoritmo sem suporte (ex: DBSCAN).
+3. **Verificação Estática:** Execução automatizada de `pyright` (modo estrito) e `ruff` antes de qualquer entrega.

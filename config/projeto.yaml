@@ -1,0 +1,18 @@
+projeto:
+  nome: steam_reviews_clustering
+  ambiente: desenvolvimento
+  idioma: pt-BR
+
+funcionalidades:
+  pln:
+    habilitado: false
+  analise_temporal:
+    habilitado: false
+  api:
+    habilitado: true
+  mlflow:
+    habilitado: true
+
+execucao:
+  modo: incremental
+  falhar_em_configuracao_invalida: true

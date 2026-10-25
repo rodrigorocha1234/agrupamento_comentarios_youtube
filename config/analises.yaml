@@ -1,0 +1,27 @@
+analises:
+  engine: plotly # plotly | altair | pandas_profiling
+  clusters:
+    dispersao_2d: true
+    dispersao_3d: false
+    distribuicao: true
+    perfil: true
+    resumo: true
+    boxplot: true
+    violin: true
+    histogramas: true
+    matriz_correlacao: true
+    scatter_matrix: false
+    pca_2d: true
+    pca_3d: false
+    silhouette_plot: true
+    ruido: true
+    distancia_centroides: true # só se algoritmo suportar centroides
+    recomendacoes_por_cluster: false
+    playtime_por_cluster: true
+    interacoes_atributos: true
+    comparar_appids: false
+    tabela_reviews_original: true
+    evolucao_temporal: false
+  exportacao:
+    habilitada: false
+    formato: html

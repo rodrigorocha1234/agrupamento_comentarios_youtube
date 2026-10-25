@@ -1,0 +1,11 @@
+mlflow:
+  habilitado: true
+  tracking_uri: "${MLFLOW_TRACKING_URI}"
+  experiment_name: steam_reviews_clustering
+  registrar_parametros: true
+  registrar_metricas: true
+  registrar_modelo: true
+  registrar_artefatos: true
+  tags:
+    projeto: steam_reviews_clustering
+    pln: "desabilitado"

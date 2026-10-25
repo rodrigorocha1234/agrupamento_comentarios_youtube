@@ -1,35 +1,30 @@
-# Pacote de agentes Google Antigravity — Steam Reviews Clustering v4.1
+# Steam Reviews Clustering — Google Antigravity Scaffold
 
-Configuração de **agentes personalizados**, **regras persistentes** e **skills** pronta para incorporar à raiz de um repositório Antigravity; **não é um aplicativo implementado** e não inicia serviços.
+Scaffold inicial para um projeto extensível de agrupamento não supervisionado de avaliações da Steam, sem PLN por padrão.
 
-## Instalação
-1. Faça backup/commit da raiz do seu projeto.
-2. Extraia o conteúdo **na raiz do repositório** (sem aninhar outra pasta). Mescle arquivos com cuidado se já existirem `.agents/` e `AGENTS.md`.
-3. Abra a raiz como workspace Antigravity e confira reconhecimento das skills.
-4. Experimente `/inventariar-projeto`, depois `/planejar-incremento`. Após aprovação explícita, `/ciclo-completo` ou skills específicas.
-5. No Antigravity CLI, `/agents` permite escolher as personas instaladas em `.agents/agents/<nome>/agent.md`; suporte de delegação muda conforme a superfície.
+## Como usar
+1. Extraia o ZIP em uma pasta de workspace.
+2. Abra a pasta no Google Antigravity.
+3. Leia `AGENTS.md`, `.agents/rules/` e `specs/`.
+4. Comece pela Skill `planejar-steam` e revise a especificação antes de implementar.
+5. Confira o `docker-compose.yml` existente antes de adicionar ou alterar infraestrutura.
 
-## Notas de compatibilidade (consulta em 24/10/2026)
-- A documentação oficial reconhece regras em `.agents/rules/*.md` com frontmatter `trigger` e skills em `.agents/skills/<nome>/SKILL.md`.
-- A documentação informa descontinuação dos **workflows legados** em outubro de 2026; por isso **não** foi criado `.agents/workflows/`.
-- O artigo de Peterson Pereira orienta ciclo com @pm, @engineer, @qa, @devops e Approval Gate; este pacote expande as especialidades ao domínio de ML/engenharia de dados.
-- `.agents/agents.md` é catálogo de papéis para humanos/IDE; os arquivos `agent.md` individuais são custom agents da **CLI** documentados oficialmente. A existência dos arquivos não garante execução autônoma paralela no IDE.
+## Princípios
+- Python 3.12+; tipagem estrita; não usar `Any` nem `typing.Any`.
+- Configuração variável em YAML.
+- Não executar expressões Python arbitrárias vindas do YAML com `eval`/`exec`; usar catálogo de transformações validadas.
+- PLN desativado por padrão; o texto da avaliação fica disponível para consulta humana, não como atributo de modelagem.
+- Separar identificadores, atributos de treino e atributos de avaliação.
+- Abstrair algoritmos, motores de processamento e fontes com contratos/Protocol e padrões Strategy, Factory, Adapter, Repository, Observer e Facade quando apropriado.
+- Inspecionar primeiro os arquivos e a infraestrutura existentes. Não sobrescrever decisões aprovadas silenciosamente.
 
-## Conteúdo
-- `AGENTS.md`: regras de escopo geral.
-- `.agents/rules/`: regras ativas e condicionais.
-- `.agents/agents/`: 9 personas customizadas.
-- `.agents/skills/`: 10 procedimentos reutilizáveis por slash command.
-- `documentacao/especificacao_original_v4_1.md`: anexo integral como fonte de verdade.
-- `documentacao/roteiro_implementacao.md`: sequência incremental.
-- `production_artifacts/`: modelos para handoff e aprovação.
+## Estrutura
+- `.agents/agents/`: agentes especializados.
+- `.agents/rules/`: restrições persistentes.
+- `.agents/skills/`: procedimentos acionáveis com `SKILL.md`.
+- `specs/`: especificações técnicas.
+- `config/`: configuração de exemplo por responsabilidade.
+- `app/`: ponto de partida do código da aplicação.
+- `tests/`: ponto de partida dos testes.
 
-## Fontes verificadas
-- Artigo: https://pt.linkedin.com/pulse/google-antigravity-na-pr%C3%A1tica-criando-um-pipeline-com-peterson-alves-nm7of
-- Regras oficiais: https://antigravity.google/docs/rules/
-- Skills oficiais: https://antigravity.google/docs/skills/
-- Migração workflows → skills: https://antigravity.google/docs/migration/workflows-to-skills/
-- Custom agents na CLI: https://antigravity.google/docs/cli/commands/agents/
-
-## Limite
-Não foi fornecido repositório completo nem Compose existente nesta solicitação; o pacote determina que o primeiro agente faça o inventário real **antes** de propor alterações. Nenhum serviço ou teste de implementação foi executado.
+Este ZIP é um scaffold documental/configuracional; não é uma implementação funcional completa do pipeline.

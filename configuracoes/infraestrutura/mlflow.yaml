@@ -1,9 +1,0 @@
-mlflow:
-  ativado: true
-  tracking_uri_env: MLFLOW_TRACKING_URI
-  experimento: steam_reviews_clustering
-  artefatos_destino_env: MLFLOW_ARTIFACTS_DESTINATION
-  registrar_modelos: true
-  serving:
-    ativado: false
-    porta: 8080

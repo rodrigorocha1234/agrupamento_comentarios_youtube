@@ -1,0 +1,18 @@
+avaliacao:
+  metricas:
+    silhouette:
+      habilitado: true
+    davies_bouldin:
+      habilitado: true
+    calinski_harabasz:
+      habilitado: true
+    proporcao_ruido:
+      habilitado: true
+    distribuicao_clusters:
+      habilitado: true
+  restricoes:
+    minimo_clusters_sem_ruido: 2
+    permitir_cluster_unico: false
+  estabilidade:
+    habilitado: false
+    repeticoes: 5

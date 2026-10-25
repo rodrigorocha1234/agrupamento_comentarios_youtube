@@ -1,0 +1,15 @@
+api:
+  habilitado: true
+  prefixo: /api/v1
+  endpoints:
+    health: /health
+    ready: /ready
+    metrics: /metrics
+    model: /model
+    clusters: /clusters
+    predict: /predict
+    predict_batch: /predict-batch
+  limites:
+    tamanho_lote_maximo: 1000
+  previsao:
+    exigir_suporte_do_algoritmo: true

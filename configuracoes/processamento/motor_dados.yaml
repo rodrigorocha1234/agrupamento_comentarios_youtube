@@ -1,4 +1,0 @@
-motor_dados:
-  tipo: pandas
-  usar_lazy: true
-  otimizar_memoria: true
