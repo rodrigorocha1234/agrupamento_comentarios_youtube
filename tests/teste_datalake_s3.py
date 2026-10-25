@@ -45,6 +45,15 @@ class ClienteS3Fake:
         conteudo = self.objetos[(bucket, key)]
         return RespostaGetObjectFake(conteudo)
 
+    def list_objects_v2(self, **kwargs: object) -> dict[str, list[dict[str, object]]]:
+        bucket = str(kwargs.get("Bucket", ""))
+        prefix = str(kwargs.get("Prefix", ""))
+        contents: list[dict[str, object]] = []
+        for b, k in self.objetos:
+            if b == bucket and k.startswith(prefix):
+                contents.append({"Key": k})
+        return {"Contents": contents}
+
 
 def test_gravar_bronze_gera_parquet_no_s3() -> None:
     """Verifica que a gravação na camada Bronze gera objeto Parquet na chave particionada."""

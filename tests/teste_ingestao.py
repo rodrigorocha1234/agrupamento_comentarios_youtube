@@ -54,6 +54,14 @@ class RepositorioEmMemoriaFake(ProtocoloRepositorioLakehouse):
         return f"s3://fake-bucket/gold/{identificador}/{sufixo_visao}.parquet"
 
     @override
+    def ler_bronze(self, identificador: str | int) -> pd.DataFrame:
+        registros: list[dict[str, object]] = []
+        for id_lote, lote in self.bronze_lotes:
+            if id_lote == identificador:
+                registros.extend(lote)
+        return pd.DataFrame(registros) if registros else pd.DataFrame()
+
+    @override
     def ler_silver(self, identificador: str | int) -> pd.DataFrame:
         if identificador in self.silver_dados:
             return self.silver_dados[identificador]

@@ -46,6 +46,10 @@ class RepositorioGoldFake(ProtocoloRepositorioLakehouse):
         return f"s3://datalake-bucket/gold/{chave}.parquet"
 
     @override
+    def ler_bronze(self, identificador: str | int) -> pd.DataFrame:
+        return pd.DataFrame()
+
+    @override
     def ler_silver(self, identificador: str | int) -> pd.DataFrame:
         return pd.DataFrame()
 
