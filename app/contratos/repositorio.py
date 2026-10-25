@@ -20,6 +20,10 @@ class ProtocoloRepositorioLakehouse(Protocol):
         """Grava matriz de atributos ou resultados finais na camada Gold no RustFS/S3 e retorna a URI (s3://...)."""
         ...
 
+    def ler_bronze(self, identificador: str | int) -> pd.DataFrame:
+        """Lê os dados da camada Bronze para o identificador informado a partir do RustFS/S3."""
+        ...
+
     def ler_silver(self, identificador: str | int) -> pd.DataFrame:
         """Lê os dados da camada Silver para o identificador informado a partir do RustFS/S3."""
         ...

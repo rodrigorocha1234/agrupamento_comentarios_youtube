@@ -91,3 +91,6 @@ class FabricaFontes:
             f"Tipo de fonte de dados '{tipo_fonte}' não suportado. "
             f"Tipos autorizados: 'steam_api', 'banco_dados', 'api_rest'."
         )
+
+
+FabricaFontesDados = FabricaFontes

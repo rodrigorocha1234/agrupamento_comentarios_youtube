@@ -27,6 +27,7 @@ class ProtocoloClienteS3(Protocol):
 
     def put_object(self, **kwargs: object) -> object: ...
     def get_object(self, **kwargs: object) -> ProtocoloRespostaGetObject: ...
+    def list_objects_v2(self, **kwargs: object) -> dict[str, list[dict[str, object]]]: ...
 
 
 class RepositorioS3Lakehouse(ProtocoloRepositorioLakehouse):
@@ -34,22 +35,22 @@ class RepositorioS3Lakehouse(ProtocoloRepositorioLakehouse):
 
     def __init__(
         self,
-        config: ConfigDatalakeInfo,
+        config: ConfigDatalakeInfo | None = None,
         cliente_s3: ProtocoloClienteS3 | None = None,
     ) -> None:
-        self._config = config
-        self._bucket = config.bucket
-        self._prefixo_bronze = config.bronze.prefixo.strip("/")
-        self._prefixo_silver = config.silver.prefixo.strip("/")
-        self._prefixo_gold = config.gold.prefixo.strip("/")
+        self._config = config or ConfigDatalakeInfo()
+        self._bucket = self._config.bucket
+        self._prefixo_bronze = self._config.bronze.prefixo.strip("/")
+        self._prefixo_silver = self._config.silver.prefixo.strip("/")
+        self._prefixo_gold = self._config.gold.prefixo.strip("/")
 
         if cliente_s3 is not None:
             self._s3 = cliente_s3
         else:
-            endpoint_url = config.endpoint_url
+            endpoint_url = self._config.endpoint_url
             aws_access_key = os.environ.get("AWS_ACCESS_KEY_ID", "admin")
             aws_secret_key = os.environ.get("AWS_SECRET_ACCESS_KEY", "admin12345")
-            regiao = config.regiao
+            regiao = self._config.regiao
 
             self._s3 = boto3.client(
                 "s3",
@@ -142,6 +143,32 @@ class RepositorioS3Lakehouse(ProtocoloRepositorioLakehouse):
         except Exception as exc:
             raise ErroDatalake(
                 f"Falha ao gravar visão Gold ({chave_s3}): {exc}"
+            ) from exc
+
+    @override
+    def ler_bronze(self, identificador: str | int) -> pd.DataFrame:
+        """Lê os dados brutos da camada Bronze para o identificador a partir do RustFS/S3."""
+        prefixo = f"{self._prefixo_bronze}/{identificador}/"
+        try:
+            resposta = self._s3.list_objects_v2(Bucket=self._bucket, Prefix=prefixo)
+            conteudo = resposta.get("Contents", [])
+            if not conteudo:
+                return pd.DataFrame()
+
+            dataframes: list[pd.DataFrame] = []
+            for item in conteudo:
+                chave = str(item.get("Key", ""))
+                if chave.endswith(".parquet"):
+                    obj = self._s3.get_object(Bucket=self._bucket, Key=chave)
+                    buf = io.BytesIO(obj["Body"].read())
+                    dataframes.append(pd.read_parquet(buf, engine="pyarrow"))
+
+            if not dataframes:
+                return pd.DataFrame()
+            return pd.concat(dataframes, ignore_index=True)
+        except Exception as exc:
+            raise ErroDatalake(
+                f"Não foi possível ler camada Bronze ({prefixo}) do RustFS/S3: {exc}"
             ) from exc
 
     @override
