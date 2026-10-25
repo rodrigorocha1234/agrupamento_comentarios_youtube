@@ -9,12 +9,20 @@ class ErroConfiguracao(ErroPlataformaClustering):
     """Lançada quando há inconsistência ou falha na validação de arquivos YAML."""
 
 
-class ErroColetaSteam(ErroPlataformaClustering):
-    """Lançada em falhas de comunicação, limites de taxa ou resposta inválida da API Steam."""
+class ErroConexaoFonte(ErroPlataformaClustering):
+    """Lançada em falhas de comunicação, limites de taxa ou resposta inválida de fontes de dados."""
 
 
-class ErroLakehouse(ErroPlataformaClustering):
-    """Lançada em erros de I/O, partição ou integridade das camadas Bronze, Silver e Gold."""
+class ErroColetaSteam(ErroConexaoFonte):
+    """Lançada em falhas específicas da API Steam (compatibilidade com ErroConexaoFonte)."""
+
+
+class ErroDatalake(ErroPlataformaClustering):
+    """Lançada em erros de I/O, partição ou integridade das camadas Bronze, Silver e Gold no Lakehouse."""
+
+
+class ErroLakehouse(ErroDatalake):
+    """Lançada em erros do lakehouse (compatibilidade com ErroDatalake)."""
 
 
 class ErroPreprocessamento(ErroPlataformaClustering):

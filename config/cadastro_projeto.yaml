@@ -1,0 +1,30 @@
+cadastro_projeto:
+  id_projeto: steam_reviews_clustering
+  nome: "Agrupamento de Avaliações Steam"
+  descricao: "Segmentação não supervisionada de perfis de jogadores e comportamento de avaliações estruturadas da Steam"
+  versao: "1.0.0"
+  dominio: "jogos_digitais"
+  entidade: "avaliacao"
+
+  mapeamento_origem:
+    tipo_fonte: steam_api
+    identificador_primario: recommendationid
+    identificador_contexto: appid
+    campo_texto_consulta: review
+    campos_numericos_padrao:
+      - votes_up
+      - votes_funny
+      - weighted_vote_score
+      - comment_count
+      - num_reviews
+      - playtime_forever
+      - playtime_last_two_weeks
+      - playtime_at_review
+    campos_temporais:
+      - timestamp_created
+      - timestamp_updated
+      - last_played
+
+  infraestrutura:
+    datalake_bucket: steam-reviews
+    mlflow_experimento: steam_reviews_clustering

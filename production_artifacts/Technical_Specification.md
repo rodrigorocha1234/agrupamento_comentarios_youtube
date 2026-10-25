@@ -20,6 +20,8 @@ Construir uma plataforma reutilizável, modular e desacoplada para ingestão, pr
 ### 1.3 Princípios de Design e Restrições Mandatórias
 - **Python 3.12+ e Tipagem Estrita:** Código em modo estrito (`pyright`), sem uso de `Any`, `typing.Any` ou `from typing import *`. Uso de `Protocol`, `Generic`, `TypeVar`, `Literal`, `@override` e tipagem completa.
 - **Nomenclatura em Português:** Módulos, classes, funções e exceções de domínio nomeados em português do Brasil, preservando nomes próprios de bibliotecas externas (`scikit-learn`, `MLflow`, `FastAPI`).
+- **Desacoplamento de Fontes de Dados (Strategy & Factory):** A camada de ingestão é agnóstica de transporte. Por meio do `ProtocoloFonteDados` e da `FabricaFontes`, o pipeline suporta intercambiar a Steam Web API por bancos de dados relacionais (Postgres, SQLite) ou outras APIs REST, viabilizando o reuso do motor de clustering para novos projetos de agrupamento.
+- **Cadastro e Metadados do Projeto em YAML:** O registro da entidade, domínio, mapeamento de identificadores de origem (`identificador_primario`, `identificador_contexto`, `campo_texto_consulta`) e atributos candidatos reside em `config/cadastro_projeto.yaml`. O código Python é 100% genérico, não contendo nomes específicos de colunas ou entidades de negócio.
 - **Armazenamento Remoto Exclusivo no RustFS/S3:** A gestão do Data Lakehouse (camadas Bronze, Silver e Gold) ocorre estritamente no serviço RustFS/S3 integrado no Docker Compose (bucket `steam-reviews`). É expressamente vedada a criação de datalake ou persistência de dados em disco local.
 - **PLN Desativado por Padrão:** O texto da avaliação (`review`) é persistido nas camadas Bronze e Silver para consulta humana, mas é rigorosamente excluído da matriz de treino.
 - **Isolamento de Identificadores:** Identificadores (`steamid`, `recommendationid`, `appid`) nunca compõem os atributos de treino.
@@ -34,8 +36,15 @@ A arquitetura do sistema adota princípios SOLID e padrões de projeto GoF com b
 
 ```mermaid
 flowchart TD
+    subgraph Fontes [Fontes de Dados Desacopladas]
+        F1[Steam Web API]
+        F2[Banco de Dados SQL / Postgres]
+        F3[Outras APIs REST]
+    end
+
     subgraph Ingestao [Ingestão & Data Lakehouse no RustFS/S3]
-        A[Steam Web API] -->|Cursor / HTTP| B[ColetorSteam]
+        F1 & F2 & F3 -->|Strategy / ProtocoloFonteDados| A[FabricaFontes]
+        A --> B[ColetorDados - Orquestrador Agnóstico]
         B -->|Payload Bruto| C[(Bronze: RustFS S3)]
         C -->|Normalização & Limpeza| D[(Silver: RustFS S3)]
     end
@@ -62,12 +71,13 @@ flowchart TD
 ```
 
 ### 2.1 Padrões de Projeto Adotados
-1. **Strategy (`MotorClusteringProtocol`):** Encapsula os algoritmos de clustering (KMeans, DBSCAN, HDBSCAN nativo do scikit-learn). Permite trocar o algoritmo via configuração sem alterar o pipeline.
-2. **Factory (`FabricaClustering`):** Resolve e instancia a estratégia correta com base no arquivo `clustering.yaml`.
-3. **Adapter (`MotorProcessamentoProtocol`):** Abstrai operações tabulares para o motor padrão `Pandas`, permitindo futura extensão para `Polars` através da mesma interface.
-4. **Repository (`RepositorioS3Lakehouse`):** Isola operações de I/O das camadas Bronze, Silver e Gold diretamente no RustFS/S3 (bucket `steam-reviews`), sem persistência no disco local.
-5. **Observer (`ObservadorMLflow`):** Notificado durante o ciclo de modelagem para registrar hiperparâmetros, métricas, modelos e artefatos analíticos no MLflow Server.
-6. **Facade (`FachadaPipeline`):** Ponto de entrada unificado que orquestra a execução end-to-end do fluxo (coleta, saneamento, engenharia, treinamento, avaliação e exportação).
+1. **Strategy / Factory de Ingestão (`ProtocoloFonteDados`, `FabricaFontes`):** Desacopla a origem dos dados do pipeline analítico. Suporta adaptadores para Steam API, Banco de Dados SQL e APIs REST genéricas.
+2. **Strategy (`MotorClusteringProtocol`):** Encapsula os algoritmos de clustering (KMeans, DBSCAN, HDBSCAN nativo do scikit-learn). Permite trocar o algoritmo via configuração sem alterar o pipeline.
+3. **Factory (`FabricaClustering`):** Resolve e instancia a estratégia correta com base no arquivo `clustering.yaml`.
+4. **Adapter (`MotorProcessamentoProtocol`):** Abstrai operações tabulares para o motor padrão `Pandas`, permitindo futura extensão para `Polars` através da mesma interface.
+5. **Repository (`RepositorioS3Lakehouse`):** Isola operações de I/O das camadas Bronze, Silver e Gold diretamente no RustFS/S3 (bucket `steam-reviews`), sem persistência no disco local.
+6. **Observer (`ObservadorMLflow`):** Notificado durante o ciclo de modelagem para registrar hiperparâmetros, métricas, modelos e artefatos analíticos no MLflow Server.
+7. **Facade (`FachadaPipeline`):** Ponto de entrada unificado que orquestra a execução end-to-end do fluxo (coleta, saneamento, engenharia, treinamento, avaliação e exportação).
 
 ---
 
@@ -103,6 +113,11 @@ O pré-processamento (`preprocessamento.yaml`) e engenharia de atributos utiliza
 - **Detecção/Tratamento de Outliers:** `iqr` (Intervalo Interquartil com corte configurável), `isolation_forest`. Ação: sinalizar coluna booleana ou filtrar.
 - **Redução Dimensional:** `pca` (`PCA`), `truncated_svd` (`TruncatedSVD`) para projeções 2D/3D.
 
+### 3.3 Ordem de Execução no Processamento Tabular
+A esteira de processamento tabular segue estritamente a ordem:
+1. **Transformação de Colunas Existentes (PRIMEIRO):** executa as operações configuradas em `transformacoes` (ex.: `log1p`, divisões por constante, normalizações).
+2. **Criação de Novas Colunas (DEPOIS):** cria os novos atributos configurados em `criacao_colunas` (com `habilitado: false` por padrão por atributo), avaliando com segurança as expressões correspondentes ao motor ativo (`expressao_pandas` ou `expressao_polars`). Dessa forma, as novas colunas já dispõem dos dados transformados no passo anterior.
+
 ---
 
 ## 4. Matriz de Compatibilidade dos Algoritmos de Clustering
@@ -135,10 +150,16 @@ app/
 │   ├── motor_clustering.py      # Protocol para algoritmos de clustering
 │   ├── repositorio.py           # Protocol para persistência de dados
 │   └── observador.py            # Protocol para rastreamento (Observer)
-├── extracao_steam/
+├── ingestao_fontes/
 │   ├── __init__.py
-│   ├── cliente_steam_api.py     # Cliente HTTP com cursor, retries e rate limit
-│   └── coletor_steam.py         # Orquestrador da coleta incremental
+│   ├── fabrica_fontes.py            # Factory para resolver a fonte (steam_api, banco_dados, api_rest)
+│   ├── coletor_dados.py             # Orquestrador agnóstico de ingestão incremental
+│   ├── cliente_http_resiliente.py   # Cliente HTTP genérico com retries, timeouts e backoff
+│   └── adaptadores/
+│       ├── __init__.py
+│       ├── adaptador_steam.py       # Especialização para a API da Steam (cursor e appid)
+│       ├── adaptador_banco_dados.py # Adaptador para Banco de Dados SQL (Postgres/SQLite)
+│       └── adaptador_api_rest.py    # Adaptador para APIs REST genéricas
 ├── gestao_datalake/
 │   ├── __init__.py
 │   └── repositorio_s3_lakehouse.py   # Repositório remoto no RustFS/S3 (sem I/O local)
@@ -203,9 +224,9 @@ Provisionamento automático em `config_ob/dashboards/`:
 - **Entregáveis:** `conf_yaml.py`, `excecoes.py`, `contratos/` com Protocols estritos e validação completa dos 13 arquivos YAML.
 - **Critérios de Aceitação:** 100% de cobertura nos testes de leitura/validação YAML; rejeição automática de parâmetros espúrios e ausência de `eval`/`exec`; aprovação no `pyright --mode strict`.
 
-### Fase 2: Ingestão Steam API & Camadas Bronze/Silver no RustFS/S3
-- **Entregáveis:** `cliente_steam_api.py`, `coletor_steam.py`, `repositorio_s3_lakehouse.py`.
-- **Critérios de Aceitação:** Paginação por cursor funcional; suporte a múltiplos `appid`; retries com backoff exponencial; deduplicação idempotente por `recommendationid`; persistência direta no bucket `steam-reviews` do RustFS/S3 (sem I/O local) com particionamento e metadados nas camadas Bronze e Silver. Testes unitários com mocks de API e chamadas S3.
+### Fase 2: Ingestão de Fontes Desacopladas & Camadas Bronze/Silver no RustFS/S3
+- **Entregáveis:** `fabrica_fontes.py`, `coletor_dados.py`, `cliente_http_resiliente.py`, `adaptadores/adaptador_steam.py`, `adaptadores/adaptador_banco_dados.py`, `adaptadores/adaptador_api_rest.py`, `repositorio_s3_lakehouse.py`.
+- **Critérios de Aceitação:** Suporte a múltiplas fontes via Strategy e resolução dinâmica via Factory (`steam_api`, `banco_dados`, `api_rest`); paginação por cursor (APIs) e offset/timestamp (Banco de Dados); retries com backoff exponencial; deduplicação idempotente; persistência direta no bucket `steam-reviews` do RustFS/S3 (sem I/O local) com particionamento e metadados nas camadas Bronze e Silver. Testes unitários com mocks de API Steam, banco SQL e chamadas S3.
 
 ### Fase 3: Engenharia de Atributos & Pré-processamento Seguro
 - **Entregáveis:** `preparador_dados.py`, `engenheiro_atributos.py`, `catalogo_operacoes.py`, `motor_pandas.py`.

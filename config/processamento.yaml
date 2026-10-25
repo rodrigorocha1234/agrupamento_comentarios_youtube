@@ -1,32 +1,71 @@
 processamento:
   motor: pandas # pandas | polars
   cabecalho: true
-  colunas:
-    habilitado: true
-    incluir:
-      - recommendationid
-      - appid
-      - review
-      - timestamp_created
-      - timestamp_updated
-      - voted_up
-      - votes_up
-      - votes_funny
-      - weighted_vote_score
-      - comment_count
-      - steamid
-      - num_reviews
-      - playtime_forever
-      - playtime_last_two_weeks
-      - playtime_at_review
-      - last_played
+  selecao_colunas:
+    habilitado: false
+    colunas:
+      - nome: recommendationid
+        habilitado: false
+      - nome: appid
+        habilitado: false
+      - nome: review
+        habilitado: false
+      - nome: timestamp_created
+        habilitado: false
+      - nome: timestamp_updated
+        habilitado: false
+      - nome: voted_up
+        habilitado: false
+      - nome: votes_up
+        habilitado: false
+      - nome: votes_funny
+        habilitado: false
+      - nome: weighted_vote_score
+        habilitado: false
+      - nome: comment_count
+        habilitado: false
+      - nome: steamid
+        habilitado: false
+      - nome: num_reviews
+        habilitado: false
+      - nome: playtime_forever
+        habilitado: false
+      - nome: playtime_last_two_weeks
+        habilitado: false
+      - nome: playtime_at_review
+        habilitado: false
+      - nome: last_played
+        habilitado: false
   filtros:
     habilitado: false
-    combinacao: and
-    condicoes: []
+    combinacao: and # and | or
+    condicoes:
+      - nome: minimo_tempo_jogo
+        habilitado: false
+        expressao_pandas: "df['playtime_forever'] >= 60"
+        expressao_polars: "pl.col('playtime_forever') >= 60"
+      - nome: avaliacoes_com_votos
+        habilitado: false
+        expressao_pandas: "df['votes_up'] > 0"
+        expressao_polars: "pl.col('votes_up') > 0"
   transformacoes:
     habilitado: false
-    operacoes: []
+    operacoes:
+      - coluna: playtime_forever
+        habilitado: false
+        expressao_pandas: "np.log1p(np.maximum(df['playtime_forever'], 0.0))"
+        expressao_polars: "pl.col('playtime_forever').clip(lower_bound=0.0).log1p()"
+  criacao_colunas:
+    habilitado: false
+    atributos:
+      - nome: razao_votos_tempo
+        habilitado: false
+        expressao_pandas: "df['votes_up'] / (df['playtime_forever'] + 1.0)"
+        expressao_polars: "pl.col('votes_up') / (pl.col('playtime_forever') + 1.0)"
+      - nome: horas_totais_jogadas
+        habilitado: false
+        expressao_pandas: "df['playtime_forever'] / 60.0"
+        expressao_polars: "pl.col('playtime_forever') / 60.0"
   validacao:
     falhar_se_colunas_ausentes: true
     remover_duplicatas: true

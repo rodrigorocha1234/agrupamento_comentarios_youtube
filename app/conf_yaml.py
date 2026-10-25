@@ -1,4 +1,8 @@
-"""Módulo de carregamento e validação centralizada das configurações YAML."""
+"""Módulo de carregamento e validação centralizada das configurações YAML.
+
+Arquitetura genérica e desacoplada de domínios específicos, extensível para
+qualquer projeto de agrupamento não supervisionado.
+"""
 
 import os
 import re
@@ -6,7 +10,7 @@ from pathlib import Path
 from typing import Final, Literal
 
 import yaml
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from app.excecoes import ErroConfiguracao
 
@@ -24,8 +28,55 @@ def expandir_variaveis_ambiente(conteudo: str) -> str:
     return PADRAO_VARIAVEL_AMBIENTE.sub(substituir, conteudo)
 
 
+# ==============================================================================
+# Modelos de Cadastro e Metadados do Projeto
+# ==============================================================================
+
+
+class ConfigMapeamentoOrigem(BaseModel):
+    """Mapeamento de chaves e campos de dados da fonte externa."""
+
+    tipo_fonte: str = "api_rest"
+    identificador_primario: str = "id"
+    identificador_contexto: str = "contexto_id"
+    campo_texto_consulta: str = "texto"
+    campos_numericos_padrao: list[str] = Field(default_factory=list)
+    campos_temporais: list[str] = Field(default_factory=list)
+
+
+class ConfigInfraestruturaProjeto(BaseModel):
+    """Parâmetros de infraestrutura específicos do projeto."""
+
+    datalake_bucket: str = "datalake-clustering"
+    mlflow_experimento: str = "experimento_clustering"
+
+
+class ConfigCadastroProjetoInfo(BaseModel):
+    """Cadastro formal e metadados de domínio do projeto de agrupamento."""
+
+    id_projeto: str = "projeto_agrupamento"
+    nome: str = "Agrupamento Não Supervisionado"
+    descricao: str = "Pipeline reutilizável de clustering não supervisionado"
+    versao: str = "1.0.0"
+    dominio: str = "geral"
+    entidade: str = "amostra"
+    mapeamento_origem: ConfigMapeamentoOrigem = Field(default_factory=ConfigMapeamentoOrigem)
+    infraestrutura: ConfigInfraestruturaProjeto = Field(default_factory=ConfigInfraestruturaProjeto)
+
+
+class ConfigCadastroProjeto(BaseModel):
+    """Container para o arquivo cadastro_projeto.yaml."""
+
+    cadastro_projeto: ConfigCadastroProjetoInfo = Field(default_factory=ConfigCadastroProjetoInfo)
+
+
+# ==============================================================================
+# Modelos de Projeto e Funcionalidades Globais
+# ==============================================================================
+
+
 class ConfigProjetoInfo(BaseModel):
-    nome: str = "steam_reviews_clustering"
+    nome: str = "projeto_clustering"
     ambiente: str = "desenvolvimento"
     idioma: str = "pt-BR"
 
@@ -64,70 +115,154 @@ class ConfigProjeto(BaseModel):
     execucao: ConfigExecucao = Field(default_factory=ConfigExecucao)
 
 
+# ==============================================================================
+# Modelos de Ingestão de Fontes (Desacoplados e Extensíveis)
+# ==============================================================================
+
+
 class ConfigSegredoFonte(BaseModel):
-    variavel_ambiente: str = "STEAM_API_KEY"
+    variavel_ambiente: str = ""
+
+
+class ConfigBancoDadosInfo(BaseModel):
+    dsn: str = ""
+    consulta_ou_tabela: str = ""
+    coluna_chave: str = "id"
+    coluna_timestamp: str = "data_criacao"
+
+
+class ConfigAPIRestInfo(BaseModel):
+    endpoint: str = ""
+    metodo: Literal["GET", "POST"] = "GET"
+    headers: dict[str, str] = Field(default_factory=dict)
+    parametro_paginacao: str = "cursor"
 
 
 class ConfigFonteInfo(BaseModel):
-    tipo: str = "steam_api"
-    endpoint: str = "https://api.steampowered.com/IUserReviewsService/GetAppReviews/v1/"
+    """Configuração genérica de fonte de dados."""
+
+    tipo: Literal["steam_api", "banco_dados", "api_rest"] = "api_rest"
+    endpoint: str | None = None
     timeout_segundos: int = 30
     tentativas_maximas: int = 5
     espera_base_segundos: float = 1.0
+    identificadores: list[str | int] = Field(default_factory=list)
     appids: list[int] = Field(default_factory=list)
     segredo: ConfigSegredoFonte = Field(default_factory=ConfigSegredoFonte)
+    banco_dados: ConfigBancoDadosInfo | None = None
+    api_rest: ConfigAPIRestInfo | None = None
+
+    @model_validator(mode="after")
+    def sincronizar_identificadores(self) -> "ConfigFonteInfo":
+        """Compatibiliza appids com o identificadores genérico."""
+        if self.appids and not self.identificadores:
+            self.identificadores = [str(x) for x in self.appids]
+        elif self.identificadores and not self.appids:
+            self.appids = [int(x) for x in self.identificadores if str(x).isdigit()]
+        return self
 
 
-class ConfigParametrosAPI(BaseModel):
-    filter: str = "recent"
-    language: str = "brazilian"
-    day_range: int | None = None
-    cursor: str = "*"
-    review_type: str = "all"
-    purchase_type: str = "all"
-    num_per_page: int = 100
-    filter_offtopic_activity: bool = False
-    language_display: str = "brazilian"
-    use_review_quality: bool = False
-    date_range_start: int | None = None
-    date_range_end: int | None = None
-    exclude: str | None = None
-    playtime_min_hours: int | None = None
-    playtime_max_hours: int | None = None
-    primarily_steam_deck: bool | None = None
-    hardware_os: str | None = None
-    hardware_cpu: str | None = None
-    hardware_gpu: str | None = None
-    hardware_device_type: str | None = None
+class ConfigParametrosFonte(BaseModel):
+    """Parâmetros arbitrários de consulta/requisição específicos da fonte informada no YAML."""
+
+    model_config = ConfigDict(extra="allow")
 
 
 class ConfigColeta(BaseModel):
+    """Parâmetros de orquestração de coleta e checkpointing."""
+
+    model_config = ConfigDict(extra="allow")
     incremental: bool = True
     checkpoint_habilitado: bool = True
-    deduplicar_por: str = "recommendationid"
+    deduplicar_por: str = "id"
     intervalo_minutos: int = 1440
 
 
 class ConfigFonteDados(BaseModel):
     fonte: ConfigFonteInfo = Field(default_factory=ConfigFonteInfo)
-    parametros_api: ConfigParametrosAPI = Field(default_factory=ConfigParametrosAPI)
+    parametros_api: ConfigParametrosFonte = Field(default_factory=ConfigParametrosFonte)
     coleta: ConfigColeta = Field(default_factory=ConfigColeta)
 
 
+# ==============================================================================
+# Modelos de Processamento Tabular e Data Lakehouse
+# ==============================================================================
+
+
+class ConfigItemColuna(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    nome: str
+    habilitado: bool = False
+
+
 class ConfigColunasProcessamento(BaseModel):
-    habilitado: bool = True
-    incluir: list[str] = Field(default_factory=list)
+    model_config = ConfigDict(extra="allow")
+    habilitado: bool = False
+    incluir: list[str | ConfigItemColuna] = Field(default_factory=list)
+    colunas: list[str | ConfigItemColuna] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def normalizar_colunas(self) -> "ConfigColunasProcessamento":
+        if self.colunas and not self.incluir:
+            self.incluir = self.colunas
+        elif self.incluir and not self.colunas:
+            self.colunas = self.incluir
+        return self
+
+    def obter_colunas_selecionadas(self) -> list[str]:
+        """Retorna a lista de nomes das colunas ativas para seleção."""
+        if not self.habilitado:
+            return []
+        itens = self.incluir if self.incluir else self.colunas
+        colunas: list[str] = []
+        for item in itens:
+            if isinstance(item, str):
+                colunas.append(item)
+            elif item.habilitado:
+                colunas.append(item.nome)
+        return colunas
+
+
+class ConfigCondicaoFiltro(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    nome: str = ""
+    habilitado: bool = False
+    expressao_pandas: str = ""
+    expressao_polars: str = ""
+    coluna: str | None = None
+    operador: str | None = None
+    valor: str | int | float | bool | None = None
 
 
 class ConfigFiltrosProcessamento(BaseModel):
     habilitado: bool = False
     combinacao: Literal["and", "or"] = "and"
-    condicoes: list[dict[str, str | int | float | bool]] = Field(default_factory=list)
+    condicoes: list[ConfigCondicaoFiltro] = Field(default_factory=list)
+
+
+class ConfigOperacaoTransformacao(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    coluna: str
+    habilitado: bool = False
+    expressao_pandas: str = ""
+    expressao_polars: str = ""
 
 
 class ConfigTransformacoesProcessamento(BaseModel):
     habilitado: bool = False
-    operacoes: list[dict[str, str | int | float | bool]] = Field(default_factory=list)
+    operacoes: list[ConfigOperacaoTransformacao] = Field(default_factory=list)
+
+
+class ConfigNovoAtributo(BaseModel):
+    nome: str
+    habilitado: bool = False
+    expressao_pandas: str = ""
+    expressao_polars: str = ""
+
+
+class ConfigCriacaoColunas(BaseModel):
+    habilitado: bool = False
+    atributos: list[ConfigNovoAtributo] = Field(default_factory=list)
 
 
 class ConfigValidacaoProcessamento(BaseModel):
@@ -139,9 +274,23 @@ class ConfigProcessamentoInfo(BaseModel):
     motor: Literal["pandas", "polars"] = "pandas"
     cabecalho: bool = True
     colunas: ConfigColunasProcessamento = Field(default_factory=ConfigColunasProcessamento)
+    selecao_colunas: ConfigColunasProcessamento = Field(default_factory=ConfigColunasProcessamento)
     filtros: ConfigFiltrosProcessamento = Field(default_factory=ConfigFiltrosProcessamento)
     transformacoes: ConfigTransformacoesProcessamento = Field(default_factory=ConfigTransformacoesProcessamento)
+    criacao_colunas: ConfigCriacaoColunas = Field(default_factory=ConfigCriacaoColunas)
     validacao: ConfigValidacaoProcessamento = Field(default_factory=ConfigValidacaoProcessamento)
+
+    @model_validator(mode="after")
+    def sincronizar_selecao_colunas(self) -> "ConfigProcessamentoInfo":
+        if self.selecao_colunas.habilitado and not self.colunas.habilitado:
+            self.colunas = self.selecao_colunas
+        elif not self.selecao_colunas.habilitado and self.colunas.habilitado:
+            self.selecao_colunas = self.colunas
+        elif (self.selecao_colunas.incluir or self.selecao_colunas.colunas) and not (self.colunas.incluir or self.colunas.colunas):
+            self.colunas = self.selecao_colunas
+        elif (self.colunas.incluir or self.colunas.colunas) and not (self.selecao_colunas.incluir or self.selecao_colunas.colunas):
+            self.selecao_colunas = self.colunas
+        return self
 
 
 class ConfigProcessamento(BaseModel):
@@ -160,16 +309,24 @@ class ConfigCamadaLake(BaseModel):
 
 
 class ConfigMetadadosLake(BaseModel):
+    model_config = ConfigDict(extra="allow")
     incluir_timestamp_coleta: bool = True
-    incluir_appid: bool = True
+    incluir_identificador: bool = True
+    incluir_appid: bool | None = None
     incluir_versao_schema: bool = True
+
+    @model_validator(mode="after")
+    def sincronizar_identificador(self) -> "ConfigMetadadosLake":
+        if self.incluir_appid is not None:
+            self.incluir_identificador = self.incluir_appid
+        return self
 
 
 class ConfigDatalakeInfo(BaseModel):
     habilitado: bool = True
     tipo: Literal["s3", "rustfs"] = "s3"
     formato: Literal["parquet", "json"] = "parquet"
-    bucket: str = "steam-reviews"
+    bucket: str = "datalake-clustering"
     endpoint_url: str = "http://127.0.0.1:9000"
     regiao: str = "us-east-1"
     bronze: ConfigCamadaLake = Field(default_factory=lambda: ConfigCamadaLake(prefixo="bronze"))
@@ -180,6 +337,11 @@ class ConfigDatalakeInfo(BaseModel):
 
 class ConfigDatalake(BaseModel):
     datalake: ConfigDatalakeInfo = Field(default_factory=ConfigDatalakeInfo)
+
+
+# ==============================================================================
+# Modelos de Atributos e Pré-processamento
+# ==============================================================================
 
 
 class ConfigTreinoAtributos(BaseModel):
@@ -259,6 +421,11 @@ class ConfigPreprocessamento(BaseModel):
     preprocessamento: ConfigPreprocessamentoInfo = Field(default_factory=ConfigPreprocessamentoInfo)
 
 
+# ==============================================================================
+# Modelos de Algoritmos e Clustering
+# ==============================================================================
+
+
 class ConfigParametrosKMeans(BaseModel):
     n_clusters: int = 5
     init: str = "k-means++"
@@ -308,6 +475,11 @@ class ConfigClustering(BaseModel):
     clustering: ConfigClusteringInfo = Field(default_factory=ConfigClusteringInfo)
 
 
+# ==============================================================================
+# Modelos de Avaliação e Métricas
+# ==============================================================================
+
+
 class ConfigItemMetrica(BaseModel):
     habilitado: bool = True
 
@@ -340,10 +512,15 @@ class ConfigAvaliacao(BaseModel):
     avaliacao: ConfigAvaliacaoInfo = Field(default_factory=ConfigAvaliacaoInfo)
 
 
+# ==============================================================================
+# Modelos de Tracking (MLflow) e Observabilidade
+# ==============================================================================
+
+
 class ConfigMLflowInfo(BaseModel):
     habilitado: bool = True
     tracking_uri: str = "http://localhost:5000"
-    experiment_name: str = "steam_reviews_clustering"
+    experiment_name: str = "experimento_clustering"
     registrar_parametros: bool = True
     registrar_metricas: bool = True
     registrar_modelo: bool = True
@@ -390,7 +567,15 @@ class ConfigObservabilidade(BaseModel):
     observabilidade: ConfigObservabilidadeInfo = Field(default_factory=ConfigObservabilidadeInfo)
 
 
+# ==============================================================================
+# Modelos de Análises e API
+# ==============================================================================
+
+
 class ConfigClustersAnalises(BaseModel):
+    """Opções visuais e diagnósticos de análise de clusters."""
+
+    model_config = ConfigDict(extra="allow")
     dispersao_2d: bool = True
     dispersao_3d: bool = False
     distribuicao: bool = True
@@ -406,12 +591,10 @@ class ConfigClustersAnalises(BaseModel):
     silhouette_plot: bool = True
     ruido: bool = True
     distancia_centroides: bool = True
-    recomendacoes_por_cluster: bool = False
-    playtime_por_cluster: bool = True
     interacoes_atributos: bool = True
-    comparar_appids: bool = False
-    tabela_reviews_original: bool = True
     evolucao_temporal: bool = False
+    tabela_dados_originais: bool = True
+    comparar_identificadores: bool = False
 
 
 class ConfigExportacaoAnalises(BaseModel):
@@ -468,9 +651,15 @@ class ConfigRegrasNegocio(BaseModel):
     regras_negocio: ConfigRegrasNegocioInfo = Field(default_factory=ConfigRegrasNegocioInfo)
 
 
+# ==============================================================================
+# Container Unificado e Validador Central
+# ==============================================================================
+
+
 class ConfYAML(BaseModel):
     """Representação unificada e validada de todos os arquivos YAML de configuração."""
 
+    cadastro_projeto: ConfigCadastroProjeto = Field(default_factory=ConfigCadastroProjeto)
     projeto: ConfigProjeto
     fonte_dados: ConfigFonteDados
     processamento: ConfigProcessamento
@@ -507,15 +696,6 @@ class ConfYAML(BaseModel):
                 "mas atributos.texto.incluir_no_treino está True."
             )
 
-        # Regra 3: Se o algoritmo for DBSCAN, alertar/validar suporte a previsão
-        if (
-            self.clustering.clustering.algoritmo == "dbscan"
-            and self.api.api.previsao.exigir_suporte_do_algoritmo
-            and self.api.api.habilitado
-        ):
-            # DBSCAN não suporta predict out-of-sample tradicional
-            pass
-
         return self
 
     @classmethod
@@ -525,7 +705,7 @@ class ConfYAML(BaseModel):
         if not dir_path.is_dir():
             raise ErroConfiguracao(f"Diretório de configuração não encontrado: {dir_path}")
 
-        arquivos_esperados: Final[dict[str, type[BaseModel]]] = {
+        arquivos_obrigatorios: Final[dict[str, type[BaseModel]]] = {
             "projeto.yaml": ConfigProjeto,
             "fonte_dados.yaml": ConfigFonteDados,
             "processamento.yaml": ConfigProcessamento,
@@ -543,7 +723,20 @@ class ConfYAML(BaseModel):
 
         valores_carregados: dict[str, BaseModel] = {}
 
-        for nome_arquivo, modelo_classe in arquivos_esperados.items():
+        # Carrega cadastro_projeto.yaml se presente
+        arquivo_cadastro = dir_path / "cadastro_projeto.yaml"
+        if arquivo_cadastro.is_file():
+            try:
+                conteudo_bruto = arquivo_cadastro.read_text(encoding="utf-8")
+                conteudo_expandido = expandir_variaveis_ambiente(conteudo_bruto)
+                dados_dict = yaml.safe_load(conteudo_expandido) or {}
+                valores_carregados["cadastro_projeto"] = ConfigCadastroProjeto.model_validate(dados_dict)
+            except Exception as exc:
+                raise ErroConfiguracao(f"Falha ao validar cadastro_projeto.yaml: {exc}") from exc
+        else:
+            valores_carregados["cadastro_projeto"] = ConfigCadastroProjeto()
+
+        for nome_arquivo, modelo_classe in arquivos_obrigatorios.items():
             arquivo_path = dir_path / nome_arquivo
             if not arquivo_path.is_file():
                 raise ErroConfiguracao(f"Arquivo obrigatório de configuração ausente: {arquivo_path}")
@@ -563,6 +756,7 @@ class ConfYAML(BaseModel):
                 raise ErroConfiguracao(f"Falha de validação em {nome_arquivo}: {exc}") from exc
 
         return cls(
+            cadastro_projeto=valores_carregados["cadastro_projeto"],  # type: ignore[arg-type]
             projeto=valores_carregados["projeto"],  # type: ignore[arg-type]
             fonte_dados=valores_carregados["fonte_dados"],  # type: ignore[arg-type]
             processamento=valores_carregados["processamento"],  # type: ignore[arg-type]
