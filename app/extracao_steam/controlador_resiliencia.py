@@ -24,9 +24,9 @@ class ControladorResiliencia:
         self._espera_429 = espera_429_segundos
 
     def calcular_espera_backoff(self, tentativa: int) -> float:
-        """Calcula o tempo de espera com backoff exponencial e jitter aleatório."""
+        """Calcula o tempo de espera com backoff exponencial e jitter aleatório proporcional."""
         fator = 2 ** (tentativa - 1)
-        jitter = random.uniform(0.1, 0.5)
+        jitter = random.uniform(0.0, 0.1 * self._espera_base)
         return float((self._espera_base * fator) + jitter)
 
     def esperar_por_taxa_limite(self) -> None:

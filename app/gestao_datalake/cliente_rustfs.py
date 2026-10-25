@@ -38,6 +38,17 @@ class ClienteRustfsS3(ArmazenamentoLake):
             aws_access_key_id=self._access_key,
             aws_secret_access_key=self._secret_key,
         )
+        self.garantir_bucket()
+
+    def garantir_bucket(self) -> None:
+        """Garante que o bucket alvo exista no storage, criando-o se necessário."""
+        try:
+            self._cliente.head_bucket(Bucket=self._bucket)
+        except (ClientError, OSError):
+            try:
+                self._cliente.create_bucket(Bucket=self._bucket)
+            except (ClientError, OSError):
+                pass
 
     @property
     def bucket(self) -> str:
@@ -63,6 +74,35 @@ class ClienteRustfsS3(ArmazenamentoLake):
             Body=dados_bytes,
             ContentType="application/octet-stream",
         )
+
+    @override
+    def ler_bytes(self, caminho_chave: str) -> bytes:
+        """Recupera conteúdo binário de um objeto no bucket S3/RustFS."""
+        resposta = self._cliente.get_object(
+            Bucket=self._bucket,
+            Key=caminho_chave.lstrip("/"),
+        )
+        corpo = resposta["Body"]
+        return corpo.read()
+
+    @override
+    def listar_chaves(self, prefixo: str) -> list[str]:
+        """Lista as chaves de objetos sob o prefixo especificado no bucket."""
+        chaves: list[str] = []
+        try:
+            paginador = self._cliente.get_paginator("list_objects_v2")
+            for pagina in paginador.paginate(
+                Bucket=self._bucket,
+                Prefix=prefixo.lstrip("/"),
+            ):
+                itens = pagina.get("Contents", [])
+                for item in itens:
+                    chave = item.get("Key")
+                    if isinstance(chave, str):
+                        chaves.append(chave)
+        except (ClientError, OSError):
+            return []
+        return chaves
 
     @override
     def verificar_existencia(self, caminho_chave: str) -> bool:

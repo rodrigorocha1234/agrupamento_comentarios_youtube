@@ -8,6 +8,7 @@ from typing import final, override
 import mlflow
 import numpy as np
 
+from app.dominio_contratos.modelos_dados import TipoDadoJson, TipoParametroAlgoritmo
 from app.integracao_mlflow.observador_treinamento import ObservadorTreinamento
 
 _logger = logging.getLogger(__name__)
@@ -41,7 +42,7 @@ class ObservadorMlflow(ObservadorTreinamento):
         self,
         nome_experimento: str,
         nome_execucao: str,
-        parametros: Mapping[str, object],
+        parametros: Mapping[str, TipoParametroAlgoritmo],
         tags: Mapping[str, str],
     ) -> None:
         """Inicia uma run no experimento especificado e registra metadados iniciais."""
@@ -108,7 +109,7 @@ class ObservadorMlflow(ObservadorTreinamento):
     @override
     def registrar_artefato_dicionario(
         self,
-        dados: Mapping[str, object],
+        dados: Mapping[str, TipoDadoJson],
         nome_arquivo: str,
     ) -> None:
         """Publica um dicionário como JSON nos artefatos."""

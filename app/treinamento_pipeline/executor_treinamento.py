@@ -9,6 +9,7 @@ from app.agrupamento_modelos.fabrica_agrupadores import FabricaAgrupadores
 from app.avaliacao_modelos.avaliador_clusters import AvaliadorClusters
 from app.avaliacao_modelos.metricas_estatisticas import ResultadoAvaliacao
 from app.configuracao_geral.conf_yaml import ConfYAML
+from app.dominio_contratos.modelos_dados import TipoParametroAlgoritmo
 from app.engenharia_atributos.gerador_atributos import GeradorAtributosDerivados
 from app.engenharia_atributos.seletor_colunas import SeletorColunasTreinamento
 from app.integracao_mlflow.observador_nulo import ObservadorNulo
@@ -54,7 +55,7 @@ class ExecutorTreinamento:
         self,
         dados_silver: pd.DataFrame,
         nome_algoritmo: str = "kmeans",
-        parametros_algoritmo: dict[str, object] | None = None,
+        parametros_algoritmo: dict[str, TipoParametroAlgoritmo] | None = None,
         versao_dataset: str = "gold_v1",
     ) -> tuple[pd.DataFrame, ResultadoAvaliacao, EstrategiaAgrupamento]:
         """Aplica engenharia de atributos, pré-processamento, treina agrupador, avalia e notifica MLOps."""

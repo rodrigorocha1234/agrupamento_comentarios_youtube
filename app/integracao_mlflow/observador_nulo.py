@@ -5,6 +5,7 @@ from typing import final, override
 
 import numpy as np
 
+from app.dominio_contratos.modelos_dados import TipoDadoJson, TipoParametroAlgoritmo
 from app.integracao_mlflow.observador_treinamento import ObservadorTreinamento
 
 
@@ -17,7 +18,7 @@ class ObservadorNulo(ObservadorTreinamento):
         self,
         nome_experimento: str,
         nome_execucao: str,
-        parametros: Mapping[str, object],
+        parametros: Mapping[str, TipoParametroAlgoritmo],
         tags: Mapping[str, str],
     ) -> None:
         pass
@@ -41,7 +42,7 @@ class ObservadorNulo(ObservadorTreinamento):
     @override
     def registrar_artefato_dicionario(
         self,
-        dados: Mapping[str, object],
+        dados: Mapping[str, TipoDadoJson],
         nome_arquivo: str,
     ) -> None:
         pass

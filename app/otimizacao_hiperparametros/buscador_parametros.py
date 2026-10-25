@@ -8,6 +8,7 @@ from app.agrupamento_modelos.capacidades_algoritmo import EstrategiaAgrupamento
 from app.agrupamento_modelos.fabrica_agrupadores import FabricaAgrupadores
 from app.avaliacao_modelos.avaliador_clusters import AvaliadorClusters
 from app.avaliacao_modelos.metricas_estatisticas import ResultadoAvaliacao
+from app.dominio_contratos.modelos_dados import TipoParametroAlgoritmo
 from app.otimizacao_hiperparametros.avaliador_objetivo import (
     AvaliadorObjetivo,
     ResultadoObjetivo,
@@ -18,7 +19,7 @@ from app.otimizacao_hiperparametros.avaliador_objetivo import (
 class CandidatoHiperparametros:
     """Registro de uma tentativa avaliada durante a busca."""
 
-    parametros: Mapping[str, object]
+    parametros: Mapping[str, TipoParametroAlgoritmo]
     metricas: ResultadoAvaliacao
     resultado_objetivo: ResultadoObjetivo
 
@@ -28,7 +29,7 @@ class ResultadoOtimizacao:
     """Resultado final contendo o modelo campeão e histórico de busca."""
 
     melhor_modelo: EstrategiaAgrupamento
-    melhores_parametros: Mapping[str, object]
+    melhores_parametros: Mapping[str, TipoParametroAlgoritmo]
     melhores_metricas: ResultadoAvaliacao
     score_campeao: float
     historico_tentativas: Sequence[CandidatoHiperparametros]
@@ -52,7 +53,7 @@ class BuscadorParametros:
         self,
         nome_algoritmo: str,
         matriz_x: np.ndarray,
-        grade_parametros: Sequence[Mapping[str, object]],
+        grade_parametros: Sequence[Mapping[str, TipoParametroAlgoritmo]],
     ) -> ResultadoOtimizacao:
         """Avalia cada combinação de hiperparâmetros e elege o melhor modelo."""
         if not grade_parametros:
@@ -62,7 +63,7 @@ class BuscadorParametros:
 
         historico: list[CandidatoHiperparametros] = []
         melhor_modelo: EstrategiaAgrupamento | None = None
-        melhores_params: Mapping[str, object] = grade_parametros[0]
+        melhores_params: Mapping[str, TipoParametroAlgoritmo] = grade_parametros[0]
         melhores_metricas: ResultadoAvaliacao | None = None
         melhor_score: float = -float("inf")
 

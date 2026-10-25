@@ -30,11 +30,11 @@ class ConexaoSqlite:
         conexao = sqlite3.connect(
             str(self._caminho),
             timeout=self._timeout,
-            autocommit=False,
+            autocommit=True,
         )
         conexao.row_factory = sqlite3.Row
-        with conexao:
-            conexao.execute(f"PRAGMA journal_mode = {self._modo_journal};")
-            conexao.execute(f"PRAGMA busy_timeout = {int(self._timeout * 1000)};")
-            conexao.execute("PRAGMA foreign_keys = ON;")
+        conexao.execute(f"PRAGMA journal_mode = {self._modo_journal};")
+        conexao.execute(f"PRAGMA busy_timeout = {int(self._timeout * 1000)};")
+        conexao.execute("PRAGMA foreign_keys = ON;")
+        conexao.autocommit = False
         return conexao

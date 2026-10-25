@@ -269,3 +269,33 @@ class ConfiguracaoFluxosIncrementais(ModeloBaseConfiguracao):
     """Mapeamento do arquivo fluxos_incrementais.yaml."""
 
     fluxos_incrementais: DetalhesFluxosIncrementais
+
+
+class CondicaoRegraConfiguracao(ModeloBaseConfiguracao):
+    """Predicado individual de uma regra de negócio declarativa."""
+
+    metrica: str
+    operador: str = "igual"
+    valor: float | int | str | list[float] | None = None
+
+
+class RegraNegocioConfiguracao(ModeloBaseConfiguracao):
+    """Especificação de persona ou perfil de negócio em YAML."""
+
+    identificador: str
+    rotulo: str
+    combinacao: str = "and"
+    condicoes: tuple[CondicaoRegraConfiguracao, ...] = ()
+
+
+class DetalhesNegocio(ModeloBaseConfiguracao):
+    """Definições operacionais do catálogo de regras pós-clustering."""
+
+    ativado: bool = True
+    regras: tuple[RegraNegocioConfiguracao, ...] = ()
+
+
+class ConfiguracaoNegocio(ModeloBaseConfiguracao):
+    """Mapeamento do arquivo configuracoes/analises/negocio.yaml."""
+
+    negocio: DetalhesNegocio

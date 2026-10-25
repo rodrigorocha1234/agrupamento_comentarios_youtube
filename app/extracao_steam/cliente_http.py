@@ -1,10 +1,11 @@
 """Cliente HTTP para o serviço GetAppReviews da Web API do Steamworks."""
 
 import json
-from typing import Final, final
+from typing import Final, cast, final
 
 import requests
 
+from app.dominio_contratos.modelos_dados import TipoDadoJson
 from app.extracao_steam.controlador_resiliencia import ControladorResiliencia
 
 
@@ -35,9 +36,9 @@ class ClienteHttpSteam:
         tamanho_pagina: int = 100,
         filtro: str = "recent",
         idiomas: tuple[str, ...] = ("brazilian",),
-    ) -> dict[str, object]:
+    ) -> dict[str, TipoDadoJson]:
         """Executa a requisição GET com tratamento de backpressure e 429."""
-        parametros_corpo: dict[str, object] = {
+        parametros_corpo: dict[str, TipoDadoJson] = {
             "appid": appid,
             "cursor": cursor,
             "num_per_page": min(tamanho_pagina, 100),
@@ -76,10 +77,10 @@ class ClienteHttpSteam:
                         "A resposta da API da Steam deve ser um objeto JSON."
                     )
 
-                dados_tipados: dict[str, object] = {}
+                dados_tipados: dict[str, TipoDadoJson] = {}
                 for k, v in dados_json.items():
                     if isinstance(k, str):
-                        dados_tipados[k] = v
+                        dados_tipados[k] = cast(TipoDadoJson, v)
                 return dados_tipados
 
             except (requests.RequestException, TypeError, ValueError):

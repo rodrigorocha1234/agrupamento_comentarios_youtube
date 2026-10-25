@@ -3,12 +3,14 @@
 from collections.abc import Mapping, Sequence
 from typing import Protocol, final, runtime_checkable
 
+from app.dominio_contratos.modelos_dados import TipoDadoJson, TipoValorEscalar
+
 
 @runtime_checkable
 class EspecificacaoNegocio(Protocol):
     """Protocolo GoF Specification para predicados avaliáveis sobre contextos analíticos."""
 
-    def satisfeita_por(self, contexto: Mapping[str, object]) -> bool:
+    def satisfeita_por(self, contexto: Mapping[str, TipoValorEscalar]) -> bool:
         """Avalia se o contexto de métricas atende aos critérios da especificação."""
         ...
 
@@ -17,12 +19,12 @@ class EspecificacaoNegocio(Protocol):
 class EspecificacaoCondicao(EspecificacaoNegocio):
     """Especificação folha que avalia uma condição atômica declarativa."""
 
-    def __init__(self, metrica: str, operador: str, valor_esperado: object) -> None:
+    def __init__(self, metrica: str, operador: str, valor_esperado: TipoDadoJson) -> None:
         self._metrica = metrica
         self._operador = operador.lower()
         self._valor_esperado = valor_esperado
 
-    def satisfeita_por(self, contexto: Mapping[str, object]) -> bool:
+    def satisfeita_por(self, contexto: Mapping[str, TipoValorEscalar]) -> bool:
         if self._metrica not in contexto:
             return False
 
@@ -44,8 +46,8 @@ class EspecificacaoCondicao(EspecificacaoNegocio):
                 and isinstance(self._valor_esperado, (list, tuple))
                 and len(self._valor_esperado) == 2
             ):
-                v_min = float(self._valor_esperado[0])
-                v_max = float(self._valor_esperado[1])
+                v_min = float(str(self._valor_esperado[0]))
+                v_max = float(str(self._valor_esperado[1]))
                 return v_min <= v_atual <= v_max
 
             # Operadores numéricos escalares
@@ -73,7 +75,7 @@ class EspecificacaoCompostaAnd(EspecificacaoNegocio):
     def __init__(self, especificacoes: Sequence[EspecificacaoNegocio]) -> None:
         self._especificacoes = list(especificacoes)
 
-    def satisfeita_por(self, contexto: Mapping[str, object]) -> bool:
+    def satisfeita_por(self, contexto: Mapping[str, TipoValorEscalar]) -> bool:
         return all(esp.satisfeita_por(contexto) for esp in self._especificacoes)
 
 
@@ -84,5 +86,5 @@ class EspecificacaoCompostaOr(EspecificacaoNegocio):
     def __init__(self, especificacoes: Sequence[EspecificacaoNegocio]) -> None:
         self._especificacoes = list(especificacoes)
 
-    def satisfeita_por(self, contexto: Mapping[str, object]) -> bool:
+    def satisfeita_por(self, contexto: Mapping[str, TipoValorEscalar]) -> bool:
         return any(esp.satisfeita_por(contexto) for esp in self._especificacoes)

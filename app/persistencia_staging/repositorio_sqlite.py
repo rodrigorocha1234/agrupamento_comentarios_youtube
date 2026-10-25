@@ -12,6 +12,7 @@ from app.dominio_contratos.modelos_dados import (
     MetadadosExecucao,
     PaginaReviews,
     ReviewSteam,
+    TipoParametroSql,
 )
 from app.dominio_contratos.protocolos_staging import RepositorioStaging
 
@@ -133,9 +134,9 @@ class RepositorioStagingSqlite(RepositorioStaging):
 
         # Processar lotes tipados com itertools.batched
         for lote in itertools.batched(reviews, self._tamanho_lote):
-            dados_autores: list[tuple[object, ...]] = []
-            dados_reviews: list[tuple[object, ...]] = []
-            dados_historico: list[tuple[object, ...]] = []
+            dados_autores: list[tuple[TipoParametroSql, ...]] = []
+            dados_reviews: list[tuple[TipoParametroSql, ...]] = []
+            dados_historico: list[tuple[TipoParametroSql, ...]] = []
 
             for rev in lote:
                 aut = rev.author

@@ -2,6 +2,16 @@
 
 from app.extracao_steam.adaptador_steam import AdaptadorSteam
 from app.extracao_steam.cliente_http import ClienteHttpSteam
+from app.extracao_steam.fabrica_extracao import (
+    ErroProvedorExtracaoNaoRegistrado,
+    FabricaExtracao,
+)
 from app.extracao_steam.gerador_paginas import GeradorPaginasSteam
 
-__all__ = ["AdaptadorSteam", "ClienteHttpSteam", "GeradorPaginasSteam"]
+__all__ = [
+    "AdaptadorSteam",
+    "ClienteHttpSteam",
+    "ErroProvedorExtracaoNaoRegistrado",
+    "FabricaExtracao",
+    "GeradorPaginasSteam",
+]

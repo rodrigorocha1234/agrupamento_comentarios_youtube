@@ -8,6 +8,7 @@ from app.agrupamento_modelos.capacidades_algoritmo import (
     EstrategiaAgrupamento,
 )
 from app.agrupamento_modelos.fabrica_agrupadores import FabricaAgrupadores
+from app.agrupamento_modelos.selecionador_automl import SelecionadorModelosAutoML
 
 __all__ = [
     "AgrupadorDbscan",
@@ -16,4 +17,5 @@ __all__ = [
     "CapacidadesAlgoritmo",
     "EstrategiaAgrupamento",
     "FabricaAgrupadores",
+    "SelecionadorModelosAutoML",
 ]

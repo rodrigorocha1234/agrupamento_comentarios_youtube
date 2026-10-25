@@ -1,19 +1,22 @@
-"""Escritor analítico em formato Parquet para a camada Gold do Lakehouse."""
+"""Escritor tabular e analítico em formato Parquet para a camada Gold do Data Lake."""
 
 import io
+import json
+from collections.abc import Mapping
+from datetime import UTC, datetime
 from typing import final
 
-import numpy as np
 import pandas as pd
 import pyarrow as pa
 import pyarrow.parquet as pq
 
+from app.avaliacao_modelos.metricas_estatisticas import ResultadoAvaliacao
 from app.dominio_contratos.protocolos_datalake import ArmazenamentoLake
 
 
 @final
 class EscritorCamadaOuro:
-    """Persiste datasets rotulados e agregados analíticos da camada Gold no Data Lake."""
+    """Persiste datasets analíticos, métricas de partição e manifestos na camada Gold."""
 
     def __init__(
         self,
@@ -23,101 +26,80 @@ class EscritorCamadaOuro:
         self._armazenamento = armazenamento
         self._prefixo = prefixo_base.strip("/")
 
-    def construir_caminho_clusters(self, appid: int, versao: str) -> str:
-        """Gera o caminho particionado para o dataset completo rotulado."""
-        return f"{self._prefixo}/clusters/appid={appid}/versao={versao}/dados_clusters.parquet"
+    def construir_caminho_clusters(
+        self, appid: int, nome_modelo: str, versao: str
+    ) -> str:
+        """Gera caminho particionado hierárquico por appid e data corrente."""
+        agora = datetime.now(UTC)
+        return (
+            f"{self._prefixo}/clusters/appid={appid}/ano={agora.year}/"
+            f"mes={agora.month:02d}/modelo_{nome_modelo}_{versao}.parquet"
+        )
 
-    def construir_caminho_agregados(self, appid: int, versao: str) -> str:
-        """Gera o caminho particionado para a tabela de resumo analítico."""
-        return f"{self._prefixo}/agregados/appid={appid}/versao={versao}/resumo_clusters.parquet"
+    def construir_caminho_metricas(self, appid: int, versao: str) -> str:
+        """Gera caminho para tabela colunar de métricas estatísticas da partição."""
+        return f"{self._prefixo}/metricas/appid={appid}/metricas_{versao}.parquet"
+
+    def construir_caminho_resumo(self, appid: int, versao: str) -> str:
+        """Gera caminho para o resumo executivo textual ou JSON da partição."""
+        return f"{self._prefixo}/resumos/appid={appid}/resumo_executivo_{versao}.json"
+
+    def construir_caminho_manifesto(self, appid: int, versao: str) -> str:
+        """Gera caminho para o manifesto de linhagem e integridade analítica."""
+        return f"{self._prefixo}/manifestos/appid={appid}/manifesto_{versao}.json"
 
     def salvar_dataset_clusters(
-        self, appid: int, versao: str, dados_gold: pd.DataFrame
+        self, appid: int, nome_modelo: str, versao: str, df: pd.DataFrame
     ) -> str:
-        """Serializa o DataFrame Gold em Parquet Snappy e persiste no armazenamento."""
-        if dados_gold.empty:
+        """Serializa o DataFrame analítico em Parquet Snappy e envia para a camada Gold."""
+        if df.empty:
             return ""
 
-        tabela_arrow = pa.Table.from_pandas(dados_gold, preserve_index=False)
+        tabela_arrow = pa.Table.from_pandas(df)
         buffer_saida = io.BytesIO()
         pq.write_table(tabela_arrow, buffer_saida, compression="snappy")
         conteudo_bytes = buffer_saida.getvalue()
 
-        caminho_chave = self.construir_caminho_clusters(appid, versao)
+        caminho_chave = self.construir_caminho_clusters(appid, nome_modelo, versao)
         self._armazenamento.gravar_bytes(caminho_chave, conteudo_bytes)
         return caminho_chave
 
-    def salvar_resumo_clusters(
-        self, appid: int, versao: str, resumo_agregado: pd.DataFrame
+    def salvar_metricas(
+        self, appid: int, versao: str, avaliacao: ResultadoAvaliacao
     ) -> str:
-        """Persiste a tabela agregada resumida de clusters em Parquet."""
-        if resumo_agregado.empty:
-            return ""
+        """Salva métricas estatísticas em arquivo Parquet colunar na camada Gold."""
+        dados_metricas: dict[str, list[int | float | None]] = {
+            "total_amostras": [avaliacao.total_amostras],
+            "total_clusters": [avaliacao.total_clusters],
+            "total_ruido": [avaliacao.total_ruido],
+            "proporcao_ruido": [avaliacao.proporcao_ruido],
+            "silhouette_global": [avaliacao.silhouette_global],
+            "silhouette_sem_ruido": [avaliacao.silhouette_sem_ruido],
+            "davies_bouldin": [avaliacao.davies_bouldin],
+            "calinski_harabasz": [avaliacao.calinski_harabasz],
+        }
 
-        tabela_arrow = pa.Table.from_pandas(resumo_agregado, preserve_index=False)
+        tabela_arrow = pa.Table.from_pydict(dados_metricas)
         buffer_saida = io.BytesIO()
         pq.write_table(tabela_arrow, buffer_saida, compression="snappy")
         conteudo_bytes = buffer_saida.getvalue()
 
-        caminho_chave = self.construir_caminho_agregados(appid, versao)
+        caminho_chave = self.construir_caminho_metricas(appid, versao)
         self._armazenamento.gravar_bytes(caminho_chave, conteudo_bytes)
         return caminho_chave
 
-    def gerar_tabela_resumo(
-        self,
-        dados_gold: pd.DataFrame,
-        coluna_cluster: str = "cluster_id",
-    ) -> pd.DataFrame:
-        """Gera um DataFrame tabular resumido com métricas de negócio por cluster."""
-        if coluna_cluster not in dados_gold.columns or dados_gold.empty:
-            return pd.DataFrame()
+    def salvar_resumo_executivo(self, appid: int, versao: str, resumo_json: str) -> str:
+        """Persiste resumo executivo em formato JSON na camada Gold."""
+        caminho_chave = self.construir_caminho_resumo(appid, versao)
+        self._armazenamento.gravar_texto(caminho_chave, resumo_json)
+        return caminho_chave
 
-        linhas_resumo: list[dict[str, object]] = []
-        clusters_unicos = sorted(dados_gold[coluna_cluster].unique())
-        total_geral = float(len(dados_gold))
+    def salvar_manifesto_ouro(
+        self, appid: int, versao: str, manifesto_dados: Mapping[str, str | int | float]
+    ) -> str:
+        """Persiste manifesto de integridade e linhagem da partição Gold."""
 
-        for c_id in clusters_unicos:
-            cluster_int = int(c_id)
-            sub = pd.DataFrame(dados_gold.loc[dados_gold[coluna_cluster] == cluster_int])
-            total_membros = len(sub)
-            prop = (float(total_membros) / total_geral * 100.0) if total_geral > 0 else 0.0
-
-            # Horas jogadas
-            if "horas_jogadas_total" in sub.columns:
-                arr_h = np.asarray(
-                    pd.to_numeric(sub["horas_jogadas_total"], errors="coerce").dropna().values,
-                    dtype=np.float64,
-                )
-                mediana_h = float(np.median(arr_h)) if len(arr_h) > 0 else 0.0
-                media_h = float(np.mean(arr_h)) if len(arr_h) > 0 else 0.0
-            else:
-                mediana_h = 0.0
-                media_h = 0.0
-
-            # Positividade
-            if "voted_up" in sub.columns and total_membros > 0:
-                arr_v = np.asarray(sub["voted_up"].to_numpy(), dtype=np.bool_)
-                pos_pct = float(np.sum(arr_v)) / float(len(arr_v)) * 100.0
-            else:
-                pos_pct = 0.0
-
-            # Rótulo de negócio
-            rotulo = (
-                str(sub["rotulo_negocio"].iloc[0])
-                if "rotulo_negocio" in sub.columns and not sub.empty
-                else "padrao"
-            )
-
-            linhas_resumo.append(
-                {
-                    "cluster_id": cluster_int,
-                    "rotulo_negocio": rotulo,
-                    "total_membros": total_membros,
-                    "proporcao_percentual": round(prop, 2),
-                    "mediana_horas_jogadas": round(mediana_h, 2),
-                    "media_horas_jogadas": round(media_h, 2),
-                    "taxa_positividade": round(pos_pct, 2),
-                }
-            )
-
-        return pd.DataFrame(linhas_resumo)
+        conteudo_texto = json.dumps(manifesto_dados, indent=2, ensure_ascii=False)
+        caminho_chave = self.construir_caminho_manifesto(appid, versao)
+        self._armazenamento.gravar_texto(caminho_chave, conteudo_texto)
+        return caminho_chave

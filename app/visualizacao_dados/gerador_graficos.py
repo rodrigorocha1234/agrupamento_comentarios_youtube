@@ -64,7 +64,7 @@ class GeradorGraficos:
             }
         )
 
-        def _formatar_rotulo(c: object) -> str:
+        def _formatar_rotulo(c: str | float | None) -> str:
             return "Ruído (-1)" if str(c) == "-1" else f"Cluster {c}"
 
         contagens["rotulo_exibicao"] = contagens["cluster"].map(_formatar_rotulo)

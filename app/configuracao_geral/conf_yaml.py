@@ -4,7 +4,7 @@ import hashlib
 import os
 import re
 from pathlib import Path
-from typing import Final, final
+from typing import Final, cast, final
 
 import yaml
 
@@ -12,10 +12,12 @@ from app.configuracao_geral.modelos_configuracao import (
     ConfiguracaoDatalake,
     ConfiguracaoFluxosIncrementais,
     ConfiguracaoMlflow,
+    ConfiguracaoNegocio,
     ConfiguracaoProjeto,
     ConfiguracaoStaging,
     ConfiguracaoSteamApi,
 )
+from app.dominio_contratos.modelos_dados import TipoDadoJson
 
 
 @final
@@ -39,6 +41,7 @@ class ConfYAML:
         self._datalake: Final[ConfiguracaoDatalake] = self._carregar_datalake()
         self._mlflow: Final[ConfiguracaoMlflow] = self._carregar_mlflow()
         self._fluxos: Final[ConfiguracaoFluxosIncrementais] = self._carregar_fluxos()
+        self._negocio: Final[ConfiguracaoNegocio] = self._carregar_negocio()
         self._hash_configuracao: Final[str] = self._calcular_hash_arquivos()
 
     @property
@@ -72,6 +75,11 @@ class ConfYAML:
         return self._fluxos
 
     @property
+    def negocio(self) -> ConfiguracaoNegocio:
+        """Retorna as definições de regras declarativas de negócio."""
+        return self._negocio
+
+    @property
     def hash_configuracao(self) -> str:
         """Hash criptográfico SHA-256 do conjunto de arquivos de configuração."""
         return self._hash_configuracao
@@ -86,7 +94,7 @@ class ConfYAML:
 
         return self._PADRAO_VARIAVEL_AMBIENTE.sub(_substituidor, conteudo_texto)
 
-    def _ler_arquivo_yaml(self, caminho_relativo: str) -> dict[str, object]:
+    def _ler_arquivo_yaml(self, caminho_relativo: str) -> dict[str, TipoDadoJson]:
         """Lê e analisa um arquivo YAML interpolando variáveis de ambiente."""
         caminho_completo = self._diretorio / caminho_relativo
         if not caminho_completo.exists():
@@ -103,11 +111,11 @@ class ConfYAML:
                 f"O arquivo {caminho_relativo} deve conter um mapeamento YAML de primeiro nível."
             )
 
-        # Garantir retorno tipado sem Any
-        resultado: dict[str, object] = {}
+        # Garantir retorno tipado sem Any ou object
+        resultado: dict[str, TipoDadoJson] = {}
         for chave, valor in dados_carregados.items():
             if isinstance(chave, str):
-                resultado[chave] = valor
+                resultado[chave] = cast(TipoDadoJson, valor)
         return resultado
 
     def _carregar_projeto(self) -> ConfiguracaoProjeto:
@@ -133,6 +141,10 @@ class ConfYAML:
     def _carregar_fluxos(self) -> ConfiguracaoFluxosIncrementais:
         dados = self._ler_arquivo_yaml("processamento/fluxos_incrementais.yaml")
         return ConfiguracaoFluxosIncrementais.model_validate(dados)
+
+    def _carregar_negocio(self) -> ConfiguracaoNegocio:
+        dados = self._ler_arquivo_yaml("analises/negocio.yaml")
+        return ConfiguracaoNegocio.model_validate(dados)
 
     def _calcular_hash_arquivos(self) -> str:
         """Calcula o digest SHA-256 combinando todos os arquivos YAML ordenados."""

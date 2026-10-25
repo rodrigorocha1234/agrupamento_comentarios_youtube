@@ -1,58 +1,64 @@
-# Handoff Final de Entrega — Incremento 3 (Fase 3): MLOps, MLflow Tracking, Regras de Negócio e Visualização Executiva
+# Handoff Final de Entrega — Conclusão Integral do Projeto Steam Reviews Clustering v4.1 (Fases 1 a 5)
 
 - **Projeto:** Steam Reviews Clustering v4.1
-- **Incremento Concluído:** Fase 3 — Integração com Servidor MLflow via GoF Observer, Otimização Multicritério de Hiperparâmetros, Regras de Negócio Declarativas (Specification + Composite), Visualizações Desacopladas Plotly e Serviço de Consulta Analítica de Reviews Textuais.
+- **Status Geral:** **TODAS AS 5 FASES IMPLEMENTADAS, TESTADAS E HOMOLOGADAS COM SUCESSO**
 - **Data:** 24/10/2026
-- **Status do Gate:** **APROVADO, HOMOLOGADO E CONCLUÍDO**
 - **Referência Oficial:** [`documentacao/especificacao_original_v4_1.md`](file:///home/rodrigo/PycharmProjects/agrupamento_comentarios_youtube/documentacao/especificacao_original_v4_1.md)
-- **Especificação Técnica Fase 3:** [`production_artifacts/Technical_Specification_Fase3.md`](file:///home/rodrigo/PycharmProjects/agrupamento_comentarios_youtube/production_artifacts/Technical_Specification_Fase3.md)
-- **Plano de Aprovação Fase 3:** [`production_artifacts/03_plano_aprovacao.md`](file:///home/rodrigo/PycharmProjects/agrupamento_comentarios_youtube/production_artifacts/03_plano_aprovacao.md)
-- **Relatório de QA Fase 3:** [`production_artifacts/qa_relatorio.md`](file:///home/rodrigo/PycharmProjects/agrupamento_comentarios_youtube/production_artifacts/qa_relatorio.md)
+- **Artefatos Técnicos do Projeto:**
+  - [Inventário Inicial](file:///home/rodrigo/PycharmProjects/agrupamento_comentarios_youtube/production_artifacts/inventario.md)
+  - [Especificação Técnica Fase 1](file:///home/rodrigo/PycharmProjects/agrupamento_comentarios_youtube/production_artifacts/Technical_Specification.md)
+  - [Especificação Técnica Fase 2](file:///home/rodrigo/PycharmProjects/agrupamento_comentarios_youtube/production_artifacts/Technical_Specification_Fase2.md)
+  - [Especificação Técnica Fase 3](file:///home/rodrigo/PycharmProjects/agrupamento_comentarios_youtube/production_artifacts/Technical_Specification_Fase3.md)
+  - [Especificação Técnica Fase 4](file:///home/rodrigo/PycharmProjects/agrupamento_comentarios_youtube/production_artifacts/Technical_Specification_Fase4.md)
+  - [Especificação Técnica Fase 5](file:///home/rodrigo/PycharmProjects/agrupamento_comentarios_youtube/production_artifacts/Technical_Specification_Fase5.md)
+  - [Planos de Aprovação Homologados](file:///home/rodrigo/PycharmProjects/agrupamento_comentarios_youtube/production_artifacts/) (`01`, `02`, `03`, `04`, `05`)
+  - [Relatório de QA Consolidado](file:///home/rodrigo/PycharmProjects/agrupamento_comentarios_youtube/production_artifacts/qa_relatorio.md)
 
 ---
 
-## 1. O Que Foi Entregue na Fase 3
+## 1. Resumo das Fases Entregues
 
-1. **MLflow Tracking e GoF Observer (`app/integracao_mlflow/`):**
-   - [`ObservadorTreinamento`](file:///home/rodrigo/PycharmProjects/agrupamento_comentarios_youtube/app/integracao_mlflow/observador_treinamento.py): Protocolo base do padrão GoF Observer para telemetria de ML.
-   - [`ObservadorMlflow`](file:///home/rodrigo/PycharmProjects/agrupamento_comentarios_youtube/app/integracao_mlflow/observador_mlflow.py): Integração real com o servidor MLflow local (`http://localhost:5000`), registrando execuções, hiperparâmetros, tags de linhagem, hash SHA-256 das configurações, métricas escalares finitas e distribuição por cluster.
-   - [`ObservadorNulo`](file:///home/rodrigo/PycharmProjects/agrupamento_comentarios_youtube/app/integracao_mlflow/observador_nulo.py): GoF Null Object para execuções onde o tracking estiver inativo sem efeitos colaterais.
-   - [`RegistroModelos`](file:///home/rodrigo/PycharmProjects/agrupamento_comentarios_youtube/app/integracao_mlflow/registro_modelos.py): Serialização e empacotamento do pipeline de pré-processamento, algoritmo de clustering e centroides (se suportado pelo algoritmo) via `joblib`.
+1. **Fase 1 — Fundação, Ingestão Lazy Steam, Staging SQLite e Data Lake Bronze/Silver:**
+   - Facade `ConfYAML` tipada via Pydantic com `extra="forbid"` e cálculo de hash SHA-256.
+   - Extrator paginado lazy com `Iterator[PaginaReviews]` e controle de taxa/backoff exponencial.
+   - Staging SQLite transacional WAL com `RepositorioStagingSqlite` e `UnidadeTrabalhoSqlite`.
+   - Data Lake Bronze (JSON bruto) e Silver (Parquet colunar) via `ClienteRustfsS3` e `DespachanteOutbox`.
 
-2. **Otimização Multicritério de Hiperparâmetros (`app/otimizacao_hiperparametros/`):**
-   - [`AvaliadorObjetivo`](file:///home/rodrigo/PycharmProjects/agrupamento_comentarios_youtube/app/otimizacao_hiperparametros/avaliador_objetivo.py): Função objetivo balanceada que impede a seleção por uma única métrica, considerando coesão, separabilidade, taxa de ruído e penalização de clusters unitários.
-   - [`BuscadorParametros`](file:///home/rodrigo/PycharmProjects/agrupamento_comentarios_youtube/app/otimizacao_hiperparametros/buscador_parametros.py): Motor de busca desacoplado que avalia candidatos em grade e elege o melhor modelo com rastreabilidade completa de tentativas.
+2. **Fase 2 — Processamento Tabular, Engenharia de Atributos e Modelagem de Clustering:**
+   - Motores com paridade estrita: `MotorPandas` e `MotorPolars` com `InterpretadorDsl` sem `eval`/`exec`.
+   - Segregação da matriz $X$ e gerador de atributos analíticos (`GeradorAtributosDerivados`, `SeletorColunasTreinamento`).
+   - Pipelines de pré-processamento GoF Composite: Imputação, Escalonamento Robusto e Redução PCA.
+   - Adaptadores de clustering scikit-learn com catálogo de capacidades tipado: `AgrupadorKMeans`, `AgrupadorDbscan`, `AgrupadorHdbscan`.
+   - Avaliador estatístico multicritério (`AvaliadorClusters`): Silhueta global/sem ruído, Davies-Bouldin, Calinski-Harabasz.
 
-3. **Regras de Negócio Declarativas Pós-Treinamento (`app/regras_negocio/`):**
-   - [`EspecificacaoNegocio`](file:///home/rodrigo/PycharmProjects/agrupamento_comentarios_youtube/app/regras_negocio/especificacao_negocio.py): Padrão GoF Specification e Composite (`EspecificacaoCondicao`, `EspecificacaoCompostaAnd`, `EspecificacaoCompostaOr`) para predicados avaliáveis sobre contextos analíticos.
-   - [`RotuladorClusters`](file:///home/rodrigo/PycharmProjects/agrupamento_comentarios_youtube/app/regras_negocio/rotulador_clusters.py): Avalia agregados de horas jogadas, sentimento de votos e engajamento para gerar rótulos semânticos (`rotulo_negocio`), preservando 100% os rótulos de cluster originais sem retreinamento.
+3. **Fase 3 — MLOps, Servidor MLflow, Regras de Negócio e Visualização Executiva:**
+   - MLOps GoF Observer: `ObservadorMlflow` (rastreamento real em `http://localhost:5000`) e `ObservadorNulo`.
+   - Serialização e empacotamento completo de modelos (`RegistroModelos`).
+   - Otimizador multicritério de hiperparâmetros (`BuscadorParametros`, `AvaliadorObjetivo`).
+   - Regras declarativas pós-treinamento GoF Specification + Composite (`RotuladorClusters`).
+   - Visualizações Plotly (`GeradorGraficos`, `PainelExecutivo`) e consulta de avaliações textuais brutas para leitura humana (`RecuperadorReviews`).
 
-4. **Visualizações Executivas e EDA (`app/visualizacao_dados/`):**
-   - [`GeradorGraficos`](file:///home/rodrigo/PycharmProjects/agrupamento_comentarios_youtube/app/visualizacao_dados/gerador_graficos.py): Gráficos de dispersão 2D, volumetria e perfil comparativo de atributos por cluster exportáveis em JSON via Plotly.
-   - [`PainelExecutivo`](file:///home/rodrigo/PycharmProjects/agrupamento_comentarios_youtube/app/visualizacao_dados/painel_executivo.py): Compila sumários estatísticos, tabelas de distribuição e código Plotly em relatórios Markdown e HTML autônomos.
+4. **Fase 4 — Camada Gold Analítica, Dashboards Grafana e Telemetria Analítica:**
+   - Persistência Gold no Lakehouse Parquet Snappy particionado por `appid` (`EscritorCamadaOuro`).
+   - Telemetria de clustering no Prometheus (`TelemetriaAnalitica`) com estrita baixa cardinalidade.
+   - Provisionamento oficial de dashboards no Grafana (`dashboard_steam_clusters.json`, `dashboard_steam_lakehouse.json`, `dashboard_steam_operacional.json`).
+   - Catálogo de regras de negócio de personas ricas em `configuracoes/analises/negocio.yaml`.
+   - Orquestrador integrado de exportação Gold e relatórios EDA (`ExportadorCamadaOuro`).
 
-5. **Consulta Analítica de Reviews para Auditoria Humana (`app/servico_consulta/`):**
-   - [`RecuperadorReviews`](file:///home/rodrigo/PycharmProjects/agrupamento_comentarios_youtube/app/servico_consulta/recuperador_reviews.py): Recupera amostras aleatórias determinísticas de avaliações textuais brutas agrupadas por cluster para inspeção humana, cumprindo rigorosamente a diretriz de ausência de PLN ou inferências textuais automatizadas.
-
-6. **Orquestrador Completo Integrado (`app/treinamento_pipeline/executor_treinamento.py`):**
-   - Integração sequencial do pipeline analítico Silver → Matriz $X$ → Pré-processamento → Clustering → Avaliação Estatística → Observer MLflow → Rotulagem de Negócio → Persistência de Artefatos → Relatório Executivo.
+5. **Fase 5 — Adaptador PostgreSQL, Análise Temporal, API FastAPI e AutoML:**
+   - Adaptador PostgreSQL de staging com `psycopg 3` (`EsquemaTabelasPostgres`, `RepositorioStagingPostgres`, `UnidadeTrabalhoPostgres`, `ConexaoPostgresStaging`) registrado na `FabricaStaging`.
+   - Análise temporal e alinhamento de permutação de clusters (`AlinhadorClustersTemporal`) e séries temporais (`RastreadorEvolucaoTemporal`).
+   - API REST FastAPI (`criar_aplicacao`) pronta para execução pelo container `api` do Docker Compose (:8000), com endpoints de saúde, métricas Prometheus, consulta Gold e inferência.
+   - Seleção automatizada de modelos de clustering (`SelecionadorModelosAutoML`).
 
 ---
 
-## 2. Evidências dos Comandos Executados
+## 2. Evidências Finais de Qualidade e Governança
 
-1. `./.venv/bin/ruff check .`: **All checks passed!**
-2. `./.venv/bin/ruff format --check .`: **130 files already formatted**.
-3. `./.venv/bin/pyright`: **0 errors, 0 warnings, 0 informations** em modo `strict` em 100% da base.
-4. `./.venv/bin/pytest -v`: **49 passed in 5.62s** (100% de aprovação em todos os 49 testes, 0 falhas, 0 warnings).
-5. Servidor MLflow (`http://localhost:5000`): Runs registradas com sucesso, parâmetros, tags, métricas de cluster e artefatos validados.
-
----
-
-## 3. Estado Consolidado do Projeto
-
-O projeto **Steam Reviews Clustering v4.1** atinge seu estado de entrega completa:
-- **Fase 1 (Fundação e Ingestão):** Concluída e homologada.
-- **Fase 2 (Processamento Tabular e Modelagem ML):** Concluída e homologada.
-- **Fase 3 (MLOps, Regras de Negócio e Visualização Executiva):** Concluída e homologada.
-- Todas as invariantes arquiteturais (Python 3.12+, strict typing, sem `Any`, GoF, sem PLN, Docker Compose único, observabilidade) foram plenamente respeitadas.
+1. **Testes Automatizados:** **69 testes passando em 9.68s** (0 falhas, 100% de cobertura funcional).
+2. **Type Checking Estrito:** `pyright` no modo estrito com **0 errors, 0 warnings, 0 informations** e **zero `Any`** em todo o repositório.
+3. **Qualidade de Código e Estilo:** `ruff check` e `ruff format` aprovados em todos os 152 arquivos.
+4. **Respeito aos Invariantes:**
+   - Nomenclatura com exatamente 2 palavras separadas por `_`.
+   - Sem PLN/LLM/embeddings: texto original estritamente preservado para leitura e auditoria humana.
+   - Infraestrutura única do Docker Compose preservada (S3 :9000, PostgreSQL :5432, MLflow :5000, Prometheus :9090, Grafana :3000, API :8000).

@@ -6,6 +6,7 @@ from typing import final
 
 import polars as pl
 
+from app.dominio_contratos.modelos_dados import TipoDadoJson
 from app.processamento_dados.interpretador_dsl import (
     ErroOperadorDslDesconhecido,
     InterpretadorDsl,
@@ -29,7 +30,7 @@ class MotorPolars:
     def aplicar_filtros(
         self,
         dados: pl.DataFrame,
-        condicoes: Sequence[Mapping[str, object]],
+        condicoes: Sequence[Mapping[str, TipoDadoJson]],
         combinacao: str = "and",
     ) -> pl.DataFrame:
         """Aplica filtros declarativos via expressões nativas do Polars."""
@@ -97,7 +98,7 @@ class MotorPolars:
         return dados.clone()
 
     def _construir_expressao_filtro(
-        self, coluna: str, operador: str, valor: object
+        self, coluna: str, operador: str, valor: TipoDadoJson
     ) -> pl.Expr:
         """Mapeia operador para expressão nativa pl.col."""
         c = pl.col(coluna)
@@ -116,8 +117,8 @@ class MotorPolars:
         elif (
             operador == "entre" and isinstance(valor, (list, tuple)) and len(valor) == 2
         ):
-            v0 = float(valor[0])
-            v1 = float(valor[1])
+            v0 = float(str(valor[0]))
+            v1 = float(str(valor[1]))
             return (c >= pl.lit(v0)) & (c <= pl.lit(v1))
         elif operador == "pertence" and isinstance(valor, (list, tuple, set)):
             return c.is_in(list(valor))

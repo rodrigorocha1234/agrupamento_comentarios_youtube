@@ -3,7 +3,7 @@
 from collections.abc import Iterator
 from typing import Protocol, TypeVar
 
-from app.dominio_contratos.modelos_dados import PaginaReviews
+from app.dominio_contratos.modelos_dados import PaginaReviews, TipoDadoJson
 
 T_co = TypeVar("T_co", covariant=True)
 
@@ -21,7 +21,7 @@ class ClienteSteam(Protocol):
 
     def buscar_pagina_bruta(
         self, appid: int, cursor: str, tamanho_pagina: int
-    ) -> dict[str, object]:
+    ) -> dict[str, TipoDadoJson]:
         """Executa a requisição HTTP retornando o dicionário da resposta."""
         ...
 

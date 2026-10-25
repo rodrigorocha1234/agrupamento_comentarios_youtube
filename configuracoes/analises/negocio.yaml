@@ -1,3 +1,50 @@
 negocio:
-  ativado: false
-  regras: []
+  ativado: true
+  regras:
+    - identificador: "veteranos_criticos"
+      rotulo: "Veteranos Críticos"
+      combinacao: "and"
+      condicoes:
+        - metrica: "mediana_horas_jogadas"
+          operador: "maior_ou_igual"
+          valor: 100.0
+        - metrica: "percentual_reviews_negativas"
+          operador: "maior_ou_igual"
+          valor: 50.0
+    - identificador: "veteranos_leais"
+      rotulo: "Veteranos Leais"
+      combinacao: "and"
+      condicoes:
+        - metrica: "mediana_horas_jogadas"
+          operador: "maior_ou_igual"
+          valor: 100.0
+        - metrica: "percentual_reviews_positivas"
+          operador: "maior_ou_igual"
+          valor: 70.0
+    - identificador: "novatos_satisfeitos"
+      rotulo: "Novatos Satisfeitos"
+      combinacao: "and"
+      condicoes:
+        - metrica: "mediana_horas_jogadas"
+          operador: "menor"
+          valor: 30.0
+        - metrica: "percentual_reviews_positivas"
+          operador: "maior_ou_igual"
+          valor: 60.0
+    - identificador: "novatos_frustrados"
+      rotulo: "Novatos Frustrados"
+      combinacao: "and"
+      condicoes:
+        - metrica: "mediana_horas_jogadas"
+          operador: "menor"
+          valor: 20.0
+        - metrica: "percentual_reviews_negativas"
+          operador: "maior_ou_igual"
+          valor: 50.0
+    - identificador: "formadores_opiniao"
+      rotulo: "Formadores de Opinião"
+      combinacao: "and"
+      condicoes:
+        - metrica: "mediana_votos_up"
+          operador: "maior_ou_igual"
+          valor: 5.0

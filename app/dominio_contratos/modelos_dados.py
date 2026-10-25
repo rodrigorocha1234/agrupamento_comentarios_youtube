@@ -1,7 +1,21 @@
 """Entidades de domínio imutáveis e fortemente tipadas para o projeto Steam Reviews."""
 
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from datetime import datetime
+
+type TipoValorEscalar = int | float | str | bool | None
+type TipoParametroSql = int | float | str | bool | bytes | datetime | None
+type TipoParametroAlgoritmo = int | float | str | bool | None
+type TipoDadoJson = (
+    int
+    | float
+    | str
+    | bool
+    | None
+    | Sequence["TipoDadoJson"]
+    | Mapping[str, "TipoDadoJson"]
+)
 
 
 @dataclass(frozen=True, slots=True)

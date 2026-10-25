@@ -2,6 +2,7 @@
 
 from typing import final, override
 
+from app.dominio_contratos.modelos_dados import TipoDadoJson
 from app.dominio_contratos.protocolos_extracao import ClienteSteam
 from app.extracao_steam.controlador_resiliencia import ControladorResiliencia
 from app.extracao_steam.gerador_paginas import GeradorPaginasSteam
@@ -18,7 +19,7 @@ class ClienteSteamFalso(ClienteSteam):
     @override
     def buscar_pagina_bruta(
         self, appid: int, cursor: str, tamanho_pagina: int
-    ) -> dict[str, object]:
+    ) -> dict[str, TipoDadoJson]:
         self.chamadas += 1
 
         if self.loop_proposital and self.chamadas >= 3:

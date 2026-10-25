@@ -5,10 +5,15 @@ import json
 from datetime import UTC, datetime
 from typing import final
 
-from app.dominio_contratos.modelos_dados import AutorSteam, PaginaReviews, ReviewSteam
+from app.dominio_contratos.modelos_dados import (
+    AutorSteam,
+    PaginaReviews,
+    ReviewSteam,
+    TipoDadoJson,
+)
 
 
-def _extrair_inteiro(valor: object, padrao: int = 0) -> int:
+def _extrair_inteiro(valor: TipoDadoJson, padrao: int = 0) -> int:
     """Converte valor desconhecido para int de forma segura."""
     if isinstance(valor, int):
         return valor
@@ -17,7 +22,7 @@ def _extrair_inteiro(valor: object, padrao: int = 0) -> int:
     return padrao
 
 
-def _extrair_float(valor: object, padrao: float = 0.0) -> float:
+def _extrair_float(valor: TipoDadoJson, padrao: float = 0.0) -> float:
     """Converte valor desconhecido para float de forma segura."""
     if isinstance(valor, (float, int)):
         return float(valor)
@@ -29,7 +34,7 @@ def _extrair_float(valor: object, padrao: float = 0.0) -> float:
     return padrao
 
 
-def _extrair_bool(valor: object, padrao: bool = False) -> bool:
+def _extrair_bool(valor: TipoDadoJson, padrao: bool = False) -> bool:
     """Converte valor desconhecido para bool de forma segura."""
     if isinstance(valor, bool):
         return valor
@@ -46,7 +51,7 @@ class AdaptadorSteam:
         self,
         appid: int,
         cursor_entrada: str,
-        dados_brutos: dict[str, object],
+        dados_brutos: dict[str, TipoDadoJson],
     ) -> PaginaReviews:
         """Converte o payload bruto em uma PaginaReviews tipada."""
         momento_atual = datetime.now(UTC)
@@ -78,7 +83,7 @@ class AdaptadorSteam:
         )
 
     def _converter_avaliacao(
-        self, appid: int, dados_review: dict[object, object]
+        self, appid: int, dados_review: dict[str, TipoDadoJson]
     ) -> ReviewSteam | None:
         """Converte um item de review individual e seu autor."""
         rec_id = dados_review.get("recommendationid")

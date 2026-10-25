@@ -1,6 +1,6 @@
 """Compilador de relatórios executivos em HTML e Markdown com sumários analíticos."""
 
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from typing import final
 
 import numpy as np
@@ -9,7 +9,7 @@ import pandas as pd
 from app.avaliacao_modelos.metricas_estatisticas import ResultadoAvaliacao
 
 
-def _extrair_array_float(serie: object) -> np.ndarray:
+def _extrair_array_float(serie: pd.Series | pd.DataFrame | Sequence[float] | None) -> np.ndarray:
     """Extrai array unidimensional de floats finitos ignorando NaNs."""
     if not isinstance(serie, pd.Series):
         return np.empty(0, dtype=np.float64)

@@ -26,6 +26,11 @@ class ArmazenamentoLakeFalso(ArmazenamentoLake):
         self.textos: dict[str, str] = {}
         self.arquivos_binarios: dict[str, bytes] = {}
 
+    @property
+    @override
+    def bucket(self) -> str:
+        return "steam-reviews-teste"
+
     @override
     def gravar_texto(self, caminho_chave: str, conteudo: str) -> None:
         self.textos[caminho_chave] = conteudo
@@ -33,6 +38,20 @@ class ArmazenamentoLakeFalso(ArmazenamentoLake):
     @override
     def gravar_bytes(self, caminho_chave: str, dados_bytes: bytes) -> None:
         self.arquivos_binarios[caminho_chave] = dados_bytes
+
+    @override
+    def ler_bytes(self, caminho_chave: str) -> bytes:
+        if caminho_chave in self.arquivos_binarios:
+            return self.arquivos_binarios[caminho_chave]
+        if caminho_chave in self.textos:
+            return self.textos[caminho_chave].encode("utf-8")
+        raise FileNotFoundError(f"Chave '{caminho_chave}' não encontrada.")
+
+    @override
+    def listar_chaves(self, prefixo: str) -> list[str]:
+        prefixo_limpo = prefixo.lstrip("/")
+        todas = list(self.arquivos_binarios.keys()) + list(self.textos.keys())
+        return [k for k in todas if k.lstrip("/").startswith(prefixo_limpo)]
 
     @override
     def verificar_existencia(self, caminho_chave: str) -> bool:

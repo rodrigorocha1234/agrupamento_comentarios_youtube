@@ -4,6 +4,7 @@ from typing import final
 import numpy as np
 import pandas as pd
 
+from app.dominio_contratos.modelos_dados import TipoDadoJson
 from app.processamento_dados.interpretador_dsl import (
     ErroOperadorDslDesconhecido,
     InterpretadorDsl,
@@ -27,7 +28,7 @@ class MotorPandas:
     def aplicar_filtros(
         self,
         dados: pd.DataFrame,
-        condicoes: Sequence[Mapping[str, object]],
+        condicoes: Sequence[Mapping[str, TipoDadoJson]],
         combinacao: str = "and",
     ) -> pd.DataFrame:
         """Aplica filtros declarativos vetorizados sobre o DataFrame."""
@@ -100,7 +101,7 @@ class MotorPandas:
         return resultado
 
     def _avaliar_condicao(
-        self, serie: pd.Series, operador: str, valor: object
+        self, serie: pd.Series, operador: str, valor: TipoDadoJson
     ) -> np.ndarray:
         """Avalia um operador único de forma vetorizada retornando array booleano."""
         arr_obj = np.asarray(serie.values)
@@ -132,8 +133,8 @@ class MotorPandas:
         elif (
             operador == "entre" and isinstance(valor, (list, tuple)) and len(valor) == 2
         ):
-            v0 = float(valor[0])
-            v1 = float(valor[1])
+            v0 = float(str(valor[0]))
+            v1 = float(str(valor[1]))
             cond = (arr_num >= v0) & (arr_num <= v1)
             return np.asarray(cond, dtype=np.bool_)
 

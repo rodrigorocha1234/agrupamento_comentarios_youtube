@@ -5,15 +5,16 @@ from app.agrupamento_modelos.agrupador_dbscan import AgrupadorDbscan
 from app.agrupamento_modelos.agrupador_hdbscan import AgrupadorHdbscan
 from app.agrupamento_modelos.agrupador_kmeans import AgrupadorKMeans
 from app.agrupamento_modelos.capacidades_algoritmo import EstrategiaAgrupamento
+from app.dominio_contratos.modelos_dados import TipoParametroAlgoritmo
 
-TipoCriadorAgrupador = Callable[[dict[str, object]], EstrategiaAgrupamento]
+TipoCriadorAgrupador = Callable[[dict[str, TipoParametroAlgoritmo]], EstrategiaAgrupamento]
 
 
 class ErroAlgoritmoNaoRegistrado(Exception):
     """Exceção levantada quando um algoritmo não estiver no catálogo de registros."""
 
 
-def _extrair_int(valor: object, padrao: int) -> int:
+def _extrair_int(valor: TipoParametroAlgoritmo, padrao: int) -> int:
     if valor is None:
         return padrao
     try:
@@ -22,7 +23,7 @@ def _extrair_int(valor: object, padrao: int) -> int:
         return padrao
 
 
-def _extrair_float(valor: object, padrao: float) -> float:
+def _extrair_float(valor: TipoParametroAlgoritmo, padrao: float) -> float:
     if valor is None:
         return padrao
     try:
@@ -44,7 +45,7 @@ class FabricaAgrupadores:
         self._registro[nome.lower()] = criador
 
     def criar_agrupador(
-        self, nome_algoritmo: str, parametros: dict[str, object] | None = None
+        self, nome_algoritmo: str, parametros: dict[str, TipoParametroAlgoritmo] | None = None
     ) -> EstrategiaAgrupamento:
         """Instancia o algoritmo correspondente sem condicionais no domínio."""
         chave = nome_algoritmo.lower()
@@ -58,7 +59,7 @@ class FabricaAgrupadores:
     def _registrar_padroes(self) -> None:
         """Registra KMeans, DBSCAN e HDBSCAN."""
 
-        def _criar_kmeans(params: dict[str, object]) -> EstrategiaAgrupamento:
+        def _criar_kmeans(params: dict[str, TipoParametroAlgoritmo]) -> EstrategiaAgrupamento:
             n_clusters = _extrair_int(params.get("n_clusters"), 4)
             random_state = _extrair_int(params.get("random_state"), 42)
             val_init = params.get("n_init", 10)
@@ -71,12 +72,12 @@ class FabricaAgrupadores:
                 n_clusters=n_clusters, random_state=random_state, n_init=n_init
             )
 
-        def _criar_dbscan(params: dict[str, object]) -> EstrategiaAgrupamento:
+        def _criar_dbscan(params: dict[str, TipoParametroAlgoritmo]) -> EstrategiaAgrupamento:
             eps = _extrair_float(params.get("eps"), 0.5)
             min_samples = _extrair_int(params.get("min_samples"), 5)
             return AgrupadorDbscan(eps=eps, min_samples=min_samples)
 
-        def _criar_hdbscan(params: dict[str, object]) -> EstrategiaAgrupamento:
+        def _criar_hdbscan(params: dict[str, TipoParametroAlgoritmo]) -> EstrategiaAgrupamento:
             min_cluster_size = _extrair_int(params.get("min_cluster_size"), 20)
             min_samples = _extrair_int(params.get("min_samples"), 5)
             return AgrupadorHdbscan(

@@ -1,0 +1,2845 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Steam Reviews Clustering v4.1 — Arquitetura UML e Manual de Operação</title>
+  
+  <!-- Fontes Google: Inter e JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+
+  <!-- Mermaid.js para renderização de diagramas UML -->
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <script>
+    mermaid.initialize({
+      startOnLoad: true,
+      theme: 'dark',
+      themeVariables: {
+        darkMode: true,
+        background: '#0f172a',
+        primaryColor: '#3b82f6',
+        primaryTextColor: '#f8fafc',
+        primaryBorderColor: '#60a5fa',
+        lineColor: '#94a3b8',
+        secondaryColor: '#1e293b',
+        tertiaryColor: '#1e1b4b',
+        noteBkgColor: '#1e293b',
+        noteTextColor: '#cbd5e1'
+      },
+      flowchart: { curve: 'basis' }
+    });
+  </script>
+
+  <style>
+    :root {
+      --bg-body: #0b0f19;
+      --bg-surface: #111827;
+      --bg-surface-elevated: #1f2937;
+      --bg-surface-card: #151d30;
+      --border-subtle: #1e293b;
+      --border-accent: #334155;
+      --border-highlight: #3b82f6;
+      
+      --text-main: #f3f4f6;
+      --text-muted: #9ca3af;
+      --text-dim: #6b7280;
+      
+      --accent-blue: #3b82f6;
+      --accent-blue-light: #60a5fa;
+      --accent-cyan: #06b6d4;
+      --accent-emerald: #10b981;
+      --accent-amber: #f59e0b;
+      --accent-purple: #8b5cf6;
+      --accent-rose: #f43f5e;
+      
+      --sidebar-width: 300px;
+      --code-bg: #0d1117;
+      --radius-sm: 6px;
+      --radius-md: 10px;
+      --radius-lg: 16px;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background-color: var(--bg-body);
+      color: var(--text-main);
+      line-height: 1.65;
+      display: flex;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* Barra Lateral Fixa (Sidebar) */
+    aside.sidebar {
+      width: var(--sidebar-width);
+      background-color: var(--bg-surface);
+      border-right: 1px solid var(--border-subtle);
+      height: 100vh;
+      position: fixed;
+      top: 0;
+      left: 0;
+      display: flex;
+      flex-direction: column;
+      z-index: 100;
+      padding: 1.5rem 1rem;
+    }
+
+    .sidebar-header {
+      padding-bottom: 1.25rem;
+      border-bottom: 1px solid var(--border-subtle);
+      margin-bottom: 1.25rem;
+    }
+
+    .brand-title {
+      font-size: 1.15rem;
+      font-weight: 800;
+      background: linear-gradient(135deg, #60a5fa 0%, #a78bfa 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .brand-badge {
+      display: inline-block;
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      padding: 0.15rem 0.45rem;
+      background: rgba(59, 130, 246, 0.2);
+      color: var(--accent-blue-light);
+      border: 1px solid rgba(59, 130, 246, 0.4);
+      border-radius: 9999px;
+      margin-top: 0.25rem;
+    }
+
+    .search-box {
+      margin-bottom: 1rem;
+      position: relative;
+    }
+
+    .search-box input {
+      width: 100%;
+      background: var(--bg-surface-elevated);
+      border: 1px solid var(--border-accent);
+      border-radius: var(--radius-sm);
+      color: var(--text-main);
+      padding: 0.45rem 0.75rem;
+      font-size: 0.85rem;
+      outline: none;
+      transition: all 0.2s ease;
+    }
+
+    .search-box input:focus {
+      border-color: var(--accent-blue);
+      box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+    }
+
+    nav.nav-links {
+      flex: 1;
+      overflow-y: auto;
+      padding-right: 0.25rem;
+    }
+
+    nav.nav-links::-webkit-scrollbar {
+      width: 5px;
+    }
+
+    nav.nav-links::-webkit-scrollbar-thumb {
+      background: var(--border-accent);
+      border-radius: 4px;
+    }
+
+    .nav-section-title {
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      font-weight: 700;
+      color: var(--text-dim);
+      letter-spacing: 0.05em;
+      margin: 1.25rem 0 0.5rem 0.5rem;
+    }
+
+    .nav-item {
+      display: block;
+      color: var(--text-muted);
+      text-decoration: none;
+      font-size: 0.86rem;
+      padding: 0.4rem 0.65rem;
+      border-radius: var(--radius-sm);
+      margin-bottom: 0.15rem;
+      transition: all 0.15s ease;
+    }
+
+    .nav-item:hover, .nav-item.active {
+      color: #ffffff;
+      background-color: var(--bg-surface-elevated);
+      border-left: 3px solid var(--accent-blue);
+    }
+
+    .sidebar-footer {
+      border-top: 1px solid var(--border-subtle);
+      padding-top: 1rem;
+      font-size: 0.75rem;
+      color: var(--text-dim);
+    }
+
+    /* Conteúdo Principal */
+    main.content {
+      margin-left: var(--sidebar-width);
+      flex: 1;
+      padding: 3rem 4rem;
+      max-width: calc(100vw - var(--sidebar-width));
+    }
+
+    .header-banner {
+      background: linear-gradient(135deg, rgba(30, 58, 138, 0.3) 0%, rgba(88, 28, 135, 0.2) 100%);
+      border: 1px solid var(--border-accent);
+      border-radius: var(--radius-lg);
+      padding: 2.5rem;
+      margin-bottom: 3rem;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .header-banner::before {
+      content: "";
+      position: absolute;
+      top: -50%;
+      right: -20%;
+      width: 350px;
+      height: 350px;
+      background: radial-gradient(circle, rgba(59, 130, 246, 0.15) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    h1.doc-title {
+      font-size: 2.4rem;
+      font-weight: 800;
+      margin-bottom: 0.75rem;
+      line-height: 1.2;
+    }
+
+    p.doc-subtitle {
+      font-size: 1.1rem;
+      color: var(--text-muted);
+      max-width: 850px;
+      margin-bottom: 1.5rem;
+    }
+
+    .badge-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.6rem;
+      align-items: center;
+    }
+
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.35rem 0.75rem;
+      border-radius: 9999px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      background: var(--bg-surface-elevated);
+      border: 1px solid var(--border-accent);
+    }
+
+    .status-badge.green {
+      border-color: rgba(16, 185, 129, 0.4);
+      color: #34d399;
+      background: rgba(16, 185, 129, 0.1);
+    }
+
+    .status-badge.blue {
+      border-color: rgba(59, 130, 246, 0.4);
+      color: #60a5fa;
+      background: rgba(59, 130, 246, 0.1);
+    }
+
+    .status-badge.purple {
+      border-color: rgba(139, 92, 246, 0.4);
+      color: #c084fc;
+      background: rgba(139, 92, 246, 0.1);
+    }
+
+    /* Seções e Tipografia */
+    section.doc-section {
+      margin-bottom: 4rem;
+      scroll-margin-top: 2rem;
+    }
+
+    h2.section-heading {
+      font-size: 1.75rem;
+      font-weight: 700;
+      margin-bottom: 1rem;
+      padding-bottom: 0.5rem;
+      border-bottom: 1px solid var(--border-subtle);
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      color: #ffffff;
+    }
+
+    h2.section-heading .heading-number {
+      font-size: 1.1rem;
+      color: var(--accent-blue-light);
+      background: rgba(59, 130, 246, 0.15);
+      border: 1px solid rgba(59, 130, 246, 0.3);
+      padding: 0.1rem 0.55rem;
+      border-radius: var(--radius-sm);
+    }
+
+    h3.subsection-heading {
+      font-size: 1.25rem;
+      font-weight: 600;
+      margin: 1.75rem 0 0.75rem;
+      color: #e2e8f0;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    p {
+      margin-bottom: 1rem;
+      color: #cbd5e1;
+    }
+
+    ul, ol {
+      margin-bottom: 1.25rem;
+      padding-left: 1.5rem;
+      color: #cbd5e1;
+    }
+
+    li {
+      margin-bottom: 0.35rem;
+    }
+
+    strong {
+      color: #ffffff;
+    }
+
+    /* Caixas de Alerta (Callouts) */
+    .callout {
+      border-left: 4px solid var(--accent-blue);
+      background: rgba(30, 41, 59, 0.6);
+      padding: 1.25rem 1.5rem;
+      border-radius: 0 var(--radius-md) var(--radius-md) 0;
+      margin: 1.5rem 0;
+    }
+
+    .callout.tip {
+      border-left-color: var(--accent-emerald);
+      background: rgba(6, 78, 59, 0.2);
+    }
+
+    .callout.warning {
+      border-left-color: var(--accent-amber);
+      background: rgba(120, 53, 15, 0.2);
+    }
+
+    .callout.danger {
+      border-left-color: var(--accent-rose);
+      background: rgba(136, 19, 55, 0.2);
+    }
+
+    .callout-title {
+      font-weight: 700;
+      font-size: 0.95rem;
+      margin-bottom: 0.4rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .callout.tip .callout-title { color: #34d399; }
+    .callout.warning .callout-title { color: #fbbf24; }
+    .callout.danger .callout-title { color: #f87171; }
+
+    /* Cards e Containers de Diagramas com Zoom Interativo */
+    .diagram-card {
+      background: var(--bg-surface-card);
+      border: 1px solid var(--border-accent);
+      border-radius: var(--radius-lg);
+      padding: 1.75rem;
+      margin: 2rem 0;
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
+    }
+
+    .diagram-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1.25rem;
+      border-bottom: 1px solid var(--border-subtle);
+      padding-bottom: 0.85rem;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+    }
+
+    .diagram-title {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: #f8fafc;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .diagram-actions {
+      display: flex;
+      align-items: center;
+      gap: 0.45rem;
+      flex-wrap: wrap;
+    }
+
+    .diagram-tag {
+      font-size: 0.75rem;
+      padding: 0.25rem 0.55rem;
+      border-radius: 4px;
+      font-weight: 600;
+      background: rgba(59, 130, 246, 0.2);
+      color: var(--accent-blue-light);
+      margin-right: 0.35rem;
+    }
+
+    .diagram-btn {
+      background: var(--bg-surface-elevated);
+      border: 1px solid var(--border-accent);
+      color: var(--text-main);
+      padding: 0.25rem 0.6rem;
+      font-size: 0.78rem;
+      font-weight: 600;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.3rem;
+      transition: all 0.15s ease;
+      user-select: none;
+    }
+
+    .diagram-btn:hover {
+      background: var(--accent-blue);
+      color: #ffffff;
+      border-color: var(--accent-blue-light);
+      box-shadow: 0 0 10px rgba(59, 130, 246, 0.3);
+    }
+
+    .diagram-btn.highlight {
+      background: rgba(59, 130, 246, 0.25);
+      border-color: var(--accent-blue);
+      color: #93c5fd;
+    }
+
+    .diagram-btn.highlight:hover {
+      background: var(--accent-blue);
+      color: #ffffff;
+    }
+
+    .zoom-level-badge {
+      font-size: 0.75rem;
+      color: var(--accent-cyan);
+      font-family: 'JetBrains Mono', monospace;
+      padding: 0.2rem 0.5rem;
+      background: rgba(6, 182, 212, 0.1);
+      border: 1px solid rgba(6, 182, 212, 0.25);
+      border-radius: 4px;
+      min-width: 48px;
+      text-align: center;
+      display: inline-block;
+    }
+
+    .mermaid-wrapper {
+      position: relative;
+      background: #0f172a;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border-subtle);
+      overflow: hidden;
+      min-height: 420px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .mermaid-viewport {
+      flex: 1;
+      width: 100%;
+      min-height: 380px;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: grab;
+      position: relative;
+      user-select: none;
+    }
+
+    .mermaid-viewport:active {
+      cursor: grabbing;
+    }
+
+    .mermaid-container {
+      background: transparent;
+      padding: 1.5rem;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      transform-origin: center center;
+      transition: transform 0.08s ease-out;
+      width: 100%;
+    }
+
+    .mermaid-container svg {
+      max-width: none !important;
+      height: auto !important;
+      display: block;
+    }
+
+    .diagram-hint {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.45rem 1rem;
+      background: rgba(15, 23, 42, 0.85);
+      border-top: 1px solid rgba(255, 255, 255, 0.07);
+      font-size: 0.75rem;
+      color: var(--text-dim);
+    }
+
+    /* Modal Lightbox de Zoom em Tela Cheia */
+    .diagram-modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(11, 15, 25, 0.94);
+      backdrop-filter: blur(14px);
+      z-index: 9999;
+      display: none;
+      flex-direction: column;
+      animation: modalFadeIn 0.2s ease-out;
+    }
+
+    .diagram-modal.active {
+      display: flex;
+    }
+
+    @keyframes modalFadeIn {
+      from { opacity: 0; transform: scale(0.98); }
+      to { opacity: 1; transform: scale(1); }
+    }
+
+    .modal-header {
+      padding: 1rem 2rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid var(--border-subtle);
+      background: rgba(17, 24, 39, 0.85);
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+
+    .modal-title {
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: #ffffff;
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+    }
+
+    .modal-actions {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      flex-wrap: wrap;
+    }
+
+    .modal-body {
+      flex: 1;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: grab;
+      position: relative;
+      user-select: none;
+    }
+
+    .modal-body:active {
+      cursor: grabbing;
+    }
+
+    #modal-svg-container {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transform-origin: center center;
+      transition: transform 0.08s ease-out;
+    }
+
+    #modal-svg-container svg {
+      max-width: none !important;
+      display: block;
+    }
+
+    .btn-close-modal {
+      background: rgba(239, 68, 68, 0.2);
+      border: 1px solid rgba(239, 68, 68, 0.4);
+      color: #f87171;
+      padding: 0.35rem 0.85rem;
+      border-radius: var(--radius-sm);
+      font-weight: 700;
+      font-size: 0.82rem;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-close-modal:hover {
+      background: rgba(239, 68, 68, 0.85);
+      color: #ffffff;
+      box-shadow: 0 0 12px rgba(239, 68, 68, 0.4);
+    }
+
+    .modal-footer-hint {
+      padding: 0.5rem 2rem;
+      background: rgba(17, 24, 39, 0.85);
+      border-top: 1px solid var(--border-subtle);
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      text-align: center;
+    }
+
+    /* Blocos de Código */
+    .code-wrapper {
+      position: relative;
+      background: var(--code-bg);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      margin: 1.25rem 0;
+      overflow: hidden;
+    }
+
+    .code-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #161b22;
+      padding: 0.45rem 1rem;
+      border-bottom: 1px solid var(--border-subtle);
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .copy-btn {
+      background: transparent;
+      border: 1px solid var(--border-accent);
+      color: var(--text-muted);
+      font-size: 0.75rem;
+      padding: 0.2rem 0.55rem;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .copy-btn:hover {
+      background: var(--bg-surface-elevated);
+      color: #ffffff;
+      border-color: var(--accent-blue);
+    }
+
+    pre code {
+      display: block;
+      padding: 1.25rem;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.87rem;
+      color: #e6edf3;
+      overflow-x: auto;
+      line-height: 1.55;
+    }
+
+    code.inline-code {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.85em;
+      background: rgba(255, 255, 255, 0.08);
+      color: #93c5fd;
+      padding: 0.15rem 0.35rem;
+      border-radius: 4px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    /* Tabelas */
+    .table-container {
+      overflow-x: auto;
+      margin: 1.5rem 0;
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+    }
+
+    table.data-table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+      font-size: 0.88rem;
+    }
+
+    table.data-table th {
+      background: var(--bg-surface-elevated);
+      color: #ffffff;
+      font-weight: 600;
+      padding: 0.85rem 1rem;
+      border-bottom: 1px solid var(--border-accent);
+    }
+
+    table.data-table td {
+      padding: 0.75rem 1rem;
+      border-bottom: 1px solid var(--border-subtle);
+      color: #cbd5e1;
+    }
+
+    table.data-table tr:last-child td {
+      border-bottom: none;
+    }
+
+    table.data-table tr:hover td {
+      background: rgba(255, 255, 255, 0.02);
+    }
+
+    /* Grid de Cards */
+    .card-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      gap: 1.25rem;
+      margin: 1.5rem 0;
+    }
+
+    .feature-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 1.25rem;
+      transition: transform 0.2s, border-color 0.2s;
+    }
+
+    .feature-card:hover {
+      transform: translateY(-2px);
+      border-color: var(--accent-blue);
+    }
+
+    .feature-icon {
+      font-size: 1.5rem;
+      margin-bottom: 0.75rem;
+      color: var(--accent-blue-light);
+    }
+
+    .feature-title {
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: #ffffff;
+      margin-bottom: 0.5rem;
+    }
+
+    .feature-desc {
+      font-size: 0.86rem;
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+
+    /* Footer */
+    footer.doc-footer {
+      margin-top: 5rem;
+      padding-top: 2rem;
+      border-top: 1px solid var(--border-subtle);
+      text-align: center;
+      color: var(--text-dim);
+      font-size: 0.85rem;
+    }
+
+    @media (max-width: 1024px) {
+      aside.sidebar {
+        display: none;
+      }
+      main.content {
+        margin-left: 0;
+        max-width: 100vw;
+        padding: 2rem;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Barra de Navegação Lateral -->
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      <div class="brand-title">Steam Clustering</div>
+      <span class="brand-badge">Especificação v4.1 Oficial</span>
+    </div>
+
+    <div class="search-box">
+      <input type="text" id="sidebar-search" placeholder="Buscar seções e termos..." onkeyup="filtrarSidebar()">
+    </div>
+
+    <nav class="nav-links" id="sidebar-nav">
+      <div class="nav-section-title">Visão do Sistema</div>
+      <a href="#visao-geral" class="nav-item">1. Visão Geral & Invariantes</a>
+      <a href="#arquitetura-gof" class="nav-item">2. Arquitetura GoF & SOLID</a>
+
+      <div class="nav-section-title">Diagramas UML</div>
+      <a href="#uml-atividade-pipeline" class="nav-item">3.1. Atividade: Pipeline E2E</a>
+      <a href="#uml-atividade-outbox" class="nav-item">3.2. Atividade: Staging & Outbox</a>
+      <a href="#uml-atividade-automl" class="nav-item">3.3. Atividade: Seleção AutoML</a>
+      <a href="#uml-classes" class="nav-item">3.4. Classes: Padrões de Projeto</a>
+      <a href="#uml-classes-multiplicidades" class="nav-item" style="padding-left: 2rem; font-size: 0.8rem; color: #93c5fd;">↳ Multiplicidades & Semântica</a>
+      <a href="#uml-componentes" class="nav-item">3.5. Componentes & Docker</a>
+      <a href="#uml-sequencia" class="nav-item">3.6. Sequência: Inferência REST</a>
+
+      <div class="nav-section-title">Manual de Instruções</div>
+      <a href="#manual-pre-requisitos" class="nav-item">4.1. Pré-Requisitos & Ambiente</a>
+      <a href="#manual-infraestrutura" class="nav-item">4.2. Subindo Microsserviços</a>
+      <a href="#manual-configuracao" class="nav-item">4.3. Governança Pydantic & YAML</a>
+      <a href="#manual-coleta" class="nav-item">4.4. Execução da Coleta Steam</a>
+      <a href="#manual-treinamento" class="nav-item">4.5. Treinamento & Clustering</a>
+      <a href="#manual-regras-negocio" class="nav-item">4.6. Personas Declarativas</a>
+      <a href="#manual-api-rest" class="nav-item">4.7. Operação da API REST</a>
+      <a href="#manual-observabilidade" class="nav-item">4.8. Grafana & MLflow</a>
+      <a href="#manual-quality-gates" class="nav-item">4.9. Quality Gates & Testes</a>
+      <a href="#manual-troubleshooting" class="nav-item">4.10. Troubleshooting & FAQ</a>
+    </nav>
+
+    <div class="sidebar-footer">
+      <div>Status: <strong>71/71 Testes Aprovados</strong></div>
+      <div>Tipagem: <strong>Pyright Strict (0 erros)</strong></div>
+    </div>
+  </aside>
+
+  <!-- Conteúdo Principal -->
+  <main class="content">
+
+    <!-- Banner de Cabeçalho -->
+    <header class="header-banner">
+      <h1 class="doc-title">Steam Reviews Clustering v4.1</h1>
+      <p class="doc-subtitle">
+        Documentação Técnica de Arquitetura, Modelagem UML Unificada e Manual Operacional de Instrução de Uso para Engenharia de Dados, MLOps e Análise de Negócio.
+      </p>
+
+      <div class="badge-bar">
+        <span class="status-badge green">✓ Python 3.12+ Strict</span>
+        <span class="status-badge green">✓ Zero `Any`</span>
+        <span class="status-badge blue">✓ 69 Testes Automatizados</span>
+        <span class="status-badge purple">✓ Docker Compose Integrado</span>
+        <span class="status-badge blue">✓ Sem PLN / LLM no Clustering</span>
+      </div>
+    </header>
+
+    <!-- SEÇÃO 1: VISÃO GERAL -->
+    <section id="visao-geral" class="doc-section">
+      <h2 class="section-heading">
+        <span class="heading-number">01</span> Visão Geral e Invariantes Arquiteturais
+      </h2>
+      <p>
+        O <strong>Steam Reviews Clustering</strong> é uma plataforma analítica de engenharia de dados e machine learning não-supervisionado desenhada para segmentar o perfil comportamental de jogadores na Steam a partir de metadados de telemetria de consumo, engajamento e votos de recomendação.
+      </p>
+
+      <div class="card-grid">
+        <div class="feature-card">
+          <div class="feature-icon">🛡️</div>
+          <div class="feature-title">Preservação Textual sem PLN</div>
+          <div class="feature-desc">
+            As avaliações textuais são preservadas integralmente para auditoria humana. É estritamente proibido o uso de PLN, LLMs, embeddings ou análise de sentimento no algoritmo de clustering.
+          </div>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon">🔒</div>
+          <div class="feature-title">Tipagem Estrita e GoF</div>
+          <div class="feature-desc">
+            Projetado sob tipagem estrita com <code class="inline-code">pyright --strict</code> e 0 instâncias de <code class="inline-code">Any</code>. Módulos com exatamente duas palavras e padrões GoF com proibição de <code class="inline-code">if/elif</code> para tecnologia.
+          </div>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon">⚙️</div>
+          <div class="feature-title">Configuração Declarativa</div>
+          <div class="feature-desc">
+            Gerenciamento exclusivo via <code class="inline-code">ConfYAML</code> com schemas Pydantic (<code class="inline-code">extra="forbid"</code>), cálculo de SHA-256 e sem execução arbitrária via <code class="inline-code">eval/exec</code>.
+          </div>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon">🏛️</div>
+          <div class="feature-title">Arquitetura Medalhão Lakehouse</div>
+          <div class="feature-desc">
+            Partição Bronze (JSON bruto particionado), Silver (Parquet deduplicado e validado) e Gold (dimensões agregadas, perfis de cluster e métricas estatísticas).
+          </div>
+        </div>
+      </div>
+
+      <div class="callout warning">
+        <div class="callout-title">⚠️ Regra Semântica Crítica de Dados</div>
+        <p>
+          O idioma <code class="inline-code">brazilian</code> registrado pela Steam API indica apenas a preferência de idioma da interface/avaliação do usuário e <strong>nunca comprova residência física no Brasil</strong>. O sistema proíbe categoricamente qualquer inferência geográfica baseada nesse atributo.
+        </p>
+      </div>
+    </section>
+
+    <!-- SEÇÃO 2: PADRÕES GOF -->
+    <section id="arquitetura-gof" class="doc-section">
+      <h2 class="section-heading">
+        <span class="heading-number">02</span> Arquitetura de Software e Padrões GoF
+      </h2>
+      <p>
+        Para garantir a extensibilidade sem violar o Princípio Aberto/Fechado (OCP), todo o núcleo do domínio utiliza padrões clássicos do GoF (Gang of Four):
+      </p>
+
+      <div class="table-container">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Padrão GoF</th>
+              <th>Interface / Contrato</th>
+              <th>Implementações Concretas</th>
+              <th>Papel Arquitetural</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Strategy</strong></td>
+              <td><code class="inline-code">MotorTabular</code></td>
+              <td><code class="inline-code">MotorPolars</code>, <code class="inline-code">MotorPandas</code></td>
+              <td>Processamento vetorial intercambiável conforme o volume de dados.</td>
+            </tr>
+            <tr>
+              <td><strong>Strategy / Adapter</strong></td>
+              <td><code class="inline-code">EstimadorClustering</code></td>
+              <td><code class="inline-code">AdaptadorKMeans</code>, <code class="inline-code">AdaptadorDBSCAN</code>, <code class="inline-code">AdaptadorHDBSCAN</code></td>
+              <td>Isola as bibliotecas Scikit-Learn e HDBSCAN com catálogo de capacidades.</td>
+            </tr>
+            <tr>
+              <td><strong>Repository</strong></td>
+              <td><code class="inline-code">RepositorioStaging</code></td>
+              <td><code class="inline-code">RepositorioStagingSQLite</code>, <code class="inline-code">RepositorioStagingPostgres</code></td>
+              <td>Abstração de I/O relacional para staging transacional de páginas e outbox.</td>
+            </tr>
+            <tr>
+              <td><strong>Unit of Work</strong></td>
+              <td><code class="inline-code">UnidadeTrabalho</code></td>
+              <td><code class="inline-code">UnidadeTrabalhoSQLite</code>, <code class="inline-code">UnidadeTrabalhoPostgres</code></td>
+              <td>Garante transações ACID atômicas por lote de ingestão.</td>
+            </tr>
+            <tr>
+              <td><strong>Observer</strong></td>
+              <td><code class="inline-code">ObservadorTreinamento</code></td>
+              <td><code class="inline-code">ObservadorMlflow</code>, <code class="inline-code">ObservadorNulo</code></td>
+              <td>Telemetria desacoplada de MLOps para registro de hiperparâmetros e artefatos.</td>
+            </tr>
+            <tr>
+              <td><strong>Specification</strong></td>
+              <td><code class="inline-code">EspecificacaoNegocio</code></td>
+              <td><code class="inline-code">RotuladorClusters</code></td>
+              <td>Rotulagem declarativa de personas em YAML sem necessidade de retreino.</td>
+            </tr>
+            <tr>
+              <td><strong>Factory / Registry</strong></td>
+              <td><code class="inline-code">FabricaStaging</code>, <code class="inline-code">FabricaAgrupadores</code></td>
+              <td>Registros estáticos com instâncias sob demanda</td>
+              <td>Eliminação de cadeias <code class="inline-code">if/elif</code> para escolha de tecnologia.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- SEÇÃO 3: DIAGRAMAS UML -->
+    <section id="diagramas-uml" class="doc-section">
+      <h2 class="section-heading">
+        <span class="heading-number">03</span> Modelagem UML Completa do Sistema
+      </h2>
+      <p>
+        Diagramas UML interativos com controle de zoom vetorial, navegação livre por arrasto e modo de tela cheia em alta definição.
+      </p>
+
+      <!-- 3.1 Diagrama de Atividade: Pipeline End-to-End -->
+      <div id="uml-atividade-pipeline" class="diagram-card" data-diagram-title="3.1. Diagrama de Atividade UML — Fluxo Completo do Pipeline End-to-End">
+        <div class="diagram-header">
+          <div class="diagram-title">3.1. Diagrama de Atividade UML — Fluxo Completo do Pipeline End-to-End</div>
+          <div class="diagram-actions">
+            <span class="diagram-tag">Atividade / Workflow</span>
+            <button class="diagram-btn" onclick="zoomDiagrama('uml-atividade-pipeline', 0.2)" title="Aumentar zoom (Zoom In)">🔍 +</button>
+            <button class="diagram-btn" onclick="zoomDiagrama('uml-atividade-pipeline', -0.2)" title="Diminuir zoom (Zoom Out)">🔍 -</button>
+            <button class="diagram-btn" onclick="resetZoomDiagrama('uml-atividade-pipeline')" title="Resetar escala para 100%">↺ 100%</button>
+            <button class="diagram-btn highlight" onclick="abrirModalDiagrama('uml-atividade-pipeline', '3.1. Diagrama de Atividade UML — Fluxo Completo do Pipeline End-to-End')" title="Expandir em tela cheia com zoom e pan livre">⛶ Tela Cheia</button>
+          </div>
+        </div>
+        <p style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 1rem;">
+          Demonstra a jornada completa do dado: desde a coleta paginada com controle de taxa até a materialização na Camada Gold, telemetria Prometheus e disponibilização na API REST.
+        </p>
+        <div class="mermaid-wrapper">
+          <div class="mermaid-viewport" id="viewport-uml-atividade-pipeline" onmousedown="iniciarArrasto(event, 'uml-atividade-pipeline')" ondblclick="alternarZoomDuploClique('uml-atividade-pipeline')">
+            <div class="mermaid-container" id="container-uml-atividade-pipeline">
+              <pre class="mermaid">
+stateDiagram-v2
+    [*] --> CarregarConfiguracao: ConfYAML valida YAMLs estritos
+    CarregarConfiguracao --> InicializarStaging: FabricaStaging cria Repo + UoW
+    
+    state "Ciclo de Ingestão e Staging" as Ingestao {
+        InicializarStaging --> ConsultarCheckpoint: Busca último cursor (*)
+        ConsultarCheckpoint --> ChamarSteamAPI: HTTP com Resiliência / Backoff
+        ChamarSteamAPI --> ValidarQualityGate: ValidadorQualidadeDados
+        
+        state Valida_Gate &lt;&lt;choice&gt;&gt;
+        ValidarQualityGate --> Valida_Gate
+        Valida_Gate --> AbortarExecucao: Rejeitado por dados corrompidos
+        Valida_Gate --> GravarTransacaoLote: Aprovado
+        
+        GravarTransacaoLote --> DespacharOutbox: Outbox pendente para S3 Bronze
+        DespacharOutbox --> ProximaPagina: Mais páginas disponíveis?
+        ProximaPagina --> ChamarSteamAPI: Sim (novo cursor)
+        ProximaPagina --> FinalizarIngestao: Não (fim do cursor)
+    }
+
+    FinalizarIngestao --> PromoverCamadaPrata: EscritorCamadaPrata (Parquet Silver)
+    
+    state "Engenharia de Features e Clustering ML" as MachineLearning {
+        PromoverCamadaPrata --> EngenhariaAtributos: GeradorAtributosDerivados
+        EngenhariaAtributos --> SegregarMatrizX: SeletorColunas (Exclui texto do treino)
+        SegregarMatrizX --> PipelinePreprocessamento: Imputação + StandardScaler
+        
+        state "Seleção AutoML / Tuning" as SelecaoML {
+            PipelinePreprocessamento --> AvaliarAlgoritmos: Testa KMeans, DBSCAN, HDBSCAN
+            AvaliarAlgoritmos --> CalcularMetricas: Silhueta, Davies-Bouldin, Calinski
+            CalcularMetricas --> AvaliadorObjetivo: Score Balanceado sem Ruído
+            AvaliadorObjetivo --> SelecionarCampeao: Modelo de Melhor Desempenho
+        }
+        
+        SelecionarCampeao --> NotificarMLflow: ObservadorMlflow registra run & artefatos
+        NotificarMLflow --> RotularPersonas: RotuladorClusters via Regras Negocio YAML
+    }
+
+    state "Camada Gold e Servicing" as Servicing {
+        RotularPersonas --> MaterializarOuro: EscritorCamadaOuro (Partição Gold)
+        MaterializarOuro --> AtualizarMetricasPrometheus: TelemetriaAnalitica
+        AtualizarMetricasPrometheus --> AlimentarDashboardsGrafana: Provisionamento Automático
+        AtualizarMetricasPrometheus --> DisponibilizarFastAPI: Endpoints de Consulta e Predição
+    }
+
+    DisponibilizarFastAPI --> [*]
+    AbortarExecucao --> [*]
+              </pre>
+            </div>
+          </div>
+          <div class="diagram-hint">
+            <span>💡 Arraste para navegar • Use a roda do mouse ou duplo clique para zoom</span>
+            <span class="zoom-level-badge" id="badge-zoom-uml-atividade-pipeline">100%</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 3.2 Diagrama de Atividade: Staging & Outbox -->
+      <div id="uml-atividade-outbox" class="diagram-card" data-diagram-title="3.2. Diagrama de Atividade UML — Ciclo Transacional do Outbox e Staging">
+        <div class="diagram-header">
+          <div class="diagram-title">3.2. Diagrama de Atividade UML — Ciclo Transacional do Outbox e Staging</div>
+          <div class="diagram-actions">
+            <span class="diagram-tag">Atividade / Concorrência</span>
+            <button class="diagram-btn" onclick="zoomDiagrama('uml-atividade-outbox', 0.2)" title="Aumentar zoom (Zoom In)">🔍 +</button>
+            <button class="diagram-btn" onclick="zoomDiagrama('uml-atividade-outbox', -0.2)" title="Diminuir zoom (Zoom Out)">🔍 -</button>
+            <button class="diagram-btn" onclick="resetZoomDiagrama('uml-atividade-outbox')" title="Resetar escala para 100%">↺ 100%</button>
+            <button class="diagram-btn highlight" onclick="abrirModalDiagrama('uml-atividade-outbox', '3.2. Diagrama de Atividade UML — Ciclo Transacional do Outbox e Staging')" title="Expandir em tela cheia com zoom e pan livre">⛶ Tela Cheia</button>
+          </div>
+        </div>
+        <p style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 1rem;">
+          Ilustra como a garantia de entrega <i>at-least-once</i> e a consistência ACID entre o banco relacional (SQLite/PostgreSQL) e o Data Lake S3 são mantidas pelo padrão Transational Outbox.
+        </p>
+        <div class="mermaid-wrapper">
+          <div class="mermaid-viewport" id="viewport-uml-atividade-outbox" onmousedown="iniciarArrasto(event, 'uml-atividade-outbox')" ondblclick="alternarZoomDuploClique('uml-atividade-outbox')">
+            <div class="mermaid-container" id="container-uml-atividade-outbox">
+              <pre class="mermaid">
+stateDiagram-v2
+    [*] --> IniciarLote
+    
+    state "Unidade de Trabalho (UoW Context)" as BlocoUoW {
+        IniciarLote --> InserirReviewsStaging: INSERT INTO reviews_staging
+        InserirReviewsStaging --> AtualizarCheckpoint: UPDATE checkpoints SET cursor
+        AtualizarCheckpoint --> EnfileirarOutbox: INSERT INTO outbox_publicacao (status='pendente')
+    }
+    
+    state CommitTransacao &lt;&lt;choice&gt;&gt;
+    BlocoUoW --> CommitTransacao
+    CommitTransacao --> RollbackLote: Falha de I/O ou Constraint
+    CommitTransacao --> DespachanteAtivo: Transação comitada com sucesso
+    
+    RollbackLote --> NotificarErro: Rejeita lote e preserva integridade
+    NotificarErro --> [*]
+
+    state "Despachante de Outbox Assíncrono" as DespachoS3 {
+        DespachanteAtivo --> LerEventosPendentes: SELECT * FROM outbox WHERE status='pendente'
+        LerEventosPendentes --> UploadStorageS3: PutObject no RustFS/S3 (Camada Bronze)
+        
+        state SucessoUpload &lt;&lt;choice&gt;&gt;
+        UploadStorageS3 --> SucessoUpload
+        SucessoUpload --> MarcarPublicado: Sucesso (UPDATE outbox SET status='publicado')
+        SucessoUpload --> MarcarFalha: Falha de rede (Incrementa tentativas & Backoff)
+    }
+
+    MarcarPublicado --> [*]
+    MarcarFalha --> [*]
+              </pre>
+            </div>
+          </div>
+          <div class="diagram-hint">
+            <span>💡 Arraste para navegar • Use a roda do mouse ou duplo clique para zoom</span>
+            <span class="zoom-level-badge" id="badge-zoom-uml-atividade-outbox">100%</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 3.3 Diagrama de Atividade: Seleção AutoML -->
+      <div id="uml-atividade-automl" class="diagram-card" data-diagram-title="3.3. Diagrama de Atividade UML — Seleção de Modelos AutoML Orientada a Capacidades">
+        <div class="diagram-header">
+          <div class="diagram-title">3.3. Diagrama de Atividade UML — Seleção de Modelos AutoML Orientada a Capacidades</div>
+          <div class="diagram-actions">
+            <span class="diagram-tag">Atividade / Inteligência</span>
+            <button class="diagram-btn" onclick="zoomDiagrama('uml-atividade-automl', 0.2)" title="Aumentar zoom (Zoom In)">🔍 +</button>
+            <button class="diagram-btn" onclick="zoomDiagrama('uml-atividade-automl', -0.2)" title="Diminuir zoom (Zoom Out)">🔍 -</button>
+            <button class="diagram-btn" onclick="resetZoomDiagrama('uml-atividade-automl')" title="Resetar escala para 100%">↺ 100%</button>
+            <button class="diagram-btn highlight" onclick="abrirModalDiagrama('uml-atividade-automl', '3.3. Diagrama de Atividade UML — Seleção de Modelos AutoML Orientada a Capacidades')" title="Expandir em tela cheia com zoom e pan livre">⛶ Tela Cheia</button>
+          </div>
+        </div>
+        <p style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 1rem;">
+          Detalhamento da tomada de decisão algorítmica: verificação de viabilidade estatística, restrição de ruído e cálculo do score balanceado.
+        </p>
+        <div class="mermaid-wrapper">
+          <div class="mermaid-viewport" id="viewport-uml-atividade-automl" onmousedown="iniciarArrasto(event, 'uml-atividade-automl')" ondblclick="alternarZoomDuploClique('uml-atividade-automl')">
+            <div class="mermaid-container" id="container-uml-atividade-automl">
+              <pre class="mermaid">
+stateDiagram-v2
+    [*] --> ReceberMatrizTreino: Matriz X escalonada
+    ReceberMatrizTreino --> ConsultarCatalogo: CatalogoCapacidadesAlgoritmo
+    
+    state LoopAlgoritmos {
+        ConsultarCatalogo --> InstanciarEstimador: FabricaAgrupadores (KMeans, DBSCAN, HDBSCAN)
+        InstanciarEstimador --> ExecutarAjuste: fit_predict(X)
+        ExecutarAjuste --> VerificarRotulos: labels = estimador.obter_rotulos()
+        
+        state ValidaRotulos &lt;&lt;choice&gt;&gt;
+        VerificarRotulos --> ValidaRotulos
+        ValidaRotulos --> DescartarModelo: Apenas 1 cluster ou todos são ruído
+        ValidaRotulos --> CalcularMetricasClustering: k >= 2 clusters válidos
+        
+        CalcularMetricasClustering --> AvaliarScoreObjetivo: AvaliadorObjetivo.calcular_score()
+        AvaliarScoreObjetivo --> CompararComMelhor: score_composto > melhor_score?
+        
+        state AtualizaMelhor &lt;&lt;choice&gt;&gt;
+        CompararComMelhor --> AtualizaMelhor
+        AtualizaMelhor --> AtualizarCampeao: Sim (salva estimador e métricas)
+        AtualizaMelhor --> ManterCampeao: Não
+    }
+
+    DescartarModelo --> ProximoAlgoritmo
+    ManterCampeao --> ProximoAlgoritmo
+    AtualizarCampeao --> ProximoAlgoritmo
+    
+    ProximoAlgoritmo --> LoopAlgoritmos: Mais estimadores?
+    ProximoAlgoritmo --> FinalizarSelecao: Fim da lista
+    
+    FinalizarSelecao --> RetornarMelhorModelo: ResultadoSelecaoAutoML
+    RetornarMelhorModelo --> [*]
+              </pre>
+            </div>
+          </div>
+          <div class="diagram-hint">
+            <span>💡 Arraste para navegar • Use a roda do mouse ou duplo clique para zoom</span>
+            <span class="zoom-level-badge" id="badge-zoom-uml-atividade-automl">100%</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 3.4 Diagrama de Classes UML -->
+      <div id="uml-classes" class="diagram-card" data-diagram-title="3.4. Diagrama de Classes UML — Estrutura de Padrões GoF Implementada">
+        <div class="diagram-header">
+          <div class="diagram-title">3.4. Diagrama de Classes UML — Estrutura de Padrões GoF Implementada</div>
+          <div class="diagram-actions">
+            <span class="diagram-tag">Classes / Arquitetura Estática</span>
+            <button class="diagram-btn" onclick="zoomDiagrama('uml-classes', 0.2)" title="Aumentar zoom (Zoom In)">🔍 +</button>
+            <button class="diagram-btn" onclick="zoomDiagrama('uml-classes', -0.2)" title="Diminuir zoom (Zoom Out)">🔍 -</button>
+            <button class="diagram-btn" onclick="resetZoomDiagrama('uml-classes')" title="Resetar escala para 100%">↺ 100%</button>
+            <button class="diagram-btn highlight" onclick="abrirModalDiagrama('uml-classes', '3.4. Diagrama de Classes UML — Estrutura de Padrões GoF Implementada')" title="Expandir em tela cheia com zoom e pan livre">⛶ Tela Cheia</button>
+          </div>
+        </div>
+        <p style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 1rem;">
+          Mapeamento completo da arquitetura orientada a objetos (SOLID e Padrões GoF), evidenciando a classe central <code class="inline-code">OrquestradorPrincipal</code>, seus subsistemas orquestrados, multiplicidades explícitas em todas as conexões (1:1, 1:N), interfaces abstratas e adaptadores concretos sob tipagem estrita no Python 3.12.
+        </p>
+        <div class="mermaid-wrapper">
+          <div class="mermaid-viewport" id="viewport-uml-classes" onmousedown="iniciarArrasto(event, 'uml-classes')" ondblclick="alternarZoomDuploClique('uml-classes')">
+            <div class="mermaid-container" id="container-uml-classes">
+              <div id="render-alvo-uml-classes" style="width: 100%; display: flex; justify-content: center;"></div>
+            </div>
+          </div>
+          <div class="diagram-hint">
+            <span>💡 Arraste para navegar • Use a roda do mouse ou duplo clique para zoom</span>
+            <span class="zoom-level-badge" id="badge-zoom-uml-classes">100%</span>
+          </div>
+        </div>
+
+        <!-- Painel Técnico Explicativo: Multiplicidades e Semântica de Relacionamentos UML -->
+        <div id="uml-classes-multiplicidades" style="margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid rgba(255, 255, 255, 0.08);">
+          <h4 style="color: #60a5fa; font-size: 1.05rem; margin-bottom: 0.75rem; display: flex; align-items: center; gap: 0.5rem;">
+            <span>📐</span> Semântica das Multiplicidades e Tipos de Relacionamento UML
+          </h4>
+          <p style="font-size: 0.88rem; color: #cbd5e1; line-height: 1.6; margin-bottom: 1rem;">
+            Na Modelagem UML (<em>Unified Modeling Language</em>), a <strong>multiplicidade</strong> define a cardinalidade numérica estrita — isto é, a quantidade mínima e máxima de instâncias válidas de uma classe que podem se relacionar com uma única instância da classe oposta. No projeto <em>Steam Reviews Clustering v4.1</em>, a definição de multiplicidades explícitas em todas as conexões garante previsibilidade de ciclo de vida, ausência de referências nulas não controladas e conformidade integral com os padrões de projeto do GoF.
+          </p>
+
+          <div class="card-grid" style="grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1rem; margin: 1rem 0;">
+            <div class="feature-card" style="padding: 1rem;">
+              <div style="font-weight: 700; color: #93c5fd; margin-bottom: 0.35rem;">Multiplicidade "1" (1..1)</div>
+              <div style="font-size: 0.82rem; color: #94a3b8; line-height: 1.5;">
+                <strong>Exatamente Uma Instância Obrigatória</strong>. A classe dependente não pode operar sem a instância parceira e a referência jamais pode ser nula (<code class="inline-code">None</code>). No Python 3.12, isso é imposto via tipagem estrita no construtor sem valor padrão opcional.
+              </div>
+            </div>
+
+            <div class="feature-card" style="padding: 1rem;">
+              <div style="font-weight: 700; color: #93c5fd; margin-bottom: 0.35rem;">Multiplicidade "1..*"</div>
+              <div style="font-size: 0.82rem; color: #94a3b8; line-height: 1.5;">
+                <strong>Uma ou Mais Instâncias (Coleção Não Vazia)</strong>. Representa conjuntos ou fábricas polimórficas que gerenciam múltiplos adaptadores. Exemplo: a <code class="inline-code">FabricaAgrupadores</code> instancia 1 ou múltiplos estimadores polimórficos.
+              </div>
+            </div>
+
+            <div class="feature-card" style="padding: 1rem;">
+              <div style="font-weight: 700; color: #93c5fd; margin-bottom: 0.35rem;">Composição ("*--")</div>
+              <div style="font-size: 0.82rem; color: #94a3b8; line-height: 1.5;">
+                <strong>Vínculo Forte de Ciclo de Vida</strong>. A parte pertence unicamente ao todo e é instanciada e destruída junto com a classe hospedeira. Exemplo: <code class="inline-code">OrquestradorPrincipal</code> compõe suas instâncias de coordenação.
+              </div>
+            </div>
+
+            <div class="feature-card" style="padding: 1rem;">
+              <div style="font-weight: 700; color: #93c5fd; margin-bottom: 0.35rem;">Agregação ("o--")</div>
+              <div style="font-size: 0.82rem; color: #94a3b8; line-height: 1.5;">
+                <strong>Acoplamento Fraco (Injeção de Dependência)</strong>. A parte existe independentemente e é injetada para promover desacoplamento e testabilidade via mocks. Exemplo: Repositórios e UoW injetados no executor.
+              </div>
+            </div>
+          </div>
+
+          <div class="table-container" style="margin-top: 1.25rem;">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Classe de Origem</th>
+                  <th>Mult. Origem</th>
+                  <th>Notação UML / GoF</th>
+                  <th>Mult. Destino</th>
+                  <th>Classe de Destino</th>
+                  <th>Semântica Arquitetural & Regra de Implementação</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><strong>OrquestradorPrincipal</strong></td>
+                  <td><code class="inline-code">1</code></td>
+                  <td>Composição (<code class="inline-code">*--</code>)</td>
+                  <td><code class="inline-code">1</code></td>
+                  <td><strong>ConfYAML</strong></td>
+                  <td>A fachada de orquestração compõe exatamente uma instância central imutável de configurações YAML validadas.</td>
+                </tr>
+                <tr>
+                  <td><strong>OrquestradorPrincipal</strong></td>
+                  <td><code class="inline-code">1</code></td>
+                  <td>Composição (<code class="inline-code">*--</code>)</td>
+                  <td><code class="inline-code">1</code></td>
+                  <td><strong>ExecutorColetaStaging</strong></td>
+                  <td>Comanda o ciclo de extração paginada e staging transacional com controle de vida unívoco.</td>
+                </tr>
+                <tr>
+                  <td><strong>OrquestradorPrincipal</strong></td>
+                  <td><code class="inline-code">1</code></td>
+                  <td>Composição (<code class="inline-code">*--</code>)</td>
+                  <td><code class="inline-code">1</code></td>
+                  <td><strong>ExecutorTreinamento</strong></td>
+                  <td>Comanda a engenharia de atributos, clustering e rotulagem declarativa.</td>
+                </tr>
+                <tr>
+                  <td><strong>OrquestradorPrincipal</strong></td>
+                  <td><code class="inline-code">1</code></td>
+                  <td>Associação (<code class="inline-code">--&gt;</code>)</td>
+                  <td><code class="inline-code">1</code></td>
+                  <td><strong>FabricaStaging</strong></td>
+                  <td>Aciona a fábrica abstrata para resolução polimórfica do banco relacional (SQLite ou PostgreSQL).</td>
+                </tr>
+                <tr>
+                  <td><strong>OrquestradorPrincipal</strong></td>
+                  <td><code class="inline-code">1</code></td>
+                  <td>Associação (<code class="inline-code">--&gt;</code>)</td>
+                  <td><code class="inline-code">1</code></td>
+                  <td><strong>FabricaExtracao</strong></td>
+                  <td>Aciona a fábrica abstrata (GoF Factory/Registry) para resolução polimórfica da API da Steam e paginação desacoplada.</td>
+                </tr>
+                <tr>
+                  <td><strong>OrquestradorPrincipal</strong></td>
+                  <td><code class="inline-code">1</code></td>
+                  <td>Associação (<code class="inline-code">--&gt;</code>)</td>
+                  <td><code class="inline-code">1</code></td>
+                  <td><strong>SelecionadorModelosAutoML</strong></td>
+                  <td>Invoca a seleção autônoma orientada a capacidades para eleição do estimador campeão.</td>
+                </tr>
+                <tr>
+                  <td><strong>OrquestradorPrincipal</strong></td>
+                  <td><code class="inline-code">1</code></td>
+                  <td>Associação (<code class="inline-code">--&gt;</code>)</td>
+                  <td><code class="inline-code">1</code></td>
+                  <td><strong>ExportadorCamadaOuro</strong></td>
+                  <td>Exporta manifestos de conformidade e materializa partições Gold no Lakehouse.</td>
+                </tr>
+                <tr>
+                  <td><strong>ExecutorColetaStaging</strong></td>
+                  <td><code class="inline-code">1</code></td>
+                  <td>Agregação (<code class="inline-code">o--</code>)</td>
+                  <td><code class="inline-code">1</code></td>
+                  <td><strong>GeradorPaginasSteam</strong></td>
+                  <td>Consome o gerador paginado sob demanda (backpressure / generators) sem sobrecarregar a memória.</td>
+                </tr>
+                <tr>
+                  <td><strong>ExecutorColetaStaging</strong></td>
+                  <td><code class="inline-code">1</code></td>
+                  <td>Agregação (<code class="inline-code">o--</code>)</td>
+                  <td><code class="inline-code">1</code></td>
+                  <td><strong>UnidadeTrabalho</strong></td>
+                  <td>Demarca atomicidade transacional ACID por lote de avaliações coletadas.</td>
+                </tr>
+                <tr>
+                  <td><strong>ExecutorColetaStaging</strong></td>
+                  <td><code class="inline-code">1</code></td>
+                  <td>Agregação (<code class="inline-code">o--</code>)</td>
+                  <td><code class="inline-code">1</code></td>
+                  <td><strong>RepositorioStaging</strong></td>
+                  <td>Persiste avaliações e checkpoints relacionais contra duplicidades e inconsistências.</td>
+                </tr>
+                <tr>
+                  <td><strong>ExecutorColetaStaging</strong></td>
+                  <td><code class="inline-code">1</code></td>
+                  <td>Agregação (<code class="inline-code">o--</code>)</td>
+                  <td><code class="inline-code">1</code></td>
+                  <td><strong>DespachanteOutbox</strong></td>
+                  <td>Enfileira e despacha eventos assíncronos para o Data Lakehouse (garantia At-Least-Once).</td>
+                </tr>
+                <tr>
+                  <td><strong>ExecutorColetaStaging</strong></td>
+                  <td><code class="inline-code">1</code></td>
+                  <td>Agregação (<code class="inline-code">o--</code>)</td>
+                  <td><code class="inline-code">1</code></td>
+                  <td><strong>EscritorCamadaPrata</strong></td>
+                  <td>Persiste os lotes colunares em formato Parquet com compressão Snappy na camada Silver.</td>
+                </tr>
+                <tr>
+                  <td><strong>GeradorPaginasSteam</strong></td>
+                  <td><code class="inline-code">1</code></td>
+                  <td>Agregação (<code class="inline-code">o--</code>)</td>
+                  <td><code class="inline-code">1</code></td>
+                  <td><strong>ClienteHttpSteam</strong></td>
+                  <td>Invoca as requisições HTTP REST à Steam API com suporte a cursores de paginação.</td>
+                </tr>
+                <tr>
+                  <td><strong>ClienteHttpSteam</strong></td>
+                  <td><code class="inline-code">1</code></td>
+                  <td>Agregação (<code class="inline-code">o--</code>)</td>
+                  <td><code class="inline-code">1</code></td>
+                  <td><strong>ControladorResiliencia</strong></td>
+                  <td>Executa retries exponenciais e backoff automático para tratamento de HTTP 429 e 5xx.</td>
+                </tr>
+                <tr>
+                  <td><strong>FabricaStaging</strong></td>
+                  <td><code class="inline-code">1</code></td>
+                  <td>Dependência (<code class="inline-code">..&gt;</code>)</td>
+                  <td><code class="inline-code">1</code></td>
+                  <td><strong>RepositorioStaging</strong></td>
+                  <td>Instancia sob demanda implementações concretas SQLite ou PostgreSQL sem retenção de estado.</td>
+                </tr>
+                <tr>
+                  <td><strong>FabricaStaging</strong></td>
+                  <td><code class="inline-code">1</code></td>
+                  <td>Dependência (<code class="inline-code">..&gt;</code>)</td>
+                  <td><code class="inline-code">1</code></td>
+                  <td><strong>UnidadeTrabalho</strong></td>
+                  <td>Instancia sob demanda o gerenciador de contexto transacional correspondente.</td>
+                </tr>
+                <tr>
+                  <td><strong>FabricaExtracao</strong></td>
+                  <td><code class="inline-code">1</code></td>
+                  <td>Dependência (<code class="inline-code">..&gt;</code>)</td>
+                  <td><code class="inline-code">1</code></td>
+                  <td><strong>GeradorPaginasSteam</strong></td>
+                  <td>Instancia sob demanda a estratégia configurada de paginação e cursor da API Steam.</td>
+                </tr>
+                <tr>
+                  <td><strong>FabricaExtracao</strong></td>
+                  <td><code class="inline-code">1</code></td>
+                  <td>Dependência (<code class="inline-code">..&gt;</code>)</td>
+                  <td><code class="inline-code">1</code></td>
+                  <td><strong>ClienteHttpSteam</strong></td>
+                  <td>Instancia sob demanda o cliente HTTP REST resiliente com backoff exponencial.</td>
+                </tr>
+                <tr>
+                  <td><strong>ExecutorTreinamento</strong></td>
+                  <td><code class="inline-code">1</code></td>
+                  <td>Agregação (<code class="inline-code">o--</code>)</td>
+                  <td><code class="inline-code">1</code></td>
+                  <td><strong>FabricaAgrupadores</strong></td>
+                  <td>Solicita a criação e parametrização dos estimadores de clusterização.</td>
+                </tr>
+                <tr>
+                  <td><strong>ExecutorTreinamento</strong></td>
+                  <td><code class="inline-code">1</code></td>
+                  <td>Agregação (<code class="inline-code">o--</code>)</td>
+                  <td><code class="inline-code">1</code></td>
+                  <td><strong>RotuladorClusters</strong></td>
+                  <td>Aplica regras de negócio declarativas para classificação em personas comerciais.</td>
+                </tr>
+                <tr>
+                  <td><strong>ExecutorTreinamento</strong></td>
+                  <td><code class="inline-code">1</code></td>
+                  <td>Agregação (<code class="inline-code">o--</code>)</td>
+                  <td><code class="inline-code">1</code></td>
+                  <td><strong>ObservadorTreinamento</strong></td>
+                  <td>Notifica métricas de silhueta, calinski-harabasz e hiperparâmetros ao MLflow (Observer pattern).</td>
+                </tr>
+                <tr>
+                  <td><strong>FabricaAgrupadores</strong></td>
+                  <td><code class="inline-code">1</code></td>
+                  <td>Associação (<code class="inline-code">--&gt;</code>)</td>
+                  <td><code class="inline-code">1..*</code></td>
+                  <td><strong>EstimadorClustering</strong></td>
+                  <td>Instancia e gerencia 1 ou múltiplos algoritmos (K-Means, DBSCAN, HDBSCAN) sob a mesma interface.</td>
+                </tr>
+                <tr>
+                  <td><strong>ExportadorCamadaOuro</strong></td>
+                  <td><code class="inline-code">1</code></td>
+                  <td>Agregação (<code class="inline-code">o--</code>)</td>
+                  <td><code class="inline-code">1</code></td>
+                  <td><strong>EscritorCamadaOuro</strong></td>
+                  <td>Materializa tabelas analíticas em Parquet no bucket S3 sob partição Hive.</td>
+                </tr>
+                <tr>
+                  <td><strong>ExportadorCamadaOuro</strong></td>
+                  <td><code class="inline-code">1</code></td>
+                  <td>Agregação (<code class="inline-code">o--</code>)</td>
+                  <td><code class="inline-code">1</code></td>
+                  <td><strong>TelemetriaAnalitica</strong></td>
+                  <td>Registra métricas agregadas dos clusters nos coletores do Prometheus.</td>
+                </tr>
+                <tr>
+                  <td><strong>DespachanteOutbox / Escritores</strong></td>
+                  <td><code class="inline-code">1</code></td>
+                  <td>Agregação (<code class="inline-code">o--</code>)</td>
+                  <td><code class="inline-code">1</code></td>
+                  <td><strong>ClienteRustfsS3</strong></td>
+                  <td>Conexão unificada com o bucket de objetos S3 / RustFS para leitura e gravação das camadas medalhão.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="callout tip" style="margin-top: 1rem;">
+            <div class="callout-title">💡 Como o Python 3.12 Garante essas Multiplicidades</div>
+            <p style="font-size: 0.85rem; color: #cbd5e1; line-height: 1.5; margin: 0;">
+              No projeto, as multiplicidades <strong>"1" (obrigatórias)</strong> são rigidamente asseguradas pelo type checker <code class="inline-code">Pyright Strict</code>: nenhum construtor aceita parâmetros com valor <code class="inline-code">None</code> a menos que o tipo seja explicitamente declarado como <code class="inline-code">T | None</code>. Relações <strong>"1..*"</strong> são garantidas através de coleções tipadas como <code class="inline-code">Sequence[T]</code> validadas contra listas vazias via verificações de pré-condição (<code class="inline-code">if not colecao: raise ValueError(...)</code>), prevenindo estados nulos e inconsistências de domínio em tempo de execução.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- 3.5 Diagrama de Componentes e Infraestrutura -->
+      <div id="uml-componentes" class="diagram-card" data-diagram-title="3.5. Diagrama de Componentes e Infraestrutura — Docker Compose & Stack Unificado">
+        <div class="diagram-header">
+          <div class="diagram-title">3.5. Diagrama de Componentes e Infraestrutura — Docker Compose & Stack Unificado</div>
+          <div class="diagram-actions">
+            <span class="diagram-tag">Componentes / Implantação</span>
+            <button class="diagram-btn" onclick="zoomDiagrama('uml-componentes', 0.2)" title="Aumentar zoom (Zoom In)">🔍 +</button>
+            <button class="diagram-btn" onclick="zoomDiagrama('uml-componentes', -0.2)" title="Diminuir zoom (Zoom Out)">🔍 -</button>
+            <button class="diagram-btn" onclick="resetZoomDiagrama('uml-componentes')" title="Resetar escala para 100%">↺ 100%</button>
+            <button class="diagram-btn highlight" onclick="abrirModalDiagrama('uml-componentes', '3.5. Diagrama de Componentes e Infraestrutura — Docker Compose & Stack Unificado')" title="Expandir em tela cheia com zoom e pan livre">⛶ Tela Cheia</button>
+          </div>
+        </div>
+        <p style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 1rem;">
+          Mapeamento dos serviços, portas de rede interna/externa e volumes persistentes definidos no <code class="inline-code">docker-compose.yml</code>.
+        </p>
+        <div class="mermaid-wrapper">
+          <div class="mermaid-viewport" id="viewport-uml-componentes" onmousedown="iniciarArrasto(event, 'uml-componentes')" ondblclick="alternarZoomDuploClique('uml-componentes')">
+            <div class="mermaid-container" id="container-uml-componentes">
+              <pre class="mermaid">
+flowchart TB
+    subgraph Host["Ambiente do Host / Desenvolvedor"]
+        CLI["Scripts / CLI Python (app.orquestracao_pipeline)"]
+        Browser["Navegador Web (Analista / Executivo)"]
+    end
+
+    subgraph Docker["Docker Compose Stack (Rede: steam_network)"]
+        subgraph StorageLayer["Camada de Armazenamento e Staging"]
+            Postgres["PostgreSQL 16\nPort: 5432\n(Volume: pgdata)"]
+            RustFS["RustFS / S3 Compatible\nPort: 9000 / 9001\n(Volume: s3data)"]
+            SQLite["SQLite Staging (Local / Volume)"]
+        end
+
+        subgraph MLOpsLayer["Rastreamento e Governança"]
+            MLflow["MLflow Tracking Server\nPort: 5000\n(Artifacts: S3 / DB: Postgres)"]
+        end
+
+        subgraph ObservabilityLayer["Telemetria e Observabilidade"]
+            Prometheus["Prometheus TSDB\nPort: 9090\n(Volume: promdata)"]
+            Grafana["Grafana Dashboards\nPort: 3000\n(Dashboards Provisionados)"]
+            Loki["Grafana Loki (Logs)\nPort: 3100"]
+            Alloy["Grafana Alloy (Coletor)\nPort: 12345"]
+        end
+
+        subgraph ServicingLayer["Serviço de Aplicação"]
+            FastAPI["FastAPI Servicing Engine\nPort: 8000\n(/health, /metrics, /api/v1)"]
+        end
+    end
+
+    CLI -->|Persistência Lotes| Postgres
+    CLI -->|Outbox Despacho| RustFS
+    CLI -->|Rastreio Experimentos| MLflow
+    CLI -->|Métricas Analíticas| Prometheus
+
+    FastAPI -->|Lê Modelos & Ouro| RustFS
+    FastAPI -->|Expõe /metrics| Prometheus
+
+    Prometheus -->|Scrape /metrics| FastAPI
+    Grafana -->|Consulta Métricas| Prometheus
+    Grafana -->|Consulta Logs| Loki
+    Alloy -->|Envia Logs| Loki
+
+    Browser -->|Porta 3000| Grafana
+    Browser -->|Porta 5000| MLflow
+    Browser -->|Porta 8000| FastAPI
+              </pre>
+            </div>
+          </div>
+          <div class="diagram-hint">
+            <span>💡 Arraste para navegar • Use a roda do mouse ou duplo clique para zoom</span>
+            <span class="zoom-level-badge" id="badge-zoom-uml-componentes">100%</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 3.6 Diagrama de Sequência UML -->
+      <div id="uml-sequencia" class="diagram-card" data-diagram-title="3.6. Diagrama de Sequência UML — Inferência e Consulta Humana na API REST">
+        <div class="diagram-header">
+          <div class="diagram-title">3.6. Diagrama de Sequência UML — Inferência e Consulta Humana na API REST</div>
+          <div class="diagram-actions">
+            <span class="diagram-tag">Sequência / Mensageria</span>
+            <button class="diagram-btn" onclick="zoomDiagrama('uml-sequencia', 0.2)" title="Aumentar zoom (Zoom In)">🔍 +</button>
+            <button class="diagram-btn" onclick="zoomDiagrama('uml-sequencia', -0.2)" title="Diminuir zoom (Zoom Out)">🔍 -</button>
+            <button class="diagram-btn" onclick="resetZoomDiagrama('uml-sequencia')" title="Resetar escala para 100%">↺ 100%</button>
+            <button class="diagram-btn highlight" onclick="abrirModalDiagrama('uml-sequencia', '3.6. Diagrama de Sequência UML — Inferência e Consulta Humana na API REST')" title="Expandir em tela cheia com zoom e pan livre">⛶ Tela Cheia</button>
+          </div>
+        </div>
+        <p style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 1rem;">
+          Fluxo de chamada síncrona demonstrando a separação estrita entre a inferência matricial do cluster e a consulta textual para auditoria humana sem uso de NLP.
+        </p>
+        <div class="mermaid-wrapper">
+          <div class="mermaid-viewport" id="viewport-uml-sequencia" onmousedown="iniciarArrasto(event, 'uml-sequencia')" ondblclick="alternarZoomDuploClique('uml-sequencia')">
+            <div class="mermaid-container" id="container-uml-sequencia">
+              <pre class="mermaid">
+sequenceDiagram
+    autonumber
+    actor Cliente as Cliente HTTP (Frontend / Analista)
+    participant API as FastAPI (Router)
+    participant ModelReg as RegistroModelos
+    participant Pipeline as PipelineComposto
+    participant Estimador as EstimadorClustering
+    participant Rotulador as RotuladorClusters
+    participant Consulta as RecuperadorReviews
+
+    Note over Cliente, API: Cenário A: Predição de Perfil de Jogador
+    Cliente->>API: POST /api/v1/jogos/427520/predizer {"dados_atributos": [[12, 4500, 120, 3000, 5]]}
+    API->>ModelReg: carregar_modelo_campeao(appid=427520)
+    ModelReg-->>API: (Pipeline, Estimador)
+    API->>Pipeline: transformar(matriz_x)
+    Pipeline-->>API: matriz_x_normalizada
+    API->>Estimador: predizer(matriz_x_normalizada)
+    Estimador-->>API: array([cluster_id=2])
+    API->>Rotulador: obter_persona(cluster_id=2)
+    Rotulador-->>API: "Veterano Crítico"
+    API-->>Cliente: 200 OK {"appid": 427520, "clusters_atribuidos": [2], "persona": "Veterano Crítico"}
+
+    Note over Cliente, API: Cenário B: Auditoria Humana de Texto (Zero PLN)
+    Cliente->>API: GET /api/v1/jogos/427520/reviews?cluster_id=2&limite=5
+    API->>Consulta: buscar_reviews_cluster(appid=427520, cluster_id=2, limite=5)
+    Consulta-->>API: Lista de ItemReviewConsulta (Texto original preservado)
+    API-->>Cliente: 200 OK {"appid": 427520, "total_retornado": 5, "reviews": [...]}
+              </pre>
+            </div>
+          </div>
+          <div class="diagram-hint">
+            <span>💡 Arraste para navegar • Use a roda do mouse ou duplo clique para zoom</span>
+            <span class="zoom-level-badge" id="badge-zoom-uml-sequencia">100%</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SEÇÃO 4: MANUAL DE INSTRUÇÕES DE USO -->
+    <section id="manual-instrucoes" class="doc-section">
+      <h2 class="section-heading">
+        <span class="heading-number">04</span> Manual de Instruções de Uso Operacional
+      </h2>
+      <p>
+        Guia prático e determinístico para instalação, configuração, execução de pipeline, treinamento de modelos e operação da plataforma.
+      </p>
+
+      <!-- 4.1 Pré-requisitos -->
+      <div id="manual-pre-requisitos" style="margin-bottom: 2.5rem;">
+        <h3 class="subsection-heading">4.1. Pré-Requisitos e Preparação do Ambiente</h3>
+        <p>Certifique-se de possuir instalado no ambiente de desenvolvimento ou servidor:</p>
+        <ul>
+          <li><strong>Python 3.12+</strong> (recomenda-se 3.12.3 ou superior).</li>
+          <li><strong>Docker & Docker Compose</strong> (v2.20+ com suporte a Compose Profiles).</li>
+          <li><strong>Git</strong> para controle de versão.</li>
+        </ul>
+
+        <div class="code-wrapper">
+          <div class="code-header">
+            <span>bash — Clonagem e Criação do Ambiente Virtual</span>
+            <button class="copy-btn" onclick="copiarCodigo(this)">Copiar</button>
+          </div>
+          <pre><code># 1. Navegue até o diretório do projeto
+cd /home/rodrigo/PycharmProjects/agrupamento_comentarios_youtube
+
+# 2. Crie e ative o ambiente virtual isolado com Python 3.12
+python3.12 -m venv .venv
+source .venv/bin/activate
+
+# 3. Instale as dependências rigorosas de produção e desenvolvimento
+pip install --upgrade pip
+pip install -r requirements.txt</code></pre>
+        </div>
+      </div>
+
+      <!-- 4.2 Subindo a Infraestrutura -->
+      <div id="manual-infraestrutura" style="margin-bottom: 2.5rem;">
+        <h3 class="subsection-heading">4.2. Subindo e Validando os Microsserviços Docker</h3>
+        <p>
+          O projeto possui uma stack Docker Compose integrada em <code class="inline-code">docker-compose.yml</code>. Utilize os profiles oficiais:
+        </p>
+
+        <div class="code-wrapper">
+          <div class="code-header">
+            <span>bash — Inicialização dos Serviços com Perfis</span>
+            <button class="copy-btn" onclick="copiarCodigo(this)">Copiar</button>
+          </div>
+          <pre><code># Subir os serviços essenciais (Storage RustFS S3, PostgreSQL, MLflow, Prometheus, Grafana e API)
+docker compose --profile dashboard --profile api up -d
+
+# Verificar o status de execução de cada container
+docker compose ps</code></pre>
+        </div>
+
+        <div class="table-container">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Serviço</th>
+                <th>Porta Externa</th>
+                <th>Credenciais Padrão</th>
+                <th>Finalidade</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>RustFS (MinIO S3)</strong></td>
+                <td><code class="inline-code">http://localhost:9000</code></td>
+                <td><code class="inline-code">admin / admin1234</code></td>
+                <td>Armazenamento de Lakehouse (Bronze, Silver, Gold).</td>
+              </tr>
+              <tr>
+                <td><strong>PostgreSQL 16</strong></td>
+                <td><code class="inline-code">localhost:5432</code></td>
+                <td><code class="inline-code">mlflow / mlflow_senha (db: mlflow)</code></td>
+                <td>Staging transacional e backend de metadados MLflow.</td>
+              </tr>
+              <tr>
+                <td><strong>MLflow Tracking</strong></td>
+                <td><code class="inline-code">http://localhost:5000</code></td>
+                <td>Acesso Livre</td>
+                <td>Rastreamento de experimentos, métricas e modelos.</td>
+              </tr>
+              <tr>
+                <td><strong>Prometheus</strong></td>
+                <td><code class="inline-code">http://localhost:9090</code></td>
+                <td>Acesso Livre</td>
+                <td>Monitoramento e coleta de métricas de telemetria.</td>
+              </tr>
+              <tr>
+                <td><strong>Grafana</strong></td>
+                <td><code class="inline-code">http://localhost:3000</code></td>
+                <td><code class="inline-code">admin / Admin@2026</code></td>
+                <td>Painéis executivos e operacionais provisionados.</td>
+              </tr>
+              <tr>
+                <td><strong>FastAPI Servicing</strong></td>
+                <td><code class="inline-code">http://localhost:8000</code></td>
+                <td>API Pública com Schemas Pydantic</td>
+                <td>Serviço de predição, auditoria humana e <code class="inline-code">/metrics</code>.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- 4.3 Governança Declarativa e Validação com Pydantic v2 -->
+      <div id="manual-configuracao" style="margin-bottom: 3rem;">
+        <h3 class="subsection-heading">4.3. Governança Declarativa e Validação Estrita com Pydantic v2</h3>
+        <p>
+          No <strong>Steam Reviews Clustering v4.1</strong>, o <strong>Pydantic v2</strong> atua como a espinha dorsal de governança, conformidade de esquemas e segurança de tipos em todas as fronteiras de entrada e saída (<em>I/O Boundaries</em>) do sistema.
+          Seguindo o princípio funcional <strong>"Parse, Don't Validate"</strong>, nenhuma estrutura de dados externa (arquivos YAML, variáveis de ambiente ou payloads HTTP) transita no domínio sem antes ser analisada, validada e convertida em modelos imutáveis de alta integridade.
+        </p>
+
+        <!-- Três Pilares da Governança Pydantic -->
+        <div class="card-grid" style="margin: 1.5rem 0;">
+          <div class="feature-card">
+            <div class="feature-icon">🛡️</div>
+            <div class="feature-title">extra="forbid" (Fail-Fast)</div>
+            <div class="feature-desc">
+              Qualquer chave não mapeada ou desconhecida nos arquivos YAML ou requisições HTTP dispara um <code class="inline-code">ValidationError</code> imediato na inicialização. Erros de digitação nunca passam despercebidos.
+            </div>
+          </div>
+
+          <div class="feature-card">
+            <div class="feature-icon">🔒</div>
+            <div class="feature-title">frozen=True (Imutabilidade)</div>
+            <div class="feature-desc">
+              As instâncias de configuração são congeladas e somente-leitura por design. Nenhum componente ou thread do pipeline pode modificar estados de configuração em tempo de execução.
+            </div>
+          </div>
+
+          <div class="feature-card">
+            <div class="feature-icon">🚫</div>
+            <div class="feature-title">Sem eval / exec Dinâmico</div>
+            <div class="feature-desc">
+              É terminantemente proibida a execução de expressões Python arbitrárias a partir dos YAMLs. O parsing é estritamente tipado e desacoplado de injeções de código.
+            </div>
+          </div>
+        </div>
+
+        <!-- Tabela Comparativa de Responsabilidades -->
+        <div style="margin: 2rem 0;">
+          <h4 style="font-size: 1.05rem; font-weight: 700; color: var(--text-main); margin-bottom: 0.75rem;">
+            Matriz de Responsabilidade: Pydantic v2 vs Python Dataclasses
+          </h4>
+          <p style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 1rem;">
+            Para conciliar máxima segurança nas bordas com altíssimo desempenho computacional no processamento em memória, a arquitetura divide claramente as funções:
+          </p>
+          <div class="table-container">
+            <table>
+              <thead>
+                <tr>
+                  <th>Camada / Domínio</th>
+                  <th>Tecnologia Utilizada</th>
+                  <th>Configuração Aplicada</th>
+                  <th>Finalidade & Racional Arquitetural</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><strong>Bordas de Configuração YAML</strong></td>
+                  <td>Pydantic v2 (<code class="inline-code">BaseModel</code>)</td>
+                  <td><code class="inline-code">extra="forbid", frozen=True</code></td>
+                  <td>Validação estrita em tempo de carga dos arquivos em <code class="inline-code">configuracoes/</code> pela fachada <code class="inline-code">ConfYAML</code>.</td>
+                </tr>
+                <tr>
+                  <td><strong>Bordas de API REST (DTOs)</strong></td>
+                  <td>Pydantic v2 (<code class="inline-code">BaseModel</code>)</td>
+                  <td><code class="inline-code">extra="forbid"</code></td>
+                  <td>Contratos de requisição e resposta do FastAPI, serialização JSON e geração do Swagger/OpenAPI.</td>
+                </tr>
+                <tr>
+                  <td><strong>Entidades de Domínio Interno</strong></td>
+                  <td>Python Standard Library (<code class="inline-code">@dataclass</code>)</td>
+                  <td><code class="inline-code">frozen=True, slots=True</code></td>
+                  <td>Representação em memória de alta performance para <code class="inline-code">ReviewSteam</code>, <code class="inline-code">AutorSteam</code> e <code class="inline-code">PaginaReviews</code> (zero overhead de validação em loops).</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Exemplos Práticos de Código Pydantic -->
+        <div style="margin: 2rem 0;">
+          <h4 style="font-size: 1.05rem; font-weight: 700; color: var(--text-main); margin-bottom: 0.75rem;">
+            1. Padrão Base de Configuração Imutável (<code class="inline-code">app/configuracao_geral/modelos_configuracao.py</code>)
+          </h4>
+          <p style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 1rem;">
+            Todos os modelos de configuração herdam de <code class="inline-code">ModeloBaseConfiguracao</code>, assegurando a política uniforme de rejeição de campos extras e imutabilidade estrutural:
+          </p>
+
+          <div class="code-wrapper">
+            <div class="code-header">
+              <span>python — Modelos Pydantic v2 de Configuração com ConfigDict</span>
+              <button class="copy-btn" onclick="copiarCodigo(this)">Copiar</button>
+            </div>
+            <pre><code>from pydantic import BaseModel, ConfigDict
+
+class ModeloBaseConfiguracao(BaseModel):
+    """Modelo base imutável com proibição estrita de campos desconhecidos."""
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+class MetadadosProjeto(ModeloBaseConfiguracao):
+    versao_schema: str
+    nome_projeto: str
+
+class FuncionalidadesAtivas(ModeloBaseConfiguracao):
+    processamento_linguagem_natural: bool = False
+    analise_temporal: bool = False
+
+class ParametrosRequisicaoSteam(ModeloBaseConfiguracao):
+    filter: str = "recent"
+    languages: tuple[str, ...] = ("brazilian",)
+    day_range: int = 30
+    num_per_page: int = 100
+    filter_offtopic_activity: bool = True</code></pre>
+          </div>
+        </div>
+
+        <!-- Exemplo de Contratos DTO na API REST -->
+        <div style="margin: 2rem 0;">
+          <h4 style="font-size: 1.05rem; font-weight: 700; color: var(--text-main); margin-bottom: 0.75rem;">
+            2. Contratos DTO na API REST FastAPI (<code class="inline-code">app/servico_api/aplicacao_fastapi.py</code>)
+          </h4>
+          <p style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 1rem;">
+            Na camada de exposição HTTP, o Pydantic valida os corpos de requisição contra ataques de <em>mass-assignment</em> e garante que as respostas sigam rigorosamente a especificação OpenAPI:
+          </p>
+
+          <div class="code-wrapper">
+            <div class="code-header">
+              <span>python — DTOs com Validação Estrita no FastAPI</span>
+              <button class="copy-btn" onclick="copiarCodigo(this)">Copiar</button>
+            </div>
+            <pre><code>from pydantic import BaseModel, ConfigDict, Field
+
+class SolicitacaoPredicao(BaseModel):
+    """Payload de entrada para inferência de novos vetores tabulares."""
+    model_config = ConfigDict(extra="forbid")
+    dados_atributos: list[list[float]] = Field(
+        ...,
+        description="Lista de vetores numéricos contendo atributos normalizados (num_reviews, playtime, etc.)",
+    )
+
+class RespostaPredicao(BaseModel):
+    """Resultado estruturado com identificadores dos clusters atribuídos."""
+    model_config = ConfigDict(extra="forbid")
+    appid: int
+    clusters_atribuidos: list[int]
+
+class ItemReviewConsulta(BaseModel):
+    """Review individual preservada exclusivamente para consulta humana (sem PLN)."""
+    model_config = ConfigDict(extra="forbid")
+    recommendationid: str
+    cluster_id: int
+    voted_up: bool
+    playtime_forever: int
+    review_texto: str</code></pre>
+          </div>
+        </div>
+
+        <!-- Exemplo de Comportamento em Caso de Erro de Validação -->
+        <div class="callout warning" style="margin-top: 1.5rem;">
+          <div class="callout-title">⚠️ Demonstração do Comportamento de Erro (Fail-Fast)</div>
+          <p style="margin-bottom: 0.75rem;">
+            Se um desenvolvedor adicionar uma chave espúria <code class="inline-code">campo_inexistente: 123</code> em <code class="inline-code">configuracoes/projeto.yaml</code>, o Pydantic interrompe o pipeline na largada com um erro claro:
+          </p>
+          <pre style="background: rgba(0,0,0,0.4); padding: 0.75rem; border-radius: 6px; font-size: 0.82rem; color: #fca5a5;">pydantic_core._pydantic_core.ValidationError: 1 validation error for ConfiguracaoProjeto
+campo_inexistente
+  Extra inputs are not permitted [type=extra_forbidden, input_value=123, input_type=int]</pre>
+          <p style="margin-top: 0.75rem; font-size: 0.85rem;">
+            Isso elimina comportamentos inesperados em produção, assegurando total rastreabilidade entre os arquivos YAML e o código Python.
+          </p>
+        </div>
+      </div>
+
+      <!-- 4.4 Coleta e Ingestão -->
+      <div id="manual-coleta" style="margin-bottom: 2.5rem;">
+        <h3 class="subsection-heading">4.4. Execução da Coleta e Ingestão de Reviews</h3>
+        <p>
+          A extração funciona de forma <strong>lazy</strong> através de geradores Python (<code class="inline-code">Iterator[PaginaReviews]</code>), garantindo uso de memória constante mesmo ao ingerir milhões de avaliações.
+        </p>
+
+        <div class="code-wrapper">
+          <div class="code-header">
+            <span>python — Script de Execução da Coleta com Staging (PostgreSQL ou SQLite)</span>
+            <button class="copy-btn" onclick="copiarCodigo(this)">Copiar</button>
+          </div>
+          <pre><code>import os
+from app.configuracao_geral.conf_yaml import ConfYAML
+from app.extracao_steam.cliente_steam import ClienteHttpSteam
+from app.extracao_steam.controlador_resiliencia import ControladorResiliencia
+from app.extracao_steam.gerador_paginas import GeradorPaginasSteam
+from app.orquestracao_pipeline.executor_coleta import ExecutorColetaStaging
+from app.persistencia_staging.fabrica_staging import FabricaStaging
+
+# 1. Carrega configurações declarativas validadas
+config = ConfYAML()
+
+# 2. Instancia o cliente HTTP resiliente com backpressure
+controlador = ControladorResiliencia(
+    tentativas_maximas=config.steam_api.resiliencia.tentativas_maximas,
+    espera_base=config.steam_api.resiliencia.tempo_espera_base_segundos,
+)
+cliente = ClienteHttpSteam(configuracoes=config, resiliencia=controlador)
+gerador = GeradorPaginasSteam(cliente_http=cliente, configuracoes=config)
+
+# 3. Cria Staging via Factory (seleciona PostgreSQL ou SQLite conforme configurado)
+tipo_bd = "postgres" if "postgresql" in os.getenv("DATABASE_URL", "") else "sqlite"
+uow, repo = FabricaStaging.criar_componentes(tipo_banco=tipo_bd, configuracoes=config)
+
+# 4. Executa a extração para um AppID da Steam (ex: 427520)
+executor = ExecutorColetaStaging(
+    configuracoes=config,
+    gerador_paginas=gerador,
+    uow=uow,
+    repositorio=repo
+)
+
+metadados = executor.executar_coleta_jogo(appid=427520, estrategia="recente")
+print(f"Coleta concluída com sucesso! Total de páginas: {metadados.total_paginas}, Reviews: {metadados.total_reviews}")</code></pre>
+        </div>
+      </div>
+
+      <!-- 4.5 Treinamento e Clustering -->
+      <div id="manual-treinamento" style="margin-bottom: 2.5rem;">
+        <h3 class="subsection-heading">4.5. Execução do Treinamento e Seleção AutoML</h3>
+        <p>
+          O treinamento lê a Camada Silver, gera atributos derivados matemáticos, segrega o texto não-estruturado e seleciona o melhor algoritmo respeitando o catálogo de capacidades:
+        </p>
+
+        <div class="code-wrapper">
+          <div class="code-header">
+            <span>python — Execução do Treinamento com Seleção AutoML</span>
+            <button class="copy-btn" onclick="copiarCodigo(this)">Copiar</button>
+          </div>
+          <pre><code>import pandas as pd
+from app.configuracao_geral.conf_yaml import ConfYAML
+from app.agrupamento_modelos.selecionador_automl import SelecionadorModelosAutoML
+from app.treinamento_pipeline.executor_treinamento import ExecutorTreinamento
+from app.treinamento_pipeline.exportador_ouro import ExportadorCamadaOuro
+
+config = ConfYAML()
+
+# 1. Carrega dados validados da Camada Silver (Parquet)
+dados_silver = pd.read_parquet("lakehouse/silver/steam/reviews/appid=427520/dados.parquet")
+
+# 2. Opcional: Utilizar Selecionador AutoML para encontrar o melhor estimador
+selecionador_automl = SelecionadorModelosAutoML(configuracoes=config)
+melhor_resultado = selecionador_automl.selecionar_melhor_modelo(
+    matriz_x=dados_silver[["num_reviews", "playtime_forever", "playtime_last_two_weeks"]].to_numpy()
+)
+print(f"Melhor Algoritmo Selecionado: {melhor_resultado.nome_algoritmo} (Score: {melhor_resultado.score_otimizacao:.4f})")
+
+# 3. Executa o treinamento completo com registro no MLflow e rotulagem
+executor = ExecutorTreinamento(configuracoes=config)
+df_rotulado, avaliacao, modelo = executor.executar_treinamento(
+    dados_silver=dados_silver,
+    nome_algoritmo=melhor_resultado.nome_algoritmo,
+    parametros_algoritmo=melhor_resultado.parametros_otimizados,
+    versao_dataset="gold_v4_1"
+)
+
+# 4. Exporta para a Camada Gold e atualiza métricas Prometheus
+exportador = ExportadorCamadaOuro(configuracoes=config)
+manifesto = exportador.exportar_resultados_completos(
+    appid=427520,
+    df_rotulado=df_rotulado,
+    avaliacao=avaliacao,
+    nome_algoritmo=melhor_resultado.nome_algoritmo,
+    versao_modelo="v4.1"
+)
+print("Partição Gold gravada com sucesso! Manifesto:", manifesto)</code></pre>
+        </div>
+      </div>
+
+      <!-- 4.6 Regras de Negócio e Personas -->
+      <div id="manual-regras-negocio" style="margin-bottom: 2.5rem;">
+        <h3 class="subsection-heading">4.6. Criação e Customização de Personas sem Retreino</h3>
+        <p>
+          A rotulagem dos clusters é 100% desacoplada da matriz de machine learning. Os analistas podem alterar, incluir ou remover perfis de personas em <code class="inline-code">configuracoes/analises/negocio.yaml</code> e as regras são aplicadas dinamicamente:
+        </p>
+
+        <div class="code-wrapper">
+          <div class="code-header">
+            <span>yaml — configuracoes/analises/negocio.yaml (Regras Declarativas de Personas)</span>
+            <button class="copy-btn" onclick="copiarCodigo(this)">Copiar</button>
+          </div>
+          <pre><code>versao_regras: "1.0.0"
+regras_negocio:
+  - nome_persona: "Veterano Entusiasta"
+    descricao: "Jogadores com tempo de jogo extremo (> 100h) e avaliação positiva."
+    criterios:
+      - atributo: "playtime_forever"
+        operador: "maior_ou_igual"
+        valor: 6000.0  # minutos
+      - atributo: "voted_up_taxa"
+        operador: "maior_ou_igual"
+        valor: 0.8
+    prioridade: 1
+
+  - nome_persona: "Explorador Crítico"
+    descricao: "Jogadores com muitas avaliações publicadas e postura crítica."
+    criterios:
+      - atributo: "num_reviews"
+        operador: "maior_ou_igual"
+        valor: 10.0
+      - atributo: "voted_up_taxa"
+        operador: "menor"
+        valor: 0.5
+    prioridade: 2
+
+  - nome_persona: "Jogador Casual"
+    descricao: "Perfil com baixo tempo total e poucas interações na comunidade."
+    criterios:
+      - atributo: "playtime_forever"
+        operador: "menor"
+        valor: 1200.0
+    prioridade: 3</code></pre>
+        </div>
+      </div>
+
+      <!-- 4.7 Operação da API REST -->
+      <div id="manual-api-rest" style="margin-bottom: 2.5rem;">
+        <h3 class="subsection-heading">4.7. Operação e Consumo da API REST (FastAPI)</h3>
+        <p>
+          A API expõe serviços de consulta analítica, healthcheck e predição com strict validation (Pydantic <code class="inline-code">extra="forbid"</code>).
+        </p>
+
+        <div class="code-wrapper">
+          <div class="code-header">
+            <span>bash — Iniciando o Servidor de API Localmente</span>
+            <button class="copy-btn" onclick="copiarCodigo(this)">Copiar</button>
+          </div>
+          <pre><code># Executar via Uvicorn na porta 8000
+python -m uvicorn app.servico_api.aplicacao_fastapi:criar_aplicacao --factory --host 0.0.0.0 --port 8000</code></pre>
+        </div>
+
+        <div class="table-container">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Método</th>
+                <th>Endpoint</th>
+                <th>Finalidade</th>
+                <th>Exemplo de Chamada cURL</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code class="inline-code">GET</code></td>
+                <td><code class="inline-code">/health</code></td>
+                <td>Verificação de saúde operacional da API.</td>
+                <td><code class="inline-code">curl -s http://localhost:8000/health</code></td>
+              </tr>
+              <tr>
+                <td><code class="inline-code">GET</code></td>
+                <td><code class="inline-code">/metrics</code></td>
+                <td>Métricas coletadas para o Prometheus.</td>
+                <td><code class="inline-code">curl -s http://localhost:8000/metrics</code></td>
+              </tr>
+              <tr>
+                <td><code class="inline-code">GET</code></td>
+                <td><code class="inline-code">/api/v1/jogos/{appid}/clusters</code></td>
+                <td>Metadados e total de clusters do jogo.</td>
+                <td><code class="inline-code">curl -s http://localhost:8000/api/v1/jogos/427520/clusters</code></td>
+              </tr>
+              <tr>
+                <td><code class="inline-code">GET</code></td>
+                <td><code class="inline-code">/api/v1/jogos/{appid}/reviews</code></td>
+                <td>Auditoria humana de texto por cluster (sem PLN).</td>
+                <td><code class="inline-code">curl -s "http://localhost:8000/api/v1/jogos/427520/reviews?cluster_id=0&limite=10"</code></td>
+              </tr>
+              <tr>
+                <td><code class="inline-code">POST</code></td>
+                <td><code class="inline-code">/api/v1/jogos/{appid}/predizer</code></td>
+                <td>Inferência de cluster para novos vetores numéricos.</td>
+                <td>Ver exemplo detalhado abaixo</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="code-wrapper">
+          <div class="code-header">
+            <span>bash — Exemplo de Inferência via POST /predizer</span>
+            <button class="copy-btn" onclick="copiarCodigo(this)">Copiar</button>
+          </div>
+          <pre><code>curl -X POST http://localhost:8000/api/v1/jogos/427520/predizer \
+  -H "Content-Type: application/json" \
+  -d '{
+    "dados_atributos": [
+      [15.0, 7200.0, 180.0, 5400.0, 3.0],
+      [1.0, 45.0, 0.0, 45.0, 90.0]
+    ]
+  }'</code></pre>
+        </div>
+      </div>
+
+      <!-- 4.8 Observabilidade e Dashboards -->
+      <div id="manual-observabilidade" style="margin-bottom: 2.5rem;">
+        <h3 class="subsection-heading">4.8. Visualização no Grafana e Acompanhamento no MLflow</h3>
+        <p>
+          O sistema inclui dashboards oficiais provisionados automaticamente no diretório <code class="inline-code">config_ob/dashboards/</code>:
+        </p>
+
+        <div class="card-grid">
+          <div class="feature-card">
+            <div class="feature-title">📊 Dashboard de Clusters Steam</div>
+            <div class="feature-desc">
+              Arquivo: <code class="inline-code">dashboard_steam_clusters.json</code>.<br>
+              Acompanhe a distribuição de jogadores por persona, métrica de silhueta, Davies-Bouldin e taxa de ruído por AppID.
+            </div>
+          </div>
+
+          <div class="feature-card">
+            <div class="feature-title">🗄️ Dashboard Lakehouse & Storage</div>
+            <div class="feature-desc">
+              Arquivo: <code class="inline-code">dashboard_steam_lakehouse.json</code>.<br>
+              Monitora volume de partições Bronze/Silver/Gold, latência de gravação de arquivos e taxa de sucesso do despachante Outbox.
+            </div>
+          </div>
+
+          <div class="feature-card">
+            <div class="feature-title">⚡ Dashboard Operacional & Ingestão</div>
+            <div class="feature-desc">
+              Arquivo: <code class="inline-code">dashboard_steam_operacional.json</code>.<br>
+              Taxa de requisições à Steam API por minuto, códigos HTTP 429 (Rate Limit), tempos de espera do backoff e consumo de memória.
+            </div>
+          </div>
+        </div>
+
+        <p>
+          Para inspecionar o histórico de experimentos de machine learning, acesse o <strong>MLflow Tracking UI</strong> em <a href="http://localhost:5000" target="_blank" style="color: var(--accent-blue-light); text-decoration: underline;">http://localhost:5000</a>.
+        </p>
+      </div>
+
+      <!-- 4.9 Quality Gates -->
+      <div id="manual-quality-gates" style="margin-bottom: 2.5rem;">
+        <h3 class="subsection-heading">4.9. Execução dos Quality Gates e Testes Automatizados</h3>
+        <p>
+          Antes de qualquer deploy ou entrega de código, os Quality Gates obrigatórios devem ser executados localmente:
+        </p>
+
+        <div class="code-wrapper">
+          <div class="code-header">
+            <span>bash — Execução dos 3 Quality Gates Obrigatórios</span>
+            <button class="copy-btn" onclick="copiarCodigo(this)">Copiar</button>
+          </div>
+          <pre><code># 1. Quality Gate de Linter e Estilo (Ruff)
+ruff check .
+
+# 2. Quality Gate de Tipagem Estrita sem 'Any' (Pyright Strict)
+pyright
+
+# 3. Quality Gate de Testes Funcionais e Integração (Pytest)
+pytest -v</code></pre>
+        </div>
+
+        <div class="callout tip">
+          <div class="callout-title">✓ Critério de Aceite</div>
+          <p>
+            O código só é aceito se o Ruff retornar 0 violações, o Pyright reportar <code class="inline-code">0 errors, 0 warnings, 0 informations</code> e todos os 69 testes unitários e de integração passarem com sucesso.
+          </p>
+        </div>
+      </div>
+
+      <!-- 4.10 Troubleshooting -->
+      <div id="manual-troubleshooting" style="margin-bottom: 2.5rem;">
+        <h3 class="subsection-heading">4.10. Troubleshooting e Resolução de Problemas Frequentes</h3>
+        
+        <div class="table-container">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Sintoma / Erro</th>
+                <th>Causa Provável</th>
+                <th>Procedimento de Correção</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>HTTP 429 da Steam API</strong></td>
+                <td>Taxa de requisições excedeu o limite da Steam.</td>
+                <td>O <code class="inline-code">ControladorResiliencia</code> aplica backoff exponencial automaticamente. Ajuste <code class="inline-code">taxa_maxima_requisicoes_minuto</code> em <code class="inline-code">steam_api.yaml</code> se persistir.</td>
+              </tr>
+              <tr>
+                <td><strong>Erro de Conexão no PostgreSQL (5432)</strong></td>
+                <td>Container do banco de dados ainda não está pronto para conexões.</td>
+                <td>Execute <code class="inline-code">docker compose logs postgres</code> e verifique se o socket está pronto. O sistema possui fallback transparente para SQLite staging se necessário.</td>
+              </tr>
+              <tr>
+                <td><strong>Pyright: Argument of type "dict" cannot be assigned...</strong></td>
+                <td>Invariância de tipos genéricos em coleções Pydantic ou dicionários.</td>
+                <td>Utilize <code class="inline-code">Mapping[str, ...]</code> em vez de <code class="inline-code">dict[str, ...]</code> nas assinaturas onde houver covariância de tipos primitivos.</td>
+              </tr>
+              <tr>
+                <td><strong>Silhueta Retornando Ruído (-1.0)</strong></td>
+                <td>Algoritmos baseados em densidade (DBSCAN/HDBSCAN) marcaram pontos como ruído.</td>
+                <td>Comportamento esperado: o <code class="inline-code">AvaliadorObjetivo</code> calcula a silhueta exclusivamente nos pontos não-ruído e aplica penalização proporcional no score composto.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- FOOTER -->
+    <footer class="doc-footer">
+      <p>Steam Reviews Clustering v4.1 — Arquitetura de Software e Engenharia de Dados.</p>
+      <p>Projetado e Homologado sob conformidade rigorosa com a Especificação Técnica Oficial v4.1.</p>
+    </footer>
+
+  </main>
+
+  <!-- Modal Lightbox Fullscreen para Zoom Máximo dos Diagramas UML -->
+  <div id="modal-diagrama-lightbox" class="diagram-modal" onclick="fecharModalSeClicarFora(event)">
+    <div class="modal-header">
+      <div class="modal-title">
+        <span>🔍</span>
+        <span id="modal-diagram-name">Visualizador de Diagrama UML</span>
+      </div>
+      <div class="modal-actions">
+        <span class="zoom-level-badge" id="modal-zoom-badge">100%</span>
+        <button class="diagram-btn" onclick="zoomModal(0.25)" title="Aumentar zoom (Zoom In)">🔍 +</button>
+        <button class="diagram-btn" onclick="zoomModal(-0.25)" title="Diminuir zoom (Zoom Out)">🔍 -</button>
+        <button class="diagram-btn" onclick="resetZoomModal()" title="Resetar escala para 100%">↺ 100%</button>
+        <button class="diagram-btn highlight" onclick="baixarSvgModal()" title="Exportar e baixar imagem vetorial SVG">💾 Baixar SVG</button>
+        <button class="btn-close-modal" onclick="fecharModalDiagrama()" title="Fechar tela cheia (Tecla Esc)">✕ Fechar</button>
+      </div>
+    </div>
+    <div class="modal-body" id="modal-body-viewport" onmousedown="iniciarArrastoModal(event)" ondblclick="alternarZoomModalDuploClique()">
+      <div id="modal-svg-container"></div>
+    </div>
+    <div class="modal-footer-hint">
+      💡 Dica: Arraste com o mouse para explorar o diagrama • Use a roda do mouse para zoom contínuo • Pressione ESC para fechar
+    </div>
+  </div>
+
+  <script>
+    // Gerenciador de Estados de Zoom e Pan para Diagramas
+    const estadosDiagramas = {};
+    const estadoModal = {
+      idAtivo: null,
+      scale: 1.0,
+      translateX: 0,
+      translateY: 0,
+      isDragging: false,
+      startX: 0,
+      startY: 0
+    };
+
+    function obterOuCriarEstado(id) {
+      if (!estadosDiagramas[id]) {
+        estadosDiagramas[id] = {
+          scale: 1.0,
+          translateX: 0,
+          translateY: 0,
+          isDragging: false,
+          startX: 0,
+          startY: 0
+        };
+      }
+      return estadosDiagramas[id];
+    }
+
+    function aplicarTransformacao(id) {
+      const estado = obterOuCriarEstado(id);
+      const container = document.getElementById(`container-${id}`);
+      const badge = document.getElementById(`badge-zoom-${id}`);
+      if (container) {
+        container.style.transform = `translate(${estado.translateX}px, ${estado.translateY}px) scale(${estado.scale})`;
+      }
+      if (badge) {
+        badge.innerText = `${Math.round(estado.scale * 100)}%`;
+      }
+    }
+
+    function zoomDiagrama(id, delta) {
+      const estado = obterOuCriarEstado(id);
+      estado.scale = Math.min(Math.max(estado.scale + delta, 0.4), 4.0);
+      aplicarTransformacao(id);
+    }
+
+    function resetZoomDiagrama(id) {
+      const estado = obterOuCriarEstado(id);
+      estado.scale = 1.0;
+      estado.translateX = 0;
+      estado.translateY = 0;
+      aplicarTransformacao(id);
+    }
+
+    function alternarZoomDuploClique(id) {
+      const estado = obterOuCriarEstado(id);
+      if (Math.abs(estado.scale - 1.0) < 0.15) {
+        estado.scale = 1.8;
+      } else {
+        estado.scale = 1.0;
+        estado.translateX = 0;
+        estado.translateY = 0;
+      }
+      aplicarTransformacao(id);
+    }
+
+    function iniciarArrasto(e, id) {
+      if (e.button !== 0) return; // Apenas botão esquerdo do mouse
+      const estado = obterOuCriarEstado(id);
+      estado.isDragging = true;
+      estado.startX = e.clientX - estado.translateX;
+      estado.startY = e.clientY - estado.translateY;
+
+      const viewport = document.getElementById(`viewport-${id}`);
+      if (viewport) {
+        viewport.style.cursor = 'grabbing';
+      }
+
+      function mover(evt) {
+        if (!estado.isDragging) return;
+        estado.translateX = evt.clientX - estado.startX;
+        estado.translateY = evt.clientY - estado.startY;
+        aplicarTransformacao(id);
+      }
+
+      function parar() {
+        estado.isDragging = false;
+        if (viewport) {
+          viewport.style.cursor = 'grab';
+        }
+        window.removeEventListener('mousemove', mover);
+        window.removeEventListener('mouseup', parar);
+      }
+
+      window.addEventListener('mousemove', mover);
+      window.addEventListener('mouseup', parar);
+    }
+
+    // Inicializa suporte à roda do mouse nos diagramas inline
+    function inicializarWheelNosDiagramas() {
+      const diagramas = [
+        'uml-atividade-pipeline',
+        'uml-atividade-outbox',
+        'uml-atividade-automl',
+        'uml-classes',
+        'uml-componentes',
+        'uml-sequencia'
+      ];
+
+      diagramas.forEach(id => {
+        const viewport = document.getElementById(`viewport-${id}`);
+        if (viewport) {
+          viewport.addEventListener('wheel', (e) => {
+            e.preventDefault();
+            const delta = e.deltaY < 0 ? 0.12 : -0.12;
+            zoomDiagrama(id, delta);
+          }, { passive: false });
+        }
+      });
+    }
+
+    // Modal Lightbox Fullscreen
+    function abrirModalDiagrama(id, titulo) {
+      estadoModal.idAtivo = id;
+      estadoModal.scale = 1.0;
+      estadoModal.translateX = 0;
+      estadoModal.translateY = 0;
+
+      const containerOriginal = document.getElementById(`container-${id}`);
+      const svgOriginal = containerOriginal ? containerOriginal.querySelector('svg') : null;
+      const modalSvgContainer = document.getElementById('modal-svg-container');
+      const modalTitle = document.getElementById('modal-diagram-name');
+      const modal = document.getElementById('modal-diagrama-lightbox');
+
+      if (!svgOriginal || !modalSvgContainer || !modal) return;
+
+      modalTitle.innerText = titulo || 'Diagrama UML em Alta Resolução';
+      modalSvgContainer.innerHTML = svgOriginal.outerHTML;
+      
+      // Remove restrições de tamanho no SVG clonado e aplica dimensões vetoriais reais
+      const svgClonado = modalSvgContainer.querySelector('svg');
+      if (svgClonado) {
+        svgClonado.style.maxWidth = 'none';
+        let largura = 0;
+        let altura = 0;
+        if (svgClonado.viewBox && svgClonado.viewBox.baseVal && svgClonado.viewBox.baseVal.width > 0) {
+          largura = svgClonado.viewBox.baseVal.width;
+          altura = svgClonado.viewBox.baseVal.height;
+        } else {
+          const rect = svgOriginal.getBoundingClientRect();
+          largura = rect.width;
+          altura = rect.height;
+        }
+
+        if (largura > 0 && altura > 0) {
+          svgClonado.setAttribute('width', largura);
+          svgClonado.setAttribute('height', altura);
+          svgClonado.style.width = `${largura}px`;
+          svgClonado.style.height = `${altura}px`;
+
+          const modalViewport = document.getElementById('modal-body-viewport');
+          if (modalViewport && modalViewport.clientWidth > 0 && modalViewport.clientHeight > 0) {
+            const margem = 0.88;
+            const escalaW = (modalViewport.clientWidth * margem) / largura;
+            const escalaH = (modalViewport.clientHeight * margem) / altura;
+            const escalaInicial = Math.min(escalaW, escalaH, 1.0);
+            estadoModal.scale = Math.max(Number(escalaInicial.toFixed(2)), 0.25);
+          }
+        }
+      }
+
+      aplicarTransformacaoModal();
+      modal.classList.add('active');
+      document.body.style.overflow = 'hidden'; // Evita rolagem da página ao fundo
+    }
+
+    function fecharModalDiagrama() {
+      const modal = document.getElementById('modal-diagrama-lightbox');
+      if (modal) {
+        modal.classList.remove('active');
+      }
+      document.body.style.overflow = '';
+      estadoModal.idAtivo = null;
+    }
+
+    function fecharModalSeClicarFora(e) {
+      if (e.target && e.target.id === 'modal-diagrama-lightbox') {
+        fecharModalDiagrama();
+      }
+    }
+
+    function aplicarTransformacaoModal() {
+      const container = document.getElementById('modal-svg-container');
+      const badge = document.getElementById('modal-zoom-badge');
+      if (container) {
+        container.style.transform = `translate(${estadoModal.translateX}px, ${estadoModal.translateY}px) scale(${estadoModal.scale})`;
+      }
+      if (badge) {
+        badge.innerText = `${Math.round(estadoModal.scale * 100)}%`;
+      }
+    }
+
+    function zoomModal(delta) {
+      estadoModal.scale = Math.min(Math.max(estadoModal.scale + delta, 0.3), 6.0);
+      aplicarTransformacaoModal();
+    }
+
+    function resetZoomModal() {
+      estadoModal.scale = 1.0;
+      estadoModal.translateX = 0;
+      estadoModal.translateY = 0;
+      aplicarTransformacaoModal();
+    }
+
+    function alternarZoomModalDuploClique() {
+      if (Math.abs(estadoModal.scale - 1.0) < 0.2) {
+        estadoModal.scale = 2.0;
+      } else {
+        estadoModal.scale = 1.0;
+        estadoModal.translateX = 0;
+        estadoModal.translateY = 0;
+      }
+      aplicarTransformacaoModal();
+    }
+
+    function iniciarArrastoModal(e) {
+      if (e.button !== 0) return;
+      estadoModal.isDragging = true;
+      estadoModal.startX = e.clientX - estadoModal.translateX;
+      estadoModal.startY = e.clientY - estadoModal.translateY;
+
+      const viewport = document.getElementById('modal-body-viewport');
+      if (viewport) {
+        viewport.style.cursor = 'grabbing';
+      }
+
+      function mover(evt) {
+        if (!estadoModal.isDragging) return;
+        estadoModal.translateX = evt.clientX - estadoModal.startX;
+        estadoModal.translateY = evt.clientY - estadoModal.startY;
+        aplicarTransformacaoModal();
+      }
+
+      function parar() {
+        estadoModal.isDragging = false;
+        if (viewport) {
+          viewport.style.cursor = 'grab';
+        }
+        window.removeEventListener('mousemove', mover);
+        window.removeEventListener('mouseup', parar);
+      }
+
+      window.addEventListener('mousemove', mover);
+      window.addEventListener('mouseup', parar);
+    }
+
+    function baixarSvgModal() {
+      const modalSvgContainer = document.getElementById('modal-svg-container');
+      const svg = modalSvgContainer ? modalSvgContainer.querySelector('svg') : null;
+      if (!svg) return;
+
+      const xml = new XMLSerializer().serializeToString(svg);
+      const blob = new Blob([xml], { type: 'image/svg+xml;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${estadoModal.idAtivo || 'diagrama_uml'}.svg`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    }
+
+    // Renderização programática do Diagrama de Classes UML (isolado de interferências do parser HTML)
+    const codigoDiagramaClasses = `classDiagram
+    direction TB
+
+    class OrquestradorPrincipal {
+        -ConfYAML _config
+        -FabricaStaging _fabrica_staging
+        -FabricaExtracao _fabrica_extracao
+        -ArmazenamentoLake _armazenamento
+        +executar_fluxo_coleta(appid, tipo_banco, tipo_api, estrategia, limite_paginas)
+        +executar_fluxo_treinamento(appid, algoritmo, versao_dataset)
+        +obter_dados_silver(appid) DataFrame
+    }
+
+    class ConfYAML {
+        -dict _dados_configuracao
+        -str _hash_versao
+        +obter_secao(nome) dict
+        +hash_configuracao() str
+    }
+
+    class FabricaStaging {
+        +criar_staging(tipo_banco) tuple
+        +registrar_tecnologia(nome_tecnologia, criador)
+    }
+
+    class FabricaExtracao {
+        +criar_gerador(nome_provedor, limite_paginas, tamanho_pagina) GeradorPaginas
+        +registrar_provedor(nome_provedor, criador)
+    }
+
+    class ExecutorColetaStaging {
+        -ConfYAML configuracoes
+        -GeradorPaginas gerador_paginas
+        -UnidadeTrabalho uow
+        -RepositorioStaging repositorio
+        -DespachanteOutbox despachante_outbox
+        -EscritorCamadaPrata escritor_prata
+        +executar_coleta_jogo(appid, estrategia) ResultadoColeta
+    }
+
+    class GeradorPaginasSteam {
+        -ClienteHttpSteam cliente
+        -int maximo_paginas
+        +obter_paginas(appid, estrategia) Iterator
+    }
+
+    class ClienteHttpSteam {
+        -ControladorResiliencia controlador
+        +requisitar_pagina_reviews(appid, params) dict
+    }
+
+    class ControladorResiliencia {
+        -int max_tentativas
+        -float espera_base_segundos
+        +executar_com_resiliencia(funcao)
+    }
+
+    class RepositorioStaging {
+        <<interface>>
+        +gravar_pagina(pagina, id_execucao)
+        +salvar_lote_reviews(reviews)
+        +obter_ultimo_checkpoint(appid, estrategia)
+    }
+    class RepositorioStagingSQLite {
+        -Connection conexao
+    }
+    class RepositorioStagingPostgres {
+        -Connection conexao
+    }
+    RepositorioStaging <|.. RepositorioStagingSQLite
+    RepositorioStaging <|.. RepositorioStagingPostgres
+
+    class UnidadeTrabalho {
+        <<interface>>
+        +iniciar_transacao()
+        +finalizar_transacao()
+        +comitar()
+        +desfazer()
+    }
+    class UnidadeTrabalhoSQLite {
+        -Connection conexao
+    }
+    class UnidadeTrabalhoPostgres {
+        -Connection conexao
+    }
+    UnidadeTrabalho <|.. UnidadeTrabalhoSQLite
+    UnidadeTrabalho <|.. UnidadeTrabalhoPostgres
+
+    class DespachanteOutbox {
+        -RepositorioStaging repositorio
+        -ClienteRustfsS3 armazenamento
+        +despachar_lote_pendente(limite_lote) int
+    }
+
+    class EscritorCamadaPrata {
+        -ClienteRustfsS3 armazenamento
+        +escrever_reviews_silver(reviews, appid) str
+    }
+
+    class ClienteRustfsS3 {
+        -S3Client cliente_boto3
+        +fazer_upload_bytes(bucket, chave, dados)
+        +baixar_bytes(bucket, chave) bytes
+    }
+
+    class SelecionadorModelosAutoML {
+        -FabricaAgrupadores fabrica
+        +selecionar_melhor_modelo(matriz_x) tuple
+    }
+
+    class ExecutorTreinamento {
+        -ConfYAML configuracoes
+        -RotuladorClusters rotulador_negocio
+        -FabricaAgrupadores fabrica_algoritmos
+        -ObservadorTreinamento observador
+        +executar_treinamento(dados_silver, nome_algoritmo, parametros, versao) tuple
+    }
+
+    class FabricaAgrupadores {
+        +criar_estimador(nome_algoritmo, parametros) EstimadorClustering
+    }
+
+    class EstimadorClustering {
+        <<interface>>
+        +ajustar(matriz_x) EstimadorClustering
+        +predizer(matriz_x) ndarray
+        +obter_rotulos() ndarray
+        +obter_capacidades() CapacidadeAlgoritmo
+    }
+    class AdaptadorKMeans {
+        -int k_clusters
+        +ajustar(matriz_x)
+        +obter_centros()
+    }
+    class AdaptadorDBSCAN {
+        -float eps
+        -int min_samples
+        +ajustar(matriz_x)
+    }
+    class AdaptadorHDBSCAN {
+        -int min_cluster_size
+        +ajustar(matriz_x)
+        +obter_probabilidades()
+    }
+    EstimadorClustering <|.. AdaptadorKMeans
+    EstimadorClustering <|.. AdaptadorDBSCAN
+    EstimadorClustering <|.. AdaptadorHDBSCAN
+
+    class RotuladorClusters {
+        -EspecificacaoNegocio especificacao
+        +aplicar_rotulos(df_perfis)
+        +compilar_regras_dsl()
+    }
+
+    class ObservadorTreinamento {
+        <<interface>>
+        +registrar_inicio(nome, params, tags)
+        +registrar_metricas(metricas, passo)
+        +registrar_artefato(caminho, destino)
+        +registrar_termino(status)
+    }
+    class ObservadorMlflow {
+        -MlflowClient cliente
+        -str id_execucao
+    }
+    class ObservadorNulo {
+    }
+    ObservadorTreinamento <|.. ObservadorMlflow
+    ObservadorTreinamento <|.. ObservadorNulo
+
+    class ExportadorCamadaOuro {
+        -EscritorCamadaOuro escritor_ouro
+        -TelemetriaAnalitica telemetria_analitica
+        +exportar_camada_ouro(appid, nome_algoritmo, versao, dados_gold, avaliacao, hash) dict
+    }
+
+    class EscritorCamadaOuro {
+        -ClienteRustfsS3 armazenamento
+        +escrever_particao_ouro(df, appid, versao) str
+    }
+
+    class TelemetriaAnalitica {
+        +registrar_metricas_clustering(metricas, tags)
+    }
+
+    class MotorTabular {
+        <<interface>>
+        +ler_parquet(caminho) DataFrame
+        +escrever_parquet(df, caminho)
+        +adicionar_coluna(df, nome, serie) DataFrame
+    }
+    class MotorPolars {
+        +ler_parquet(caminho)
+        +escrever_parquet(df, caminho)
+    }
+    class MotorPandas {
+        +ler_parquet(caminho)
+        +escrever_parquet(df, caminho)
+    }
+    MotorTabular <|.. MotorPolars
+    MotorTabular <|.. MotorPandas
+
+    OrquestradorPrincipal "1" *-- "1" ConfYAML : consulta
+    OrquestradorPrincipal "1" *-- "1" ExecutorColetaStaging : orquestra
+    OrquestradorPrincipal "1" *-- "1" ExecutorTreinamento : orquestra
+    OrquestradorPrincipal "1" --> "1" FabricaStaging : solicita_banco
+    OrquestradorPrincipal "1" --> "1" FabricaExtracao : solicita_api
+    OrquestradorPrincipal "1" --> "1" SelecionadorModelosAutoML : consulta
+    OrquestradorPrincipal "1" --> "1" ExportadorCamadaOuro : exporta
+
+    ExecutorColetaStaging "1" o-- "1" GeradorPaginasSteam : consome
+    ExecutorColetaStaging "1" o-- "1" UnidadeTrabalho : transacao
+    ExecutorColetaStaging "1" o-- "1" RepositorioStaging : persiste
+    ExecutorColetaStaging "1" o-- "1" DespachanteOutbox : aciona
+    ExecutorColetaStaging "1" o-- "1" EscritorCamadaPrata : gera_silver
+
+    FabricaExtracao "1" ..> "1" GeradorPaginasSteam : instancia
+    FabricaExtracao "1" ..> "1" ClienteHttpSteam : instancia
+
+    GeradorPaginasSteam "1" o-- "1" ClienteHttpSteam : requisita
+    ClienteHttpSteam "1" o-- "1" ControladorResiliencia : retries
+
+    FabricaStaging "1" ..> "1" RepositorioStaging : instancia
+    FabricaStaging "1" ..> "1" UnidadeTrabalho : instancia
+
+    DespachanteOutbox "1" o-- "1" RepositorioStaging : consulta
+    DespachanteOutbox "1" o-- "1" ClienteRustfsS3 : envia_bronze
+    EscritorCamadaPrata "1" o-- "1" ClienteRustfsS3 : grava_parquet
+
+    ExecutorTreinamento "1" o-- "1" FabricaAgrupadores : usa
+    ExecutorTreinamento "1" o-- "1" RotuladorClusters : rotula
+    ExecutorTreinamento "1" o-- "1" ObservadorTreinamento : notifica
+
+    SelecionadorModelosAutoML "1" o-- "1" FabricaAgrupadores : avalia
+    FabricaAgrupadores "1" --> "1..*" EstimadorClustering : instancia
+
+    ExportadorCamadaOuro "1" o-- "1" EscritorCamadaOuro : persiste
+    ExportadorCamadaOuro "1" o-- "1" TelemetriaAnalitica : registra
+    EscritorCamadaOuro "1" o-- "1" ClienteRustfsS3 : grava_parquet`;
+
+    async function renderizarDiagramaClasses() {
+      const containerAlvo = document.getElementById('render-alvo-uml-classes');
+      if (!containerAlvo) return;
+      try {
+        const { svg } = await mermaid.render('svg-diagrama-classes-oficial', codigoDiagramaClasses);
+        containerAlvo.innerHTML = svg;
+      } catch (err) {
+        console.error('Falha ao renderizar diagrama de classes:', err);
+      }
+    }
+
+    // Listener para inicialização geral e roda do mouse
+    document.addEventListener('DOMContentLoaded', () => {
+      renderizarDiagramaClasses();
+      inicializarWheelNosDiagramas();
+
+      const modalViewport = document.getElementById('modal-body-viewport');
+      if (modalViewport) {
+        modalViewport.addEventListener('wheel', (e) => {
+          e.preventDefault();
+          const delta = e.deltaY < 0 ? 0.15 : -0.15;
+          zoomModal(delta);
+        }, { passive: false });
+      }
+    });
+
+    // Atalhos de Teclado
+    window.addEventListener('keydown', (e) => {
+      const modal = document.getElementById('modal-diagrama-lightbox');
+      const modalAtivo = modal && modal.classList.contains('active');
+
+      if (e.key === 'Escape' && modalAtivo) {
+        fecharModalDiagrama();
+      } else if (modalAtivo && (e.key === '+' || e.key === '=')) {
+        zoomModal(0.2);
+      } else if (modalAtivo && (e.key === '-' || e.key === '_')) {
+        zoomModal(-0.2);
+      } else if (modalAtivo && e.key === '0') {
+        resetZoomModal();
+      }
+    });
+
+    // Função para filtro dinâmico na barra de navegação
+    function filtrarSidebar() {
+      const termo = document.getElementById('sidebar-search').value.toLowerCase();
+      const itens = document.querySelectorAll('#sidebar-nav .nav-item');
+      itens.forEach(item => {
+        const texto = item.textContent.toLowerCase();
+        if (texto.includes(termo)) {
+          item.style.display = 'block';
+        } else {
+          item.style.display = 'none';
+        }
+      });
+    }
+
+    // Função para copiar código para o clipboard
+    function copiarCodigo(botao) {
+      const wrapper = botao.closest('.code-wrapper');
+      const codigo = wrapper.querySelector('pre code').innerText;
+      navigator.clipboard.writeText(codigo).then(() => {
+        const textoOriginal = botao.innerText;
+        botao.innerText = 'Copiado!';
+        botao.style.borderColor = '#10b981';
+        botao.style.color = '#34d399';
+        setTimeout(() => {
+          botao.innerText = textoOriginal;
+          botao.style.borderColor = '';
+          botao.style.color = '';
+        }, 2000);
+      });
+    }
+
+    // Destaca item ativo do menu conforme scroll
+    window.addEventListener('scroll', () => {
+      const sections = document.querySelectorAll('section.doc-section, .diagram-card, div[id^="manual-"]');
+      const navItems = document.querySelectorAll('.nav-item');
+      let currentId = '';
+
+      sections.forEach(section => {
+        const sectionTop = section.offsetTop - 120;
+        if (window.scrollY >= sectionTop) {
+          currentId = section.getAttribute('id');
+        }
+      });
+
+      if (currentId) {
+        navItems.forEach(item => {
+          item.classList.remove('active');
+          if (item.getAttribute('href') === '#' + currentId) {
+            item.classList.add('active');
+          }
+        });
+      }
+    });
+  </script>
+</body>
+</html>

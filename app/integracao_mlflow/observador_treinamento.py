@@ -5,6 +5,8 @@ from typing import Protocol, runtime_checkable
 
 import numpy as np
 
+from app.dominio_contratos.modelos_dados import TipoDadoJson, TipoParametroAlgoritmo
+
 
 @runtime_checkable
 class ObservadorTreinamento(Protocol):
@@ -14,7 +16,7 @@ class ObservadorTreinamento(Protocol):
         self,
         nome_experimento: str,
         nome_execucao: str,
-        parametros: Mapping[str, object],
+        parametros: Mapping[str, TipoParametroAlgoritmo],
         tags: Mapping[str, str],
     ) -> None:
         """Notifica o início de uma sessão ou run de treinamento."""
@@ -38,7 +40,7 @@ class ObservadorTreinamento(Protocol):
 
     def registrar_artefato_dicionario(
         self,
-        dados: Mapping[str, object],
+        dados: Mapping[str, TipoDadoJson],
         nome_arquivo: str,
     ) -> None:
         """Grava um artefato serializável a partir de um dicionário."""

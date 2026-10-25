@@ -9,12 +9,25 @@ from app.dominio_contratos.modelos_dados import EventoPublicacao
 class ArmazenamentoLake(Protocol):
     """Contrato abstrato de armazenamento de objetos no Data Lake (RustFS/S3)."""
 
+    @property
+    def bucket(self) -> str:
+        """Nome do bucket alvo no Data Lake."""
+        ...
+
     def gravar_texto(self, caminho_chave: str, conteudo: str) -> None:
         """Persiste conteúdo textual (JSON, manifesto)."""
         ...
 
     def gravar_bytes(self, caminho_chave: str, dados_bytes: bytes) -> None:
         """Persiste conteúdo binário (Parquet)."""
+        ...
+
+    def ler_bytes(self, caminho_chave: str) -> bytes:
+        """Recupera conteúdo binário de um caminho no Lakehouse/S3."""
+        ...
+
+    def listar_chaves(self, prefixo: str) -> list[str]:
+        """Lista os caminhos de chaves sob o prefixo especificado."""
         ...
 
     def verificar_existencia(self, caminho_chave: str) -> bool:

@@ -11,8 +11,8 @@ from app.dominio_contratos.modelos_dados import (
     EventoPublicacao,
     MetadadosExecucao,
 )
+from app.dominio_contratos.protocolos_extracao import GeradorPaginas
 from app.dominio_contratos.protocolos_staging import RepositorioStaging, UnidadeTrabalho
-from app.extracao_steam.gerador_paginas import GeradorPaginasSteam
 from app.gestao_datalake.despachante_outbox import DespachanteOutbox
 from app.gestao_datalake.escritor_prata import EscritorCamadaPrata
 from app.observabilidade_metricas.registro_telemetria import RegistroTelemetria
@@ -26,7 +26,7 @@ class ExecutorColetaStaging:
     def __init__(
         self,
         configuracoes: ConfYAML,
-        gerador_paginas: GeradorPaginasSteam,
+        gerador_paginas: GeradorPaginas,
         uow: UnidadeTrabalho,
         repositorio: RepositorioStaging,
         despachante_outbox: DespachanteOutbox | None = None,

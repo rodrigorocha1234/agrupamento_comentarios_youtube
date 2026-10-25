@@ -7,6 +7,7 @@ from typing import final
 import numpy as np
 import pandas as pd
 
+from app.dominio_contratos.modelos_dados import TipoDadoJson, TipoValorEscalar
 from app.regras_negocio.especificacao_negocio import (
     EspecificacaoCompostaAnd,
     EspecificacaoCompostaOr,
@@ -15,7 +16,7 @@ from app.regras_negocio.especificacao_negocio import (
 )
 
 
-def _extrair_array_float(serie: object) -> np.ndarray:
+def _extrair_array_float(serie: pd.Series | pd.DataFrame | Sequence[float] | None) -> np.ndarray:
     """Extrai array unidimensional de floats finitos ignorando NaNs."""
     if not isinstance(serie, pd.Series):
         return np.empty(0, dtype=np.float64)
@@ -41,7 +42,7 @@ class RotuladorClusters:
 
     @classmethod
     def de_configuracao(
-        cls, definicoes_regras: Sequence[Mapping[str, object]]
+        cls, definicoes_regras: Sequence[Mapping[str, TipoDadoJson]]
     ) -> "RotuladorClusters":
         """Instancia o rotulador a partir da estrutura declarativa em YAML."""
         regras_compiladas: list[RegraDeclarativaNegocio] = []
@@ -119,7 +120,7 @@ class RotuladorClusters:
             mapa_rotulos[cluster_int] = rotulo_atribuido
 
         # Adiciona a coluna descritiva sem alterar a coluna cluster_id original
-        def _obter_rotulo(cid: object) -> str:
+        def _obter_rotulo(cid: str | float | None) -> str:
             try:
                 return mapa_rotulos.get(int(str(cid)), rotulo_padrao)
             except (ValueError, TypeError):
@@ -129,9 +130,9 @@ class RotuladorClusters:
 
         return resultado, mapa_rotulos
 
-    def _extrair_contexto_cluster(self, sub_df: pd.DataFrame) -> dict[str, object]:
+    def _extrair_contexto_cluster(self, sub_df: pd.DataFrame) -> dict[str, TipoValorEscalar]:
         """Calcula métricas agregadas descritivas de um cluster para avaliação de regras."""
-        contexto: dict[str, object] = {
+        contexto: dict[str, TipoValorEscalar] = {
             "total_membros": len(sub_df),
         }
 

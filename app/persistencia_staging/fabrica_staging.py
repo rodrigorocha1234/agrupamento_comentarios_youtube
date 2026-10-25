@@ -4,9 +4,13 @@ from collections.abc import Callable
 from typing import Final, final
 
 from app.dominio_contratos.protocolos_staging import RepositorioStaging, UnidadeTrabalho
+from app.persistencia_staging.conexao_postgres import ConexaoPostgresStaging
 from app.persistencia_staging.conexao_sqlite import ConexaoSqlite
+from app.persistencia_staging.esquema_postgres import EsquemaTabelasPostgres
 from app.persistencia_staging.esquema_tabelas import EsquemaTabelasStaging
+from app.persistencia_staging.repositorio_postgres import RepositorioStagingPostgres
 from app.persistencia_staging.repositorio_sqlite import RepositorioStagingSqlite
+from app.persistencia_staging.unidade_postgres import UnidadeTrabalhoPostgres
 from app.persistencia_staging.unidade_trabalho import UnidadeTrabalhoSqlite
 
 TipoCriadorStaging = Callable[[], tuple[UnidadeTrabalho, RepositorioStaging]]
@@ -43,7 +47,7 @@ class FabricaStaging:
         return criador()
 
     def _registrar_padroes(self) -> None:
-        """Registra a implementação padrão de SQLite."""
+        """Registra as implementações padrão de SQLite e PostgreSQL."""
 
         def _criar_sqlite() -> tuple[UnidadeTrabalho, RepositorioStaging]:
             gerenciador = ConexaoSqlite()
@@ -54,4 +58,15 @@ class FabricaStaging:
             repositorio = RepositorioStagingSqlite(conexao)
             return uow, repositorio
 
+        def _criar_postgres() -> tuple[UnidadeTrabalho, RepositorioStaging]:
+            gerenciador = ConexaoPostgresStaging()
+            conexao = gerenciador.criar_conexao()
+            esquema = EsquemaTabelasPostgres()
+            esquema.inicializar_esquema(conexao)
+            uow = UnidadeTrabalhoPostgres(conexao)
+            repositorio = RepositorioStagingPostgres(conexao)
+            return uow, repositorio
+
         self.registrar_tecnologia("sqlite", _criar_sqlite)
+        self.registrar_tecnologia("postgres", _criar_postgres)
+        self.registrar_tecnologia("postgresql", _criar_postgres)
