@@ -1,5 +1,30 @@
 analises:
   engine: plotly # plotly | altair | pandas_profiling
+  layout:
+    titulo_pca: "Projeção Exploratória dos Agrupamentos (PCA 2D)"
+    titulo_distribuicao: "Distribuição de Avaliações por Cluster"
+    eixo_x_distribuicao: "Agrupamento"
+    eixo_y_distribuicao: "Quantidade de Avaliações"
+    titulo_perfil: "Perfil Médio dos Atributos por Cluster"
+    titulo_resumo: "Resumo Estatístico dos Clusters"
+    titulo_relatorio: "Relatório Analítico de Agrupamento de Avaliações"
+    subtitulo_relatorio: "Diagnósticos visuais, distribuição de grupos e projeções multidimensionais."
+    tema: "plotly_white"
+    cor_ruido: "#e74c3c"
+    cor_cluster_padrao: "#3498db"
+    rotulo_ruido: "Ruído (-1)"
+  tabela_resumo:
+    coluna_cluster: "Cluster"
+    coluna_persona: "Persona / Negócio"
+    coluna_alerta: "Alerta"
+    coluna_quantidade: "Qtd Avaliações"
+    coluna_proporcao: "Proporção (%)"
+    coluna_distancia_centroide: "Dist. Centroide"
+  dispersao:
+    atributo_x: "playtime_forever"
+    atributo_y: "votes_up"
+  boxplot:
+    atributo: "playtime_forever"
   clusters:
     dispersao_2d: true
     dispersao_3d: false
@@ -16,12 +41,25 @@ analises:
     silhouette_plot: true
     ruido: true
     distancia_centroides: true # só se algoritmo suportar centroides
-    recomendacoes_por_cluster: false
-    playtime_por_cluster: true
     interacoes_atributos: true
-    comparar_appids: false
-    tabela_reviews_original: true
-    evolucao_temporal: false
+    tabela_dados_originais: true
+    comparar_identificadores: false
+  metricas_resumo:
+    - nome: "taxa_recomendacao"
+      coluna: "voted_up"
+      operacao: "media"
+    - nome: "media_horas_jogadas"
+      coluna: "author_playtime_forever"
+      operacao: "media"
+      divisor: 60.0
+  amostras:
+    quantidade_por_cluster: 5
+    colunas:
+      - "recommendationid"
+      - "review"
+      - "voted_up"
+      - "votes_up"
+      - "author_playtime_forever"
   exportacao:
     habilitada: false
     formato: html

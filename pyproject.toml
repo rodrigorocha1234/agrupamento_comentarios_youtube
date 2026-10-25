@@ -17,9 +17,10 @@ dependencies = [
     "pyarrow>=17",
     "polars>=2.0",
     "plotly>=5.20",
+    "httpx>=0.27",
 ]
 [project.optional-dependencies]
-dev = ["pytest>=8", "pyright>=1.1", "ruff>=0.6", "httpx>=0.27"]
+dev = ["pytest>=8", "pyright>=1.1", "ruff>=0.6"]
 [tool.pyright]
 typeCheckingMode = "strict"
 include = ["app", "tests"]

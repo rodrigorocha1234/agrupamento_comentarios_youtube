@@ -1,10 +1,14 @@
 """Módulo de sumarização diagnóstica e análise de perfis de clusters."""
 
-from dataclasses import dataclass
-from typing import Final
+from dataclasses import dataclass, field
+from typing import TYPE_CHECKING, Final
 
 import numpy as np
 import pandas as pd
+
+if TYPE_CHECKING:
+    from app.conf_yaml import ConfigAnalisesInfo
+    from app.regras_negocio.avaliador_regras import AvaliadorRegrasNegocio
 
 ROTULO_RUIDO: Final[str] = "Ruído / Outlier"
 
@@ -19,9 +23,17 @@ class PerfilCluster:
     proporcao_amostras: float
     medias_atributos: dict[str, float]
     medianas_atributos: dict[str, float]
-    taxa_recomendacao: float | None = None
-    media_horas_jogadas: float | None = None
     distancia_media_centroide: float | None = None
+    rotulo_negocio: str | None = None
+    alerta_negocio: bool = False
+    prioridade_negocio: str | None = None
+    metricas_personalizadas: dict[str, float] = field(default_factory=dict)
+
+    def __getattr__(self, item: str) -> float | None:
+        """Permite acesso dinâmico e transparente aos atributos configurados via YAML."""
+        if item in self.metricas_personalizadas:
+            return self.metricas_personalizadas[item]
+        return None
 
 
 @dataclass(frozen=True)
@@ -39,15 +51,28 @@ class ResumoAnaliseClusters:
 class AnalisadorClusters:
     """Calcula estatísticas descritivas, perfis agregados e isolamento de ruído."""
 
-    @staticmethod
+    @classmethod
+    def _obter_config_analises_padrao(cls) -> "ConfigAnalisesInfo | None":
+        """Carrega a configuração de análises padrão a partir do YAML do projeto se existir."""
+        try:
+            from app.conf_yaml import ConfigAnalisesInfo
+
+            return ConfigAnalisesInfo.carregar_de_arquivo()
+        except (OSError, ValueError, TypeError):
+            return None
+
+    @classmethod
     def gerar_resumo_estatistico(
+        cls,
         matriz_treino: pd.DataFrame | np.ndarray,
         rotulos: list[int],
         metadados: pd.DataFrame | None = None,
         centroides: np.ndarray | None = None,
         nomes_colunas_matriz: list[str] | None = None,
+        avaliador_regras: "AvaliadorRegrasNegocio | None" = None,
+        config_analises: "ConfigAnalisesInfo | None" = None,
     ) -> ResumoAnaliseClusters:
-        """Produz o sumário descritivo por cluster cruzando atributos com metadados."""
+        """Produz o sumário descritivo por cluster cruzando atributos com metadados configurados."""
         total_amostras = len(rotulos)
         if total_amostras == 0:
             return ResumoAnaliseClusters(
@@ -58,6 +83,8 @@ class AnalisadorClusters:
                 proporcao_ruido=0.0,
                 atributos_analisados=[],
             )
+
+        cfg_analises: ConfigAnalisesInfo | None = config_analises or cls._obter_config_analises_padrao()
 
         if isinstance(matriz_treino, pd.DataFrame):
             colunas_atributos = list(matriz_treino.columns)
@@ -103,18 +130,25 @@ class AnalisadorClusters:
                 medias[nome_col] = float(np.mean(subset_matriz[:, col_idx]))
                 medianas[nome_col] = float(np.median(subset_matriz[:, col_idx]))
 
-            taxa_recom: float | None = None
-            media_horas: float | None = None
+            metricas_personalizadas: dict[str, float] = {}
 
-            if metadados is not None and not metadados.empty:
+            if metadados is not None and not metadados.empty and cfg_analises is not None:
                 subset_meta = metadados.iloc[mascara]
-                if "voted_up" in subset_meta.columns:
-                    col_voted = subset_meta["voted_up"]
-                    taxa_recom = float(col_voted.astype(float).mean())
+                for cfg_m in cfg_analises.metricas_resumo:
+                    if cfg_m.coluna in subset_meta.columns:
+                        col_vals = subset_meta[cfg_m.coluna]
+                        divisor = cfg_m.divisor if cfg_m.divisor != 0.0 else 1.0
+                        val_calc: float
+                        if cfg_m.operacao in ("media", "proporcao"):
+                            val_calc = float(col_vals.astype(float).mean() / divisor)
+                        elif cfg_m.operacao == "soma":
+                            val_calc = float(col_vals.astype(float).sum() / divisor)
+                        elif cfg_m.operacao == "mediana":
+                            val_calc = float(col_vals.astype(float).median() / divisor)
+                        else:
+                            val_calc = float(col_vals.astype(float).mean() / divisor)
 
-                if "author_playtime_forever" in subset_meta.columns:
-                    media_minutos = float(subset_meta["author_playtime_forever"].astype(float).mean())
-                    media_horas = round(media_minutos / 60.0, 2)
+                        metricas_personalizadas[cfg_m.nome] = val_calc
 
             dist_media: float | None = None
             if distancias is not None and r != -1:
@@ -123,19 +157,20 @@ class AnalisadorClusters:
                 if len(dist_validas) > 0:
                     dist_media = float(np.mean(dist_validas))
 
-            perfis.append(
-                PerfilCluster(
-                    id_cluster=r,
-                    nome_rotulo=nome,
-                    quantidade_amostras=qtd,
-                    proporcao_amostras=prop,
-                    medias_atributos=medias,
-                    medianas_atributos=medianas,
-                    taxa_recomendacao=taxa_recom,
-                    media_horas_jogadas=media_horas,
-                    distancia_media_centroide=dist_media,
-                )
+            perfil_obj = PerfilCluster(
+                id_cluster=r,
+                nome_rotulo=nome,
+                quantidade_amostras=qtd,
+                proporcao_amostras=prop,
+                medias_atributos=medias,
+                medianas_atributos=medianas,
+                distancia_media_centroide=dist_media,
+                metricas_personalizadas=metricas_personalizadas,
             )
+            if avaliador_regras is not None:
+                perfil_obj = avaliador_regras.aplicar_regras_perfil(perfil_obj)
+
+            perfis.append(perfil_obj)
 
         return ResumoAnaliseClusters(
             perfis=perfis,
@@ -146,15 +181,29 @@ class AnalisadorClusters:
             atributos_analisados=colunas_atributos,
         )
 
-    @staticmethod
+    @classmethod
     def extrair_amostras_reviews_por_cluster(
+        cls,
         metadados: pd.DataFrame,
         rotulos: list[int],
         amostras_por_cluster: int = 5,
+        colunas_exibicao: list[str] | None = None,
+        config_analises: "ConfigAnalisesInfo | None" = None,
     ) -> dict[int, list[dict[str, str | int | float | bool]]]:
-        """Extrai exemplos de reviews originais por cluster para inspeção humana."""
+        """Extrai exemplos de dados originais por cluster usando colunas configuradas no YAML."""
         if metadados.empty or len(rotulos) != len(metadados):
             return {}
+
+        cfg_analises: ConfigAnalisesInfo | None = config_analises or cls._obter_config_analises_padrao()
+
+        # Determina as colunas a extrair: parâmetro explícito, YAML analises.yaml ou colunas do DataFrame
+        colunas_alvo: list[str]
+        if colunas_exibicao is not None and len(colunas_exibicao) > 0:
+            colunas_alvo = colunas_exibicao
+        elif cfg_analises is not None and cfg_analises.amostras.colunas:
+            colunas_alvo = cfg_analises.amostras.colunas
+        else:
+            colunas_alvo = list(metadados.columns)
 
         df_aux = metadados.copy()
         df_aux["_cluster_rotulo"] = rotulos
@@ -167,7 +216,7 @@ class AnalisadorClusters:
             lista_registros: list[dict[str, str | int | float | bool]] = []
             for _, row in amostra.iterrows():
                 registro: dict[str, str | int | float | bool] = {}
-                for col in ["recommendationid", "review", "voted_up", "votes_up", "author_playtime_forever"]:
+                for col in colunas_alvo:
                     if col in row:
                         val = row[col]
                         if bool(pd.isna(val)):

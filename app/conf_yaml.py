@@ -602,10 +602,86 @@ class ConfigExportacaoAnalises(BaseModel):
     formato: str = "html"
 
 
+class ConfigMetricaResumo(BaseModel):
+    nome: str
+    coluna: str
+    operacao: Literal["media", "soma", "proporcao", "mediana"] = "media"
+    divisor: float = 1.0
+
+
+class ConfigAmostrasAnalises(BaseModel):
+    quantidade_por_cluster: int = 5
+    colunas: list[str] = Field(default_factory=list)
+
+
+class ConfigDispersaoGrafico(BaseModel):
+    """Atributos configurados para os eixos da dispersão 2D."""
+
+    atributo_x: str = ""
+    atributo_y: str = ""
+
+
+class ConfigBoxplotGrafico(BaseModel):
+    """Atributo configurado para geração de diagramas boxplot."""
+
+    atributo: str = ""
+
+
+class ConfigTabelaResumoGrafico(BaseModel):
+    """Rótulos dos cabeçalhos da tabela descritiva de clusters."""
+
+    coluna_cluster: str = "Cluster"
+    coluna_persona: str = "Persona / Negócio"
+    coluna_alerta: str = "Alerta"
+    coluna_quantidade: str = "Qtd Amostras"
+    coluna_proporcao: str = "Proporção (%)"
+    coluna_distancia_centroide: str = "Dist. Centroide"
+
+
+class ConfigLayoutGraficos(BaseModel):
+    """Configurações visuais, títulos de eixos e cabeçalhos de relatórios."""
+
+    titulo_pca: str = "Projeção Exploratória dos Agrupamentos (PCA 2D)"
+    titulo_distribuicao: str = "Distribuição de Amostras por Cluster"
+    eixo_x_distribuicao: str = "Agrupamento"
+    eixo_y_distribuicao: str = "Quantidade de Amostras"
+    titulo_perfil: str = "Perfil Médio dos Atributos por Cluster"
+    titulo_resumo: str = "Resumo Estatístico dos Clusters"
+    titulo_relatorio: str = "Relatório Analítico de Agrupamento"
+    subtitulo_relatorio: str = "Diagnósticos visuais, distribuição de grupos e projeções multidimensionais."
+    tema: str = "plotly_white"
+    cor_ruido: str = "#888888"
+    cor_cluster_padrao: str = "#3498db"
+    rotulo_ruido: str = "Ruído (-1)"
+
+
 class ConfigAnalisesInfo(BaseModel):
     engine: Literal["plotly", "altair", "pandas_profiling"] = "plotly"
     clusters: ConfigClustersAnalises = Field(default_factory=ConfigClustersAnalises)
     exportacao: ConfigExportacaoAnalises = Field(default_factory=ConfigExportacaoAnalises)
+    layout: ConfigLayoutGraficos = Field(default_factory=ConfigLayoutGraficos)
+    tabela_resumo: ConfigTabelaResumoGrafico = Field(default_factory=ConfigTabelaResumoGrafico)
+    dispersao: ConfigDispersaoGrafico = Field(default_factory=ConfigDispersaoGrafico)
+    boxplot: ConfigBoxplotGrafico = Field(default_factory=ConfigBoxplotGrafico)
+    metricas_resumo: list[ConfigMetricaResumo] = Field(default_factory=list)
+    amostras: ConfigAmostrasAnalises = Field(default_factory=ConfigAmostrasAnalises)
+
+    @classmethod
+    def carregar_de_arquivo(cls, caminho: Path | str = "config/analises.yaml") -> "ConfigAnalisesInfo":
+        """Carrega a configuração de análises a partir de um arquivo YAML se disponível."""
+        path = Path(caminho)
+        if not path.is_file():
+            return cls()
+        try:
+            conteudo = expandir_variaveis_ambiente(path.read_text(encoding="utf-8"))
+            dados = yaml.safe_load(conteudo) or {}
+            if isinstance(dados, dict) and "analises" in dados and isinstance(dados["analises"], dict):
+                return cls.model_validate(dados["analises"])
+            if isinstance(dados, dict):
+                return cls.model_validate(dados)
+        except (yaml.YAMLError, OSError, ValueError):
+            return cls()
+        return cls()
 
 
 class ConfigAnalises(BaseModel):
@@ -642,9 +718,36 @@ class ConfigAPI(BaseModel):
     api: ConfigAPIInfo = Field(default_factory=ConfigAPIInfo)
 
 
+class ConfigCondicaoRegra(BaseModel):
+    atributo: str = ""
+    metrica: Literal["valor", "media", "mediana", "min", "max"] = "valor"
+    operador: Literal[">", ">=", "<", "<=", "==", "!="] = ">="
+    valor: float | int | str | bool = ""
+    expressao_pandas: str = ""
+    expressao_polars: str = ""
+
+
+class ConfigAcaoRegra(BaseModel):
+    rotulo: str = ""
+    alerta: bool = False
+    prioridade: Literal["baixa", "media", "alta", "critica"] = "media"
+    tag: str = ""
+
+
+class ConfigRegraItem(BaseModel):
+    nome: str
+    descricao: str = ""
+    habilitado: bool = True
+    alvo: Literal["cluster", "amostra"] = "cluster"
+    expressao_pandas: str = ""
+    expressao_polars: str = ""
+    acao: ConfigAcaoRegra = Field(default_factory=ConfigAcaoRegra)
+
+
 class ConfigRegrasNegocioInfo(BaseModel):
     habilitado: bool = False
-    regras: list[dict[str, str | int | float | bool]] = Field(default_factory=list)
+    motor: Literal["pandas", "polars"] = "pandas"
+    regras: list[ConfigRegraItem] = Field(default_factory=list)
 
 
 class ConfigRegrasNegocio(BaseModel):

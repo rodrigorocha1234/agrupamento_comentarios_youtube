@@ -6,8 +6,9 @@ Scaffold inicial para um projeto extensível de agrupamento não supervisionado 
 1. Extraia o ZIP em uma pasta de workspace.
 2. Abra a pasta no Google Antigravity.
 3. Leia `AGENTS.md`, `.agents/rules/` e `specs/`.
-4. Comece pela Skill `planejar-steam` e revise a especificação antes de implementar.
-5. Confira o `docker-compose.yml` existente antes de adicionar ou alterar infraestrutura.
+4. Acesse a documentação técnica interativa completa em [docs/index.html](docs/index.html) (com diagramas UML de atividade, componentes, classes e guia exaustivo dos 14 arquivos YAML).
+5. Execute os testes e verificação com `./executar.sh test`.
+6. Inicie os serviços de infraestrutura e API com `./executar.sh infra` e `./executar.sh api --docker`.
 
 ## Princípios
 - Python 3.12+; tipagem estrita; não usar `Any` nem `typing.Any`.

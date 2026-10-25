@@ -167,3 +167,9 @@ class AvaliadorExpressao:
             raise ErroPreprocessamento(f"Resultado não é uma expressão booleana Polars: {type(expr_obj)}")
         except Exception as exc:
             raise ErroPreprocessamento(f"Falha ao avaliar filtro Polars '{expressao}': {exc}") from exc
+
+    def avaliar_mascara_polars(self, expressao: str, dados: pl.DataFrame) -> np.ndarray:
+        """Avalia expressão booleana no Polars retornando array numpy booleano."""
+        expr_filtro = self.avaliar_filtro_polars(expressao)
+        serie_pl = dados.select(expr_filtro).to_series()
+        return np.asarray(serie_pl.to_numpy(), dtype=bool)

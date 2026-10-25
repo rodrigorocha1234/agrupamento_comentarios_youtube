@@ -103,6 +103,9 @@ def test_fachada_pipeline_execucao_completa(
     assert resultado.resumo_analitico.total_amostras == 20
     assert "pca_2d" in resultado.figuras_geradas
     assert "distribuicao" in resultado.figuras_geradas
+    assert "dispersao_2d" in resultado.figuras_geradas
+    assert "perfil" in resultado.figuras_geradas
+    assert "resumo" in resultado.figuras_geradas
     assert caminho_relatorio.exists()
     assert resultado.caminho_relatorio_html == str(caminho_relatorio)
 

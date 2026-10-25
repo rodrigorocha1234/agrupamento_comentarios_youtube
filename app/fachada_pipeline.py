@@ -23,6 +23,7 @@ from app.conf_yaml import (
     ConfigMLflowInfo,
     ConfigPreprocessamentoInfo,
     ConfigProcessamentoInfo,
+    ConfigRegrasNegocioInfo,
 )
 from app.contratos.fonte_dados import ProtocoloFonteDados
 from app.contratos.repositorio import ProtocoloRepositorioLakehouse
@@ -31,6 +32,7 @@ from app.ingestao_fontes.coletor_dados import ColetorDados
 from app.ingestao_fontes.fabrica_fontes import FabricaFontesDados
 from app.preprocessamento_ml.engenheiro_atributos import EngenheiroAtributos
 from app.processamento_dados.processador_tabela import ProcessadorTabela
+from app.regras_negocio.avaliador_regras import AvaliadorRegrasNegocio
 
 SUFIXO_VISAO_CLUSTERS: Final[str] = "clusters"
 
@@ -62,6 +64,7 @@ class FachadaPipelineClustering:
         config_clustering: ConfigClusteringInfo,
         config_mlflow: ConfigMLflowInfo | None = None,
         config_analises: ConfigAnalisesInfo | None = None,
+        config_regras_negocio: ConfigRegrasNegocioInfo | None = None,
         repositorio_lakehouse: ProtocoloRepositorioLakehouse | None = None,
         fonte_dados: ProtocoloFonteDados | None = None,
     ) -> None:
@@ -72,12 +75,14 @@ class FachadaPipelineClustering:
         self._config_clustering = config_clustering
         self._config_mlflow = config_mlflow or ConfigMLflowInfo(habilitado=False)
         self._config_analises = config_analises or ConfigAnalisesInfo()
+        self._config_regras_negocio = config_regras_negocio or ConfigRegrasNegocioInfo(habilitado=False)
 
         self._repositorio = repositorio_lakehouse or RepositorioS3Lakehouse()
         self._fonte_dados = fonte_dados or FabricaFontesDados.criar_fonte(
             ConfigFonteDados(fonte=config_fonte)
         )
         self._rastreador_mlflow = RastreadorMLflow(self._config_mlflow)
+        self._avaliador_regras = AvaliadorRegrasNegocio(self._config_regras_negocio)
 
     def executar(
         self,
@@ -100,6 +105,8 @@ class FachadaPipelineClustering:
         dados_bronze = self._repositorio.ler_bronze(identificador)
         processador = ProcessadorTabela()
         dados_silver = processador.processar(dados_bronze, self._config_processamento)
+        if self._avaliador_regras.habilitado:
+            dados_silver = self._avaliador_regras.aplicar_regras_amostras(dados_silver)
         self._repositorio.gravar_silver(identificador, dados_silver)
 
         # 3. Engenharia de Atributos & Matriz Analítica Gold
@@ -132,29 +139,61 @@ class FachadaPipelineClustering:
             rotulos=resultado_clustering.rotulos,
             metadados=artefato_gold.metadados,
             centroides=centroides,
+            avaliador_regras=self._avaliador_regras,
+            config_analises=self._config_analises,
         )
 
         # 6. Geração de Gráficos e Relatório Plotly
         figuras: dict[str, go.Figure] = {}
         opcoes_visuais = self._config_analises.clusters
 
-        if opcoes_visuais.pca_2d:
-            figuras["pca_2d"] = GeradorVisualizacoesClusters.gerar_grafico_pca_2d(
-                matriz_treino=matriz_np,
-                rotulos=resultado_clustering.rotulos,
+        if opcoes_visuais.resumo:
+            figuras["resumo"] = GeradorVisualizacoesClusters.gerar_tabela_resumo_clusters(
+                resumo=resumo_analitico,
+                config_analises=self._config_analises,
             )
 
         if opcoes_visuais.distribuicao:
             figuras["distribuicao"] = GeradorVisualizacoesClusters.gerar_grafico_distribuicao_clusters(
                 rotulos=resultado_clustering.rotulos,
+                config_analises=self._config_analises,
+            )
+
+        if opcoes_visuais.dispersao_2d and len(artefato_gold.nomes_atributos) >= 2:
+            cfg_disp = self._config_analises.dispersao
+            attr_x = cfg_disp.atributo_x if cfg_disp.atributo_x in artefato_gold.matriz_treino.columns else artefato_gold.nomes_atributos[0]
+            attr_y = cfg_disp.atributo_y if cfg_disp.atributo_y in artefato_gold.matriz_treino.columns else artefato_gold.nomes_atributos[1]
+
+            figuras["dispersao_2d"] = GeradorVisualizacoesClusters.gerar_grafico_dispersao_2_atributos(
+                dados=artefato_gold.matriz_treino,
+                atributo_x=attr_x,
+                atributo_y=attr_y,
+                rotulos=resultado_clustering.rotulos,
+                config_analises=self._config_analises,
+            )
+
+        if opcoes_visuais.perfil:
+            figuras["perfil"] = GeradorVisualizacoesClusters.gerar_grafico_perfil_clusters(
+                resumo=resumo_analitico,
+                config_analises=self._config_analises,
+            )
+
+        if opcoes_visuais.pca_2d:
+            figuras["pca_2d"] = GeradorVisualizacoesClusters.gerar_grafico_pca_2d(
+                matriz_treino=matriz_np,
+                rotulos=resultado_clustering.rotulos,
+                config_analises=self._config_analises,
             )
 
         if opcoes_visuais.boxplot and artefato_gold.nomes_atributos:
-            primeiro_atributo = artefato_gold.nomes_atributos[0]
+            cfg_box = self._config_analises.boxplot
+            attr_box = cfg_box.atributo if cfg_box.atributo in artefato_gold.matriz_treino.columns else artefato_gold.nomes_atributos[0]
+
             figuras["boxplot"] = GeradorVisualizacoesClusters.gerar_boxplot_atributos(
                 dados=artefato_gold.matriz_treino,
-                atributo=primeiro_atributo,
+                atributo=attr_box,
                 rotulos=resultado_clustering.rotulos,
+                config_analises=self._config_analises,
             )
 
         caminho_relatorio_str = ""
@@ -163,6 +202,7 @@ class FachadaPipelineClustering:
             GeradorVisualizacoesClusters.exportar_relatorio_html(
                 figuras=list(figuras.values()),
                 caminho_saida=caminho_path,
+                config_analises=self._config_analises,
             )
             caminho_relatorio_str = str(caminho_path)
 

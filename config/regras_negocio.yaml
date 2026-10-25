@@ -1,9 +1,55 @@
 regras_negocio:
   habilitado: false
-  regras: []
-  # Exemplo futuro:
-  # - nome: cluster_com_alto_engajamento
-  #   habilitado: false
-  #   condicao_registrada: alto_engajamento
-  #   parametros:
-  #     minimo_playtime: 120
+  motor: pandas # pandas | polars
+  regras:
+    # --------------------------------------------------------------------------
+    # Regras a nível de Cluster (atribuição semântica de Personas e Alertas)
+    # Permite expressões Python (Pandas ou Polars) sobre as métricas dos agrupamentos
+    # --------------------------------------------------------------------------
+    - nome: "Veteranos Satisfeitos"
+      descricao: "Agrupamento com alto tempo de jogo e forte recomendação positiva"
+      habilitado: true
+      alvo: "cluster"
+      expressao_pandas: "(df['author_playtime_forever'] >= 120.0) & (df['taxa_recomendacao'] >= 0.70)"
+      expressao_polars: "(pl.col('author_playtime_forever') >= 120.0) & (pl.col('taxa_recomendacao') >= 0.70)"
+      acao:
+        rotulo: "Veteranos Entusiastas"
+        alerta: false
+        prioridade: "baixa"
+
+    - nome: "Críticos Influentes"
+      descricao: "Agrupamento de avaliações predominantemente negativas com alta repercussão de votos"
+      habilitado: true
+      alvo: "cluster"
+      expressao_pandas: "(df['taxa_recomendacao'] <= 0.40) & (df['votes_up'] >= 3.0)"
+      expressao_polars: "(pl.col('taxa_recomendacao') <= 0.40) & (pl.col('votes_up') >= 3.0)"
+      acao:
+        rotulo: "Críticos Relevantes"
+        alerta: true
+        prioridade: "alta"
+
+    - nome: "Comunidade Casual"
+      descricao: "Agrupamento com baixo tempo de jogo acumulado"
+      habilitado: true
+      alvo: "cluster"
+      expressao_pandas: "df['author_playtime_forever'] < 30.0"
+      expressao_polars: "pl.col('author_playtime_forever') < 30.0"
+      acao:
+        rotulo: "Jogadores Casuais"
+        alerta: false
+        prioridade: "media"
+
+    # --------------------------------------------------------------------------
+    # Regras a nível de Amostra Individual (Sinalização, Tags e Alertas)
+    # Permite expressões Python (Pandas ou Polars) vetorizadas linha a linha
+    # --------------------------------------------------------------------------
+    - nome: "Alerta Churn Veterano"
+      descricao: "Avaliação negativa vinda de jogador com mais de 500 horas de jogo"
+      habilitado: true
+      alvo: "amostra"
+      expressao_pandas: "(df['author_playtime_forever'] >= 500.0) & (~df['voted_up'])"
+      expressao_polars: "(pl.col('author_playtime_forever') >= 500.0) & (~pl.col('voted_up'))"
+      acao:
+        tag: "alerta_churn_veterano"
+        alerta: true
+        prioridade: "critica"

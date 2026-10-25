@@ -34,6 +34,7 @@ def executar_pipeline_cli(
         config_clustering=conf.clustering.clustering,
         config_mlflow=conf.mlflow.mlflow,
         config_analises=conf.analises.analises,
+        config_regras_negocio=conf.regras_negocio.regras_negocio,
         repositorio_lakehouse=repositorio,
     )
 

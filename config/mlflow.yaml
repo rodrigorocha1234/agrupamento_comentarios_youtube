@@ -1,6 +1,6 @@
 mlflow:
   habilitado: true
-  tracking_uri: "${MLFLOW_TRACKING_URI}"
+  tracking_uri: "${MLFLOW_TRACKING_URI:-http://127.0.0.1:5000}"
   experiment_name: steam_reviews_clustering
   registrar_parametros: true
   registrar_metricas: true

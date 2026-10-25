@@ -54,8 +54,10 @@ ${VERDE}Uso: ./executar.sh [COMANDO] [OPÇÕES]${RESET}
 ${AZUL}Comandos disponíveis:${RESET}
   ${AMARELO}pipeline [ID] [--coletar]${RESET}  Executa o pipeline completo (leitura Bronze -> Silver -> Gold -> Clustering -> Relatório).
                                   Exemplo: ./executar.sh pipeline 730 --coletar
-  ${AMARELO}api [--host H] [-p P]${RESET}     Inicia o servidor REST FastAPI com endpoints de predição e métricas.
-                                  Exemplo: ./executar.sh api -p 8000
+  ${AMARELO}api [--docker] [-p P]${RESET}    Inicia o servidor REST FastAPI (local ou no Docker Compose com --docker).
+                                  Exemplo: ./executar.sh api --docker
+  ${AMARELO}api-docker${RESET}                 Inicia a API FastAPI diretamente no Docker Compose com build.
+  ${AMARELO}api-down${RESET}                   Encerra o contêiner da API FastAPI no Docker Compose.
   ${AMARELO}infra${RESET}                      Inicia os serviços de infraestrutura (RustFS S3, MLflow, Postgres, Grafana).
   ${AMARELO}infra-down${RESET}                 Encerra os serviços de infraestrutura em execução.
   ${AMARELO}testes${RESET} (ou test)            Executa a suíte de validação: ruff, pytest e checagem de tipos estrita (pyright).
@@ -100,8 +102,37 @@ case "${COMANDO}" in
 
     api)
         shift || true
-        log_info "Iniciando servidor de API FastAPI..."
-        "${PYTHON_BIN}" "${DIRETORIO_PROJETO}/main.py" api "$@"
+        MODO_DOCKER=false
+        ARGS=()
+        for arg in "$@"; do
+            if [[ "$arg" == "--docker" || "$arg" == "-d" ]]; then
+                MODO_DOCKER=true
+            else
+                ARGS+=("$arg")
+            fi
+        done
+
+        if [[ "${MODO_DOCKER}" == "true" ]]; then
+            log_info "Subindo a API FastAPI via Docker Compose..."
+            docker compose --profile servico_ml --profile api up -d --build api
+            log_sucesso "API FastAPI em execução no Docker Compose (http://localhost:8000)!"
+        else
+            log_info "Iniciando servidor de API FastAPI localmente..."
+            "${PYTHON_BIN}" "${DIRETORIO_PROJETO}/main.py" api "${ARGS[@]}"
+        fi
+        ;;
+
+    api-docker)
+        shift || true
+        log_info "Subindo a API FastAPI via Docker Compose com build..."
+        docker compose --profile servico_ml --profile api up -d --build api
+        log_sucesso "API FastAPI em execução no Docker Compose (http://localhost:8000)!"
+        ;;
+
+    api-down)
+        log_info "Parando o contêiner da API FastAPI no Docker Compose..."
+        docker compose stop api
+        log_sucesso "Contêiner da API finalizado com sucesso."
         ;;
 
     infra)

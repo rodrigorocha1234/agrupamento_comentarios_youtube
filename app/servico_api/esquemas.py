@@ -78,9 +78,11 @@ class RespostaPerfilCluster(BaseModel):
     proporcao_amostras: float
     medias_atributos: dict[str, float]
     medianas_atributos: dict[str, float]
-    taxa_recomendacao: float | None = None
-    media_horas_jogadas: float | None = None
     distancia_media_centroide: float | None = None
+    rotulo_negocio: str | None = None
+    alerta_negocio: bool = False
+    prioridade_negocio: str | None = None
+    metricas_personalizadas: dict[str, float] = Field(default_factory=dict)
 
 
 class RespostaResumoClusters(BaseModel):

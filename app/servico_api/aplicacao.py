@@ -1,11 +1,14 @@
 """Fábrica e roteamento da aplicação FastAPI para serviço analítico e predição."""
 
+from pathlib import Path
+
 import numpy as np
 from fastapi import FastAPI, HTTPException, Response, status
 from prometheus_client import CONTENT_TYPE_LATEST, Counter, Histogram, generate_latest
 
 from app.analise_clusters.analisador_clusters import ROTULO_RUIDO
 from app.conf_yaml import ConfigAPIInfo, ConfigClusteringInfo
+from app.excecoes import ErroConfiguracao
 from app.servico_api.esquemas import (
     RequisicaoLote,
     RequisicaoPonto,
@@ -31,9 +34,32 @@ LATENCIA_INFERENCIA = Histogram(
 )
 
 
+def _obter_estado_padrao() -> EstadoAplicacao:
+    """Carrega o estado a partir do diretório config padrão se disponível."""
+    diretorio_config = Path("config")
+    if diretorio_config.exists():
+        try:
+            from app.conf_yaml import ConfYAML
+            from app.gestao_datalake.repositorio_s3_lakehouse import (
+                RepositorioS3Lakehouse,
+            )
+
+            conf = ConfYAML.carregar_de_diretorio(diretorio_config)
+            repositorio = RepositorioS3Lakehouse(config=conf.datalake.datalake)
+            return EstadoAplicacao(
+                config_api=conf.api.api,
+                config_clustering=conf.clustering.clustering,
+                repositorio=repositorio,
+                nomes_atributos=conf.atributos.atributos.treino.colunas,
+            )
+        except (ErroConfiguracao, OSError, ValueError, KeyError):
+            return EstadoAplicacao()
+    return EstadoAplicacao()
+
+
 def criar_aplicacao_fastapi(estado: EstadoAplicacao | None = None) -> FastAPI:
     """Cria e configura a instância do FastAPI com base no estado e nas rotas autorizadas."""
-    estado_ativo = estado or EstadoAplicacao()
+    estado_ativo = estado if estado is not None else _obter_estado_padrao()
     config_api: ConfigAPIInfo = estado_ativo.config_api
     config_clustering: ConfigClusteringInfo = estado_ativo.config_clustering
 
@@ -139,9 +165,11 @@ def criar_aplicacao_fastapi(estado: EstadoAplicacao | None = None) -> FastAPI:
                 proporcao_amostras=p.proporcao_amostras,
                 medias_atributos=p.medias_atributos,
                 medianas_atributos=p.medianas_atributos,
-                taxa_recomendacao=p.taxa_recomendacao,
-                media_horas_jogadas=p.media_horas_jogadas,
                 distancia_media_centroide=p.distancia_media_centroide,
+                rotulo_negocio=p.rotulo_negocio,
+                alerta_negocio=p.alerta_negocio,
+                prioridade_negocio=p.prioridade_negocio,
+                metricas_personalizadas=p.metricas_personalizadas,
             )
             for p in resumo.perfis
         ]
@@ -183,9 +211,11 @@ def criar_aplicacao_fastapi(estado: EstadoAplicacao | None = None) -> FastAPI:
             proporcao_amostras=perfil.proporcao_amostras,
             medias_atributos=perfil.medias_atributos,
             medianas_atributos=perfil.medianas_atributos,
-            taxa_recomendacao=perfil.taxa_recomendacao,
-            media_horas_jogadas=perfil.media_horas_jogadas,
             distancia_media_centroide=perfil.distancia_media_centroide,
+            rotulo_negocio=perfil.rotulo_negocio,
+            alerta_negocio=perfil.alerta_negocio,
+            prioridade_negocio=perfil.prioridade_negocio,
+            metricas_personalizadas=perfil.metricas_personalizadas,
         )
 
     # --------------------------------------------------------------------------
@@ -305,3 +335,6 @@ def criar_aplicacao_fastapi(estado: EstadoAplicacao | None = None) -> FastAPI:
             )
 
     return app
+
+
+criar_aplicacao = criar_aplicacao_fastapi
