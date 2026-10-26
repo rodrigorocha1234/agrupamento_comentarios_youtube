@@ -36,6 +36,12 @@ A arquitetura do sistema adota princípios SOLID e padrões de projeto GoF com b
 
 ```mermaid
 flowchart TD
+    subgraph Configuracao [Configuração Declarativa Pydantic v2]
+        CFG["16 Arquivos YAML (config/*.yaml)"] --> B1["ConstrutorConfiguracao (GoF Builder)"]
+        B1 --> V1["Pydantic v2 Core (Rust Engine)"]
+        V1 --> F0["ConfYAML (GoF Facade & Composite)"]
+    end
+
     subgraph Fontes [Fontes de Dados Desacopladas]
         F1[Steam Web API]
         F2[Banco de Dados SQL / Postgres]
@@ -46,38 +52,48 @@ flowchart TD
         F1 & F2 & F3 -->|Strategy / ProtocoloFonteDados| A[FabricaFontes]
         A --> B[ColetorDados - Orquestrador Agnóstico]
         B -->|Payload Bruto| C[(Bronze: RustFS S3)]
-        C -->|Normalização & Limpeza| D[(Silver: RustFS S3)]
+        C -->|Deduplicação & Saneamento| D[(Silver: RustFS S3)]
     end
 
-    subgraph Preparacao [Engenharia de Atributos & Preparação]
-        D -->|Seleção Segura & Filtros| E[PreparadorDados]
+    subgraph Preparacao [Engenharia de Atributos & PLN Opcional]
+        D -->|Seleção Segura & Filtros| E[ProcessadorTabela - Pandas/Polars]
         E -->|Transformações Seguras| F[EngenheiroAtributos]
-        F -->|Matriz de Treino & Identificadores| G[(Gold: RustFS S3)]
+        D -.->|Se pln.habilitado == true| PLN["ProcessadorPLN (Strategy: spaCy / TF-IDF / Count)"]
+        F & PLN -->|Matriz de Treino & Identificadores| G[(Gold: RustFS S3)]
     end
 
     subgraph Modelagem [Clustering & Rastreamento]
-        G --> H[FabricaClustering]
-        H -->|Strategy| I[MotorClustering - KMeans / DBSCAN / HDBSCAN]
-        I --> J[AvaliadorClusters]
+        G --> H[FabricaMotoresClustering]
+        H -->|Strategy| I["MotorClustering (KMeans / DBSCAN / HDBSCAN)"]
+        I --> J[AvaliadorClusters & Regras AST]
         J -->|Métricas & Artefatos| K[RastreadorMLflow - Observer]
     end
 
-    subgraph Entrega [Análises, API & Observabilidade]
-        I --> L[AnalisadorClusters]
-        L -->|HTML Plotly / Perfis| M[Artefatos Analíticos]
-        I --> N[ServicoAPI - FastAPI]
-        B & E & I & N -->|Métricas & Logs| O[Prometheus / Loki / Grafana]
+    subgraph Entrega [Diagnósticos, Análise Temporal & Visualização]
+        I --> L[AnalisadorClusters - Personas]
+        I -.->|Se analise_temporal.habilitado == true| AT["AnalisadorTemporal (Strategy Agregação & Z-Score)"]
+        L & AT --> VIZ["GeradorVisualizacoes (Strategy Plotly / Altair)"]
+        VIZ --> M["Artefatos Analíticos (relatorio_clusters.html)"]
+        I --> N[ServicoAPI - FastAPI REST]
+        B & E & I & N -->|Métricas & Logs| O[Prometheus / Loki / Grafana / Alloy]
     end
+
+    F0 -.->|Governa Parâmetros| Ingestao & Preparacao & Modelagem & Entrega
 ```
 
 ### 2.1 Padrões de Projeto Adotados
-1. **Strategy / Factory de Ingestão (`ProtocoloFonteDados`, `FabricaFontes`):** Desacopla a origem dos dados do pipeline analítico. Suporta adaptadores para Steam API, Banco de Dados SQL e APIs REST genéricas.
-2. **Strategy (`MotorClusteringProtocol`):** Encapsula os algoritmos de clustering (KMeans, DBSCAN, HDBSCAN nativo do scikit-learn). Permite trocar o algoritmo via configuração sem alterar o pipeline.
-3. **Factory (`FabricaClustering`):** Resolve e instancia a estratégia correta com base no arquivo `clustering.yaml`.
-4. **Adapter (`MotorProcessamentoProtocol`):** Abstrai operações tabulares para o motor padrão `Pandas`, permitindo futura extensão para `Polars` através da mesma interface.
-5. **Repository (`RepositorioS3Lakehouse`):** Isola operações de I/O das camadas Bronze, Silver e Gold diretamente no RustFS/S3 (bucket `steam-reviews`), sem persistência no disco local.
-6. **Observer (`ObservadorMLflow`):** Notificado durante o ciclo de modelagem para registrar hiperparâmetros, métricas, modelos e artefatos analíticos no MLflow Server.
-7. **Facade (`FachadaPipeline`):** Ponto de entrada unificado que orquestra a execução end-to-end do fluxo (coleta, saneamento, engenharia, treinamento, avaliação e exportação).
+1. **Facade & Composite (`ConfYAML`):** Centraliza os 16 módulos de configuração em uma árvore de validação Pydantic v2 com carregamento unificado e validações cruzadas globais.
+2. **Builder (`ConstrutorConfiguracao`):** Processa e mescla arquivos YAML independentes, aplicando interpolação de variáveis de ambiente com fallbacks antes da instanciação dos modelos Pydantic.
+3. **Strategy / Factory de Ingestão (`ProtocoloFonteDados`, `FabricaFontes`):** Desacopla a origem dos dados do pipeline analítico. Suporta adaptadores para Steam API, Banco de Dados SQL e APIs REST genéricas.
+4. **Strategy (`ProtocoloMotorClustering`):** Encapsula os algoritmos de clustering (KMeans, DBSCAN, HDBSCAN nativo do scikit-learn). Permite trocar o algoritmo via configuração sem alterar o pipeline.
+5. **Factory (`FabricaMotoresClustering`):** Resolve e instancia a estratégia correta de clustering com base no arquivo `clustering.yaml`.
+6. **Strategy / Adapter de Processamento (`ProtocoloMotorProcessamento`):** Abstrai operações tabulares para o motor padrão `Pandas`, permitindo futura extensão para `Polars` através da mesma interface.
+7. **Strategy de Processamento de Linguagem Natural (`ProtocoloTratamentoPLN`):** Encapsula vetorizadores textuais (spaCy, TF-IDF, CountVectorizer), mantido desativado por padrão (`pln.habilitado: false`).
+8. **Strategy de Agregação Temporal (`EstrategiaAgregacaoTemporal`):** Permite discretizar séries de reviews por granularidades (`AgregadorDiario`, `AgregadorSemanal`, `AgregadorMensal`, `AgregadorAnual`) com detecção de picos e review bombing via Z-score móvel.
+9. **Strategy / Factory de Visualização (`EstrategiaVisualizacao`, `FabricaVisualizacoes`):** Provedores multimotor para geração de gráficos e relatórios interativos utilizando `Plotly` ou `Altair`.
+10. **Repository (`RepositorioS3Lakehouse`):** Isola operações de I/O das camadas Bronze, Silver e Gold diretamente no RustFS/S3 (bucket `steam-reviews`), sem persistência no disco local.
+11. **Observer (`ProtocoloObservadorExperimento` / `RastreadorMLflow`):** Notificado durante o ciclo de modelagem para registrar hiperparâmetros, métricas, modelos e artefatos analíticos no MLflow Server.
+12. **Facade (`FachadaPipelineClustering`):** Ponto de entrada unificado que orquestra a execução end-to-end do fluxo (coleta, saneamento, engenharia, treinamento, avaliação e exportação).
 
 ---
 
@@ -242,9 +258,15 @@ Provisionamento automático em `config_ob/dashboards/`:
 
 ---
 
+### Fase 6: Dinâmica e Análise Temporal dos Agrupamentos (Pós-Clustering)
+- **Entregáveis:** `app/analise_temporal/` (`contratos.py`, `estrategia_agregacao.py`, `detector_anomalias.py`, `analisador_temporal.py`, `fabrica_analise_temporal.py`), `config/analise_temporal.yaml`, extensão de `EstrategiaVisualizacao` e integração na `FachadaPipelineClustering`.
+- **Critérios de Aceitação:** Agrupamento cronológico multi-granular (mensal, semanal, diária, anual) via GoF Strategy; cálculo de volume, proporção, taxa de recomendação e horas por período; detecção estatística de picos/anomalias com Z-score configurável; geração de gráficos de evolução temporal (linhas) e área empilhada 100% (Plotly e Altair); resiliência a dados vazios ou ausentes; tipagem estrita com zero `Any` e zero `object`.
+
+---
+
 ## 8. Estratégia de Testes e QA
 
-1. **Testes Unitários:** Cada módulo terá suite correspondente em `tests/` (`teste_conf_yaml.py`, `teste_coletor_steam.py`, `teste_preparador.py`, `teste_clustering.py`, `teste_avaliador.py`, `teste_api.py`).
+1. **Testes Unitários:** Cada módulo terá suite correspondente em `tests/` (`teste_conf_yaml.py`, `teste_coletor_steam.py`, `teste_preparador.py`, `teste_clustering.py`, `teste_avaliador.py`, `teste_api.py`, `teste_analise_temporal.py`).
 2. **Casos de Borda Obrigatórios:**
    - Resposta vazia da Steam API.
    - Presença de duplicatas e identificadores nulos.
@@ -252,4 +274,5 @@ Provisionamento automático em `config_ob/dashboards/`:
    - DBSCAN classificando 100% dos dados como ruído (`-1`).
    - Algoritmo que produz um único cluster (tratamento gracioso de métricas).
    - Tentativa de chamar `/predict` em algoritmo sem suporte (ex: DBSCAN).
+   - Análise temporal com coluna de data ausente, nula ou com timestamps corrompidos.
 3. **Verificação Estática:** Execução automatizada de `pyright` (modo estrito) e `ruff` antes de qualquer entrega.

@@ -4,7 +4,10 @@ fonte:
   timeout_segundos: 30
   tentativas_maximas: 5
   espera_base_segundos: 1.0
-  appids: []
+  appids: [
+     1631270,275850
+
+  ]
   segredo:
     variavel_ambiente: STEAM_API_KEY
 

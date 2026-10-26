@@ -11,6 +11,7 @@ import pandas as pd
 
 from app.conf_yaml import ConfigDatalakeInfo
 from app.contratos.repositorio import ProtocoloRepositorioLakehouse
+from app.contratos.tipos_dados import DicionarioJson, RegistroDado
 from app.excecoes import ErroDatalake
 
 
@@ -25,9 +26,16 @@ class ProtocoloRespostaGetObject(Protocol):
 class ProtocoloClienteS3(Protocol):
     """Protocolo estrito para chamadas de cliente S3."""
 
-    def put_object(self, **kwargs: object) -> object: ...
-    def get_object(self, **kwargs: object) -> ProtocoloRespostaGetObject: ...
-    def list_objects_v2(self, **kwargs: object) -> dict[str, list[dict[str, object]]]: ...
+    def put_object(
+        self,
+        *,
+        Bucket: str,
+        Key: str,
+        Body: bytes | io.BytesIO | str,
+        ContentType: str = ...,
+    ) -> DicionarioJson: ...
+    def get_object(self, *, Bucket: str, Key: str) -> ProtocoloRespostaGetObject: ...
+    def list_objects_v2(self, *, Bucket: str, Prefix: str) -> dict[str, list[dict[str, str]]]: ...
 
 
 class RepositorioS3Lakehouse(ProtocoloRepositorioLakehouse):
@@ -64,7 +72,7 @@ class RepositorioS3Lakehouse(ProtocoloRepositorioLakehouse):
     def gravar_bronze(
         self,
         identificador: str | int,
-        registros: Sequence[dict[str, object]],
+        registros: Sequence[RegistroDado],
     ) -> str:
         """Persiste registros brutos da ingestão na camada Bronze no RustFS/S3."""
         if not registros:

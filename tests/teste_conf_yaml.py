@@ -32,9 +32,13 @@ def test_carregar_configuracao_padrao_valida() -> None:
     assert not conf.atributos.atributos.texto.incluir_no_treino
     assert conf.datalake.datalake.tipo in {"s3", "rustfs"}
     assert conf.datalake.datalake.bucket == "steam-reviews"
+    assert conf.datalake.datalake.caminho == "datalake"
     assert conf.datalake.datalake.bronze.prefixo == "bronze"
+    assert conf.datalake.datalake.bronze.caminho == "bronze"
     assert conf.datalake.datalake.silver.prefixo == "silver"
+    assert conf.datalake.datalake.silver.caminho == "silver"
     assert conf.datalake.datalake.gold.prefixo == "gold"
+    assert conf.datalake.datalake.gold.caminho == "gold"
     assert conf.cadastro_projeto.cadastro_projeto.id_projeto == "steam_reviews_clustering"
     assert conf.cadastro_projeto.cadastro_projeto.entidade == "avaliacao"
     assert conf.cadastro_projeto.cadastro_projeto.mapeamento_origem.identificador_primario == "recommendationid"

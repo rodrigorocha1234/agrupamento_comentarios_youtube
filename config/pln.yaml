@@ -1,0 +1,26 @@
+pln:
+  habilitado: false
+  tratamento: spacy # Opções: spacy | tfidf | count
+  coluna_texto: review
+  tamanho_minimo_caracteres: 3
+  substituir_vazios_por: "sem_comentario"
+  spacy:
+    modelo: "pt_core_news_sm"
+    remover_stopwords: true
+    lematizar: true
+    remover_pontuacao: true
+    remover_numeros: true
+    converter_minusculas: true
+  tfidf:
+    max_features: 100
+    ngram_range: [1, 2]
+    min_df: 1
+    max_df: 1.0
+    sublinear_tf: true
+  count:
+    max_features: 100
+    ngram_range: [1, 1]
+    min_df: 1
+  fusao:
+    modo: "apenas_texto" # apenas_texto | concatenar
+    prefixo_coluna: "pln_"

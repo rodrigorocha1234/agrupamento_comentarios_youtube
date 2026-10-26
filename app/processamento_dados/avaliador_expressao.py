@@ -1,6 +1,7 @@
 """Avaliador seguro de expressões Python para filtros, criação e transformação de colunas."""
 
 import ast
+from types import ModuleType
 from typing import Final
 
 import numpy as np
@@ -91,7 +92,7 @@ class AvaliadorExpressao:
             arvore = ast.parse(expressao, mode="eval")
             self._validador.visit(arvore)
             codigo = compile(arvore, filename="<expressao_pandas>", mode="eval")
-            contexto: dict[str, object] = {
+            contexto: dict[str, ModuleType | pd.DataFrame] = {
                 "df": dados,
                 "np": np,
                 "pd": pd,
@@ -114,7 +115,7 @@ class AvaliadorExpressao:
             arvore = ast.parse(expressao, mode="eval")
             self._validador.visit(arvore)
             codigo = compile(arvore, filename="<filtro_pandas>", mode="eval")
-            contexto: dict[str, object] = {
+            contexto: dict[str, ModuleType | pd.DataFrame] = {
                 "df": dados,
                 "np": np,
                 "pd": pd,
@@ -137,7 +138,7 @@ class AvaliadorExpressao:
             arvore = ast.parse(expressao, mode="eval")
             self._validador.visit(arvore)
             codigo = compile(arvore, filename="<expressao_polars>", mode="eval")
-            contexto: dict[str, object] = {
+            contexto: dict[str, ModuleType] = {
                 "pl": pl,
                 "np": np,
             }
@@ -157,7 +158,7 @@ class AvaliadorExpressao:
             arvore = ast.parse(expressao, mode="eval")
             self._validador.visit(arvore)
             codigo = compile(arvore, filename="<filtro_polars>", mode="eval")
-            contexto: dict[str, object] = {
+            contexto: dict[str, ModuleType] = {
                 "pl": pl,
                 "np": np,
             }

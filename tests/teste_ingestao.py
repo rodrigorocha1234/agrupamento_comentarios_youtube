@@ -16,6 +16,7 @@ from app.conf_yaml import (
 )
 from app.contratos.fonte_dados import ProtocoloFonteDados
 from app.contratos.repositorio import ProtocoloRepositorioLakehouse
+from app.contratos.tipos_dados import RegistroDado
 from app.excecoes import ErroConexaoFonte
 from app.extracao_steam.cliente_steam_api import ClienteSteamAPI
 from app.extracao_steam.coletor_steam import ColetorSteam
@@ -34,12 +35,12 @@ class RepositorioEmMemoriaFake(ProtocoloRepositorioLakehouse):
     """Implementação em memória do repositório para isolamento completo em testes."""
 
     def __init__(self) -> None:
-        self.bronze_lotes: list[tuple[str | int, Sequence[dict[str, object]]]] = []
+        self.bronze_lotes: list[tuple[str | int, Sequence[RegistroDado]]] = []
         self.silver_dados: dict[str | int, pd.DataFrame] = {}
         self.gold_dados: dict[str, pd.DataFrame] = {}
 
     @override
-    def gravar_bronze(self, identificador: str | int, registros: Sequence[dict[str, object]]) -> str:
+    def gravar_bronze(self, identificador: str | int, registros: Sequence[RegistroDado]) -> str:
         self.bronze_lotes.append((identificador, registros))
         return f"s3://fake-bucket/bronze/{identificador}/lote.parquet"
 
@@ -55,7 +56,7 @@ class RepositorioEmMemoriaFake(ProtocoloRepositorioLakehouse):
 
     @override
     def ler_bronze(self, identificador: str | int) -> pd.DataFrame:
-        registros: list[dict[str, object]] = []
+        registros: list[RegistroDado] = []
         for id_lote, lote in self.bronze_lotes:
             if id_lote == identificador:
                 registros.extend(lote)
@@ -279,7 +280,7 @@ def test_coletor_dados_orquestracao_e_deduplicacao() -> None:
         @override
         def extrair_lote(
             self, identificador_origem: str | int, marcador_posicao: str | None = None, limite: int = 100
-        ) -> tuple[list[dict[str, object]], str | None, bool]:
+        ) -> tuple[list[RegistroDado], str | None, bool]:
             nonlocal chamadas
             chamadas += 1
             if chamadas == 1:
@@ -306,7 +307,7 @@ def test_coletor_dados_orquestracao_e_deduplicacao() -> None:
         @override
         def coletar_lote(
             self, appid: int, cursor: str, quantidade_por_pagina: int
-        ) -> tuple[list[dict[str, object]], str, bool]:
+        ) -> tuple[list[RegistroDado], str, bool]:
             return [], "", False
 
     fonte = FonteMock()

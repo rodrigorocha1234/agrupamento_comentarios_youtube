@@ -3,12 +3,14 @@ from typing import Protocol, runtime_checkable
 
 import pandas as pd
 
+from app.contratos.tipos_dados import RegistroDado
+
 
 @runtime_checkable
 class ProtocoloRepositorioLakehouse(Protocol):
     """Protocolo abstrato para gerenciamento remoto das camadas Bronze, Silver e Gold no RustFS/S3."""
 
-    def gravar_bronze(self, identificador: str | int, registros: Sequence[dict[str, object]]) -> str:
+    def gravar_bronze(self, identificador: str | int, registros: Sequence[RegistroDado]) -> str:
         """Grava dados brutos na camada Bronze no RustFS/S3 e retorna a URI gravada (s3://...)."""
         ...
 

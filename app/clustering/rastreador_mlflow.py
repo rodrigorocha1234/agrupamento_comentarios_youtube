@@ -6,6 +6,7 @@ from typing import override
 
 import mlflow
 from mlflow.tracking import MlflowClient
+from sklearn.base import BaseEstimator
 
 from app.conf_yaml import ConfigMLflowInfo
 from app.contratos.observador import ProtocoloObservadorExperimento
@@ -81,7 +82,7 @@ class RastreadorMLflow(ProtocoloObservadorExperimento):
 
     def registrar_modelo_sklearn(
         self,
-        modelo: object,
+        modelo: BaseEstimator,
         nome_artefato: str = "modelo_clustering",
     ) -> None:
         """Registra o estimador do scikit-learn como artefato oficial de modelo do MLflow."""

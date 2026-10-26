@@ -5,19 +5,22 @@ from collections.abc import Callable
 from typing import Protocol, override
 
 from app.contratos.fonte_dados import ProtocoloFonteDados
+from app.contratos.tipos_dados import RegistroDado, ValorEscalar
 from app.excecoes import ErroConexaoFonte
 
 
 class ProtocoloCursorDB(Protocol):
     @property
-    def description(self) -> list[tuple[str, object, object, object, object, object, object]] | None: ...
-    def execute(self, sql: str, parametros: tuple[object, ...] = ...) -> object: ...
-    def fetchall(self) -> list[tuple[object, ...]]: ...
+    def description(
+        self,
+    ) -> list[tuple[str, ValorEscalar, ValorEscalar, ValorEscalar, ValorEscalar, ValorEscalar, ValorEscalar]] | None: ...
+    def execute(self, sql: str, parametros: tuple[ValorEscalar, ...] = ...) -> None: ...
+    def fetchall(self) -> list[tuple[ValorEscalar, ...]]: ...
     def close(self) -> None: ...
 
 
 class ProtocoloConexaoDB(Protocol):
-    def cursor(self) -> object: ...
+    def cursor(self) -> ProtocoloCursorDB: ...
     def close(self) -> None: ...
 
 
@@ -42,7 +45,7 @@ class AdaptadorBancoDados(ProtocoloFonteDados):
         identificador_origem: str | int,
         marcador_posicao: str | None = None,
         limite: int = 100,
-    ) -> tuple[list[dict[str, object]], str | None, bool]:
+    ) -> tuple[list[RegistroDado], str | None, bool]:
         """Extrai um lote de linhas do banco de dados utilizando marcador de offset ou cursor de chave."""
         offset = int(marcador_posicao) if marcador_posicao and marcador_posicao.isdigit() else 0
 
@@ -71,11 +74,14 @@ class AdaptadorBancoDados(ProtocoloFonteDados):
         tem_mais = len(linhas) > limite
         linhas_lote = linhas[:limite]
 
-        registros: list[dict[str, object]] = []
+        registros: list[RegistroDado] = []
         for linha in linhas_lote:
-            dicionario_linha: dict[str, object] = {}
+            dicionario_linha: RegistroDado = {}
             for col, val in zip(nomes_colunas, linha):
-                dicionario_linha[col] = val
+                if isinstance(val, (str, int, float, bool)) or val is None:
+                    dicionario_linha[col] = val
+                else:
+                    dicionario_linha[col] = str(val)
             registros.append(dicionario_linha)
 
         novo_marcador = str(offset + len(linhas_lote)) if tem_mais else None
@@ -87,7 +93,7 @@ class AdaptadorBancoDados(ProtocoloFonteDados):
         appid: int,
         cursor: str,
         quantidade_por_pagina: int,
-    ) -> tuple[list[dict[str, object]], str, bool]:
+    ) -> tuple[list[RegistroDado], str, bool]:
         registros, prox_cursor, tem_mais = self.extrair_lote(
             identificador_origem=appid,
             marcador_posicao=cursor,

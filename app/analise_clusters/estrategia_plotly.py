@@ -13,7 +13,9 @@ from app.analise_clusters.analisador_clusters import ResumoAnaliseClusters
 from app.analise_clusters.estrategia_visualizacao import (
     AVISO_PCA,
     EstrategiaVisualizacao,
+    FiguraAnalitica,
 )
+from app.analise_temporal.contratos import ResumoAnaliseTemporal
 
 if TYPE_CHECKING:
     from app.conf_yaml import ConfigAnalisesInfo
@@ -413,9 +415,111 @@ class EstrategiaVisualizacaoPlotly(EstrategiaVisualizacao):
         fig.update_layout(title=titulo_final, template=tema)
         return fig
 
+    def gerar_grafico_evolucao_temporal(
+        self,
+        resumo_temporal: ResumoAnaliseTemporal,
+        titulo: str | None = None,
+        config_analises: "ConfigAnalisesInfo | None" = None,
+    ) -> go.Figure:
+        """Gera série temporal com o volume cronológico por cluster e marcação de anomalias/picos."""
+        cfg = config_analises
+        titulo_final = titulo or "Evolução Histórica do Volume por Agrupamento"
+        tema = cfg.layout.tema if cfg is not None else "plotly_white"
+        cor_ruido = cfg.layout.cor_ruido if cfg is not None else "#888888"
+
+        fig = go.Figure()
+        periodos = resumo_temporal.periodos_ordenados
+        clusters = resumo_temporal.clusters_presentes
+
+        for cid in clusters:
+            pontos_cid = [p for p in resumo_temporal.pontos_temporais if p.id_cluster == cid]
+            mapa_qtd = {p.periodo: p.quantidade_amostras for p in pontos_cid}
+            y_valores = [mapa_qtd.get(per, 0) for per in periodos]
+            nome_rotulo = pontos_cid[0].nome_rotulo if pontos_cid else f"Cluster {cid}"
+
+            linha_cor = cor_ruido if cid == -1 else None
+
+            fig.add_trace(
+                go.Scatter(
+                    x=periodos,
+                    y=y_valores,
+                    mode="lines+markers",
+                    name=nome_rotulo,
+                    line={"color": linha_cor} if linha_cor else None,
+                )
+            )
+
+        # Destaca anomalias/picos identificados
+        for alerta in resumo_temporal.alertas_picos:
+            fig.add_annotation(
+                x=alerta.periodo,
+                y=alerta.valor_observado,
+                text=f"Pico {alerta.nome_rotulo} (+{alerta.z_score:.1f}σ)",
+                showarrow=True,
+                arrowhead=2,
+                arrowcolor="#e74c3c",
+                bgcolor="#fadbd8",
+                bordercolor="#e74c3c",
+                font={"size": 10, "color": "#78281f"},
+            )
+
+        fig.update_layout(
+            title={"text": titulo_final, "x": 0.5, "xanchor": "center"},
+            template=tema,
+            xaxis_title="Período Cronológico",
+            yaxis_title="Quantidade de Avaliações",
+            hovermode="x unified",
+        )
+        return fig
+
+    def gerar_grafico_area_empilhada_temporal(
+        self,
+        resumo_temporal: ResumoAnaliseTemporal,
+        titulo: str | None = None,
+        config_analises: "ConfigAnalisesInfo | None" = None,
+    ) -> go.Figure:
+        """Gera gráfico de área 100% empilhada demonstrando a dinâmica de composição dos grupos."""
+        cfg = config_analises
+        titulo_final = titulo or "Composição Relativa dos Agrupamentos ao Longo do Tempo"
+        tema = cfg.layout.tema if cfg is not None else "plotly_white"
+        cor_ruido = cfg.layout.cor_ruido if cfg is not None else "#888888"
+
+        fig = go.Figure()
+        periodos = resumo_temporal.periodos_ordenados
+        clusters = resumo_temporal.clusters_presentes
+
+        for cid in clusters:
+            pontos_cid = [p for p in resumo_temporal.pontos_temporais if p.id_cluster == cid]
+            mapa_prop = {p.periodo: p.proporcao_periodo * 100.0 for p in pontos_cid}
+            y_valores = [mapa_prop.get(per, 0.0) for per in periodos]
+            nome_rotulo = pontos_cid[0].nome_rotulo if pontos_cid else f"Cluster {cid}"
+
+            linha_cor = cor_ruido if cid == -1 else None
+
+            fig.add_trace(
+                go.Scatter(
+                    x=periodos,
+                    y=y_valores,
+                    mode="lines",
+                    stackgroup="clusters_stack",
+                    name=nome_rotulo,
+                    line={"color": linha_cor} if linha_cor else None,
+                )
+            )
+
+        fig.update_layout(
+            title={"text": titulo_final, "x": 0.5, "xanchor": "center"},
+            template=tema,
+            xaxis_title="Período Cronológico",
+            yaxis_title="Participação Percentual (%)",
+            yaxis={"range": [0, 100]},
+            hovermode="x unified",
+        )
+        return fig
+
     def exportar_relatorio_html(
         self,
-        figuras: list[go.Figure | object],
+        figuras: list[FiguraAnalitica],
         caminho_saida: str | Path,
         titulo: str | None = None,
         subtitulo: str | None = None,

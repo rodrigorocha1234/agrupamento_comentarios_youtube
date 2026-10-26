@@ -383,21 +383,195 @@
       background: rgba(255, 255, 255, 0.02);
     }
 
-    /* Mermaid Diagrams */
+    /* Mermaid Diagrams & Zoom Controller */
     .mermaid-box {
       background: #0d131f;
       border: 1px solid var(--border-color);
       border-radius: var(--radius-md);
-      padding: 24px;
+      padding: 0;
       margin: 20px 0;
+      position: relative;
+      overflow: hidden;
+      min-height: 380px;
+      height: 480px;
       display: flex;
       justify-content: center;
-      overflow-x: auto;
-      box-shadow: inset 0 2px 8px rgba(0,0,0,0.5);
+      align-items: center;
+      box-shadow: inset 0 2px 12px rgba(0,0,0,0.6);
+    }
+    #diagrama-classes .mermaid-box {
+      height: 700px;
+    }
+    #diagrama-sequencia .mermaid-box {
+      height: 600px;
+    }
+    #diagrama-componentes .mermaid-box {
+      height: 520px;
+    }
+    #diagrama-atividades-pipeline .mermaid-box {
+      height: 520px;
+    }
+    .mermaid-viewport {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      cursor: grab;
+      user-select: none;
+      touch-action: none;
+      overflow: hidden;
+      position: relative;
+      background: radial-gradient(circle at center, rgba(30, 41, 59, 0.3) 0%, rgba(13, 19, 31, 0.98) 100%);
+    }
+    .mermaid-viewport.grabbing {
+      cursor: grabbing;
+    }
+    .mermaid-content {
+      transform-origin: center center;
+      transition: transform 0.12s cubic-bezier(0.1, 0, 0.1, 1);
+      display: inline-block;
+      position: relative;
+    }
+    .mermaid-content.dragging {
+      transition: none;
     }
     .mermaid {
-      width: 100%;
       text-align: center;
+      display: inline-block;
+    }
+    .mermaid svg {
+      max-width: none !important;
+      display: block;
+      margin: 0 auto;
+    }
+
+    /* Floating Zoom Controls Bar */
+    .diagram-controls {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      background: rgba(15, 23, 42, 0.94);
+      backdrop-filter: blur(10px);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-sm);
+      padding: 4px 6px;
+      z-index: 30;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.6);
+    }
+    .diagram-btn {
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      color: var(--text-primary);
+      min-width: 28px;
+      height: 28px;
+      padding: 0 7px;
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 0.82rem;
+      font-weight: 600;
+      transition: all 0.15s ease;
+      user-select: none;
+    }
+    .diagram-btn:hover {
+      background: rgba(56, 189, 248, 0.25);
+      border-color: var(--accent-sky);
+      color: var(--accent-sky);
+      transform: translateY(-1px);
+    }
+    .diagram-btn:active {
+      transform: scale(0.95);
+    }
+    .diagram-scale-text {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.74rem;
+      color: var(--accent-cyan);
+      padding: 0 6px;
+      min-width: 48px;
+      text-align: center;
+      user-select: none;
+      cursor: pointer;
+      font-weight: 600;
+    }
+    .diagram-scale-text:hover {
+      color: var(--accent-sky);
+    }
+    .diagram-hint {
+      position: absolute;
+      bottom: 8px;
+      left: 12px;
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      pointer-events: none;
+      background: rgba(13, 19, 31, 0.75);
+      backdrop-filter: blur(4px);
+      padding: 2px 8px;
+      border-radius: 4px;
+      border: 1px solid rgba(255,255,255,0.06);
+      z-index: 10;
+      opacity: 0.75;
+      transition: opacity 0.2s;
+    }
+    .mermaid-box:hover .diagram-hint {
+      opacity: 1;
+    }
+
+    /* Modal Fullscreen Viewer */
+    .diagram-modal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(10, 14, 23, 0.95);
+      backdrop-filter: blur(12px);
+      z-index: 10000;
+      flex-direction: column;
+    }
+    .diagram-modal.active {
+      display: flex;
+    }
+    .diagram-modal-header {
+      padding: 12px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: rgba(17, 24, 39, 0.85);
+      border-bottom: 1px solid var(--border-color);
+    }
+    .diagram-modal-title {
+      font-family: 'Outfit', sans-serif;
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: #ffffff;
+    }
+    .diagram-modal-body {
+      flex: 1;
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .diagram-modal-close {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid var(--border-color);
+      color: var(--text-primary);
+      padding: 5px 14px;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      font-size: 0.85rem;
+      font-weight: 500;
+      transition: all 0.2s;
+    }
+    .diagram-modal-close:hover {
+      background: var(--accent-rose);
+      color: #fff;
+      border-color: var(--accent-rose);
     }
 
     /* YAML Card Specifics */
@@ -504,7 +678,8 @@
 
       <div class="nav-category">Guia de Configuração (YAML)</div>
       <ul>
-        <li><a href="#yaml-resumo" class="nav-link">Estrutura dos 14 Arquivos</a></li>
+        <li><a href="#pydantic-arquitetura" class="nav-link">Pydantic v2 & Validação</a></li>
+        <li><a href="#yaml-resumo" class="nav-link">Estrutura dos 16 Arquivos</a></li>
         <li><a href="#yaml-projeto" class="nav-link">projeto.yaml</a></li>
         <li><a href="#yaml-cadastro" class="nav-link">cadastro_projeto.yaml</a></li>
         <li><a href="#yaml-fonte" class="nav-link">fonte_dados.yaml</a></li>
@@ -516,8 +691,11 @@
         <li><a href="#yaml-avaliacao" class="nav-link">avaliacao.yaml</a></li>
         <li><a href="#yaml-regras-negocio" class="nav-link">regras_negocio.yaml</a></li>
         <li><a href="#yaml-analises" class="nav-link">analises.yaml</a></li>
+        <li><a href="#yaml-analise-temporal" class="nav-link">analise_temporal.yaml</a></li>
         <li><a href="#yaml-mlflow" class="nav-link">mlflow.yaml</a></li>
         <li><a href="#yaml-api" class="nav-link">api.yaml</a></li>
+        <li><a href="#yaml-observabilidade" class="nav-link">observabilidade.yaml</a></li>
+        <li><a href="#yaml-pln" class="nav-link">pln.yaml</a></li>
       </ul>
 
       <div class="nav-category">Visualizações & Regras</div>
@@ -529,13 +707,22 @@
         <li><a href="#grafico-distribuicao" class="nav-link">Distribuição de Frequência</a></li>
         <li><a href="#grafico-pca" class="nav-link">Projeção PCA 2D</a></li>
         <li><a href="#grafico-boxplot" class="nav-link">Boxplots por Atributo</a></li>
+        <li><a href="#grafico-evolucao-temporal" class="nav-link">Evolução Temporal dos Clusters</a></li>
+        <li><a href="#grafico-area-empilhada" class="nav-link">Composição Relativa (Área 100%)</a></li>
+        <li><a href="#deteccao-review-bombing" class="nav-link">Detecção de Review Bombing</a></li>
       </ul>
 
-      <div class="nav-category">Operação & Execução</div>
+      <div class="nav-category">Manual de Uso do Projeto</div>
       <ul>
-        <li><a href="#operacao-cli" class="nav-link">Guia do executar.sh</a></li>
-        <li><a href="#docker-compose" class="nav-link">Docker Compose & Serviços</a></li>
-        <li><a href="#api-endpoints" class="nav-link">Endpoints REST FastAPI</a></li>
+        <li><a href="#manual-instalacao" class="nav-link">1. Instalação & Setup</a></li>
+        <li><a href="#manual-infra" class="nav-link">2. Infraestrutura Docker</a></li>
+        <li><a href="#manual-pipeline" class="nav-link">3. Execução do Pipeline CLI</a></li>
+        <li><a href="#manual-cenarios-yaml" class="nav-link">4. Cenários Práticos no YAML</a></li>
+        <li><a href="#manual-api-rest" class="nav-link">5. API REST FastAPI & cURL</a></li>
+        <li><a href="#manual-mlflow" class="nav-link">6. Rastreamento com MLflow</a></li>
+        <li><a href="#manual-observabilidade" class="nav-link">7. Grafana, Prometheus & Loki</a></li>
+        <li><a href="#manual-qualidade" class="nav-link">8. Testes & Qualidade (CI/CD)</a></li>
+        <li><a href="#manual-troubleshooting" class="nav-link">9. Guia de Troubleshooting</a></li>
       </ul>
     </nav>
   </aside>
@@ -555,9 +742,10 @@
         <span class="badge badge-cyan">Python 3.12+</span>
         <span class="badge badge-indigo">Scikit-Learn & PyCaret Strategy</span>
         <span class="badge badge-emerald">Lakehouse RustFS / S3</span>
-        <span class="badge badge-amber">100% Config-Driven (14 YAMLs)</span>
+        <span class="badge badge-amber">100% Config-Driven (16 YAMLs)</span>
+        <span class="badge badge-cyan">Pydantic v2 Fail-Fast</span>
         <span class="badge">PLN Desativado por Padrão</span>
-        <span class="badge">75 Testes Automatizados</span>
+        <span class="badge">90 Testes Automatizados</span>
       </div>
     </div>
 
@@ -583,8 +771,8 @@
             <span class="badge badge-cyan">Strategy</span>
           </div>
           <p style="font-size:0.88rem; color:var(--text-secondary);">
-            Interfaces abstratas em <code>app/contratos/</code> isolam o domínio contra fontes de dados, motores de clustering,
-            repositórios lakehouse e sistemas de observabilidade.
+            Interfaces abstratas e <code>@runtime_checkable</code> em <code>app/contratos/</code> isolam o domínio contra fontes de dados,
+            motores de clustering, repositórios lakehouse e sistemas de observabilidade.
           </p>
         </div>
 
@@ -595,7 +783,7 @@
           </div>
           <p style="font-size:0.88rem; color:var(--text-secondary);">
             Nenhum dado é salvo em pastas locais do repositório. Toda a persistência é remota no RustFS S3,
-            estruturada em camadas Bronze (bruto), Silver (limpo/tipado) e Gold (matriz analítica).
+            estruturada em camadas Bronze (JSON bruto), Silver (Parquet limpo/tipado) e Gold (matriz analítica).
           </p>
         </div>
 
@@ -606,7 +794,40 @@
           </div>
           <p style="font-size:0.88rem; color:var(--text-secondary);">
             Transformações e regras de negócio escritas em Pandas ou Polars são validadas por árvore sintática (AST)
-            com whitelist de nós e escopo restrito, garantindo segurança contra execução de código arbitrário.
+            com whitelist de nós e escopo restrito, garantindo segurança estrita contra execução de código arbitrário.
+          </p>
+        </div>
+
+        <div class="card">
+          <div class="card-title">
+            <span>Configuração Pydantic v2 & GoF</span>
+            <span class="badge badge-indigo">Fail-Fast</span>
+          </div>
+          <p style="font-size:0.88rem; color:var(--text-secondary);">
+            Arquitetura 100% tipada em <code>app/configuracao/</code> combinando GoF Facade (<code>ConfYAML</code>),
+            Composite (árvore de modelos) e Builder (<code>ConstrutorConfiguracao</code>), com zero <code>Any</code> e validação em Rust.
+          </p>
+        </div>
+
+        <div class="card">
+          <div class="card-title">
+            <span>Diagnósticos Temporais & Picos</span>
+            <span class="badge badge-cyan">Z-Score Móvel</span>
+          </div>
+          <p style="font-size:0.88rem; color:var(--text-secondary);">
+            Subsistema <code>app/analise_temporal/</code> pós-clustering desacoplado com agregação multi-granularidade (diária a anual)
+            e detecção estatística de anomalias de volume e alertas de <em>review bombing</em>.
+          </p>
+        </div>
+
+        <div class="card">
+          <div class="card-title">
+            <span>PLN Desacoplado & Seguro</span>
+            <span class="badge badge-purple">Off-by-Default</span>
+          </div>
+          <p style="font-size:0.88rem; color:var(--text-secondary);">
+            Pré-processamento textual via GoF Strategy (<code>spacy</code>, <code>tfidf</code>, <code>count</code>) desativado por padrão
+            para preservar foco comportamental, com validação cruzada que impede contaminação acidental no treino.
           </p>
         </div>
       </div>
@@ -632,51 +853,73 @@
         <div class="mermaid-box">
           <div class="mermaid">
             stateDiagram-v2
-              [*] --> IniciarExecucao: CLI main.py / API
+              [*] --> IniciarExecucao: Iniciar Pipeline (CLI / API)
 
               state IniciarExecucao {
-                [*] --> CarregarYAML: ConfYAML.carregar_de_diretorio()
-                CarregarYAML --> ValidarContratos: Validar tipos e identificadores
-                ValidarContratos --> VerificarColeta
+                [*] --> CarregarArquivosYAML: 16 arquivos em config/
+                CarregarArquivosYAML --> ValidacaoPydanticV2: ConstrutorConfiguracao Fail-Fast
+                ValidacaoPydanticV2 --> [*]: Configuração Tipada Válida
               }
 
-              state "Etapa 1: Ingestão de Dados" as Etapa1 {
-                VerificarColeta --> ColetarDados: coletar_dados_novos == True
-                VerificarColeta --> LerBronzeDireto: coletar_dados_novos == False
-                ColetarDados --> ExtrairLoteSteam: ProtocoloFonteDados.extrair_lote()
-                ExtrairLoteSteam --> GravarBronzeS3: RepositorioS3.gravar_bronze() (Bronze S3)
-                GravarBronzeS3 --> LerBronzeDireto
+              IniciarExecucao --> IngestaoBronze: Iniciar Ingestão
+
+              state IngestaoBronze {
+                [*] --> DecidirColeta: coletar_dados_novos?
+                DecidirColeta --> ColetaAPI: True (ProtocoloFonteDados)
+                DecidirColeta --> LeituraBronze: False (Reutilizar Lakehouse)
+                ColetaAPI --> GravarBronzeS3: RepositorioS3Lakehouse
+                GravarBronzeS3 --> LeituraBronze
+                LeituraBronze --> [*]: Dados Bronze Disponíveis
               }
 
-              state "Etapa 2: Processamento Silver" as Etapa2 {
-                LerBronzeDireto --> DeduplicarRegistros: ProcessadorTabela (Pandas/Polars)
-                DeduplicarRegistros --> TratarNulosEConverterTipos
-                TratarNulosEConverterTipos --> AvaliarRegrasAmostras: AvaliadorRegrasNegocio
-                AvaliarRegrasAmostras --> GravarSilverS3: RepositorioS3.gravar_silver() (Silver S3)
+              IngestaoBronze --> SaneamentoSilver: Camada Bronze Pronta
+
+              state SaneamentoSilver {
+                [*] --> Deduplicar: ProcessadorTabela (Pandas/Polars)
+                Deduplicar --> ConverterTiposENulos: Tipagem Estrita
+                ConverterTiposENulos --> AvaliarRegrasAST: AvaliadorRegrasNegocio
+                AvaliarRegrasAST --> GravarSilverS3: RepositorioS3Lakehouse
+                GravarSilverS3 --> [*]: Camada Silver Persistida
               }
 
-              state "Etapa 3: Engenharia Gold" as Etapa3 {
-                GravarSilverS3 --> TratarOutliers: EngenheiroAtributos (IQR/ZScore)
-                TratarOutliers --> AplicarTransformacoes: log1p, divisores, multiplicadores
-                AplicarTransformacoes --> NormalizarEscalonar: StandardScaler, RobustScaler
-                NormalizarEscalonar --> GravarGoldS3: RepositorioS3.gravar_gold() (Gold S3)
+              SaneamentoSilver --> EngenhariaGold: Camada Silver Pronta
+
+              state EngenhariaGold {
+                [*] --> TratarOutliers: EngenheiroAtributos (IQR/Z-Score)
+                TratarOutliers --> TransformarEscalonar: Log1p e Scalers
+                TransformarEscalonar --> DecidirPLN: pln.habilitado?
+                DecidirPLN --> ProcessarTextoPLN: True (GoF Strategy spaCy/TF-IDF)
+                DecidirPLN --> GravarGoldS3: False (Apenas Variáveis Tabulares)
+                ProcessarTextoPLN --> FundirMatrizTreino: modo concatenar/apenas_texto
+                FundirMatrizTreino --> GravarGoldS3: RepositorioS3Lakehouse
+                GravarGoldS3 --> [*]: Matriz Gold Pronta
               }
 
-              state "Etapa 4: Motor de Clustering & MLflow" as Etapa4 {
-                GravarGoldS3 --> InstanciarAlgoritmo: FabricaMotoresClustering
-                InstanciarAlgoritmo --> AjustarModelo: ProtocoloMotorClustering.ajustar()
+              EngenhariaGold --> ModelagemMLflow: Matriz Gold Persistida
+
+              state ModelagemMLflow {
+                [*] --> InstanciarAlgoritmo: FabricaMotores (KMeans/DBSCAN/HDBSCAN)
+                InstanciarAlgoritmo --> AjustarModelo: ProtocoloMotorClustering.ajustar
                 AjustarModelo --> CalcularMetricas: Silhueta, Davies-Bouldin, Calinski
-                CalcularMetricas --> RegistrarMLflow: RastreadorMLflow (Parâmetros, Métricas, Tags)
+                CalcularMetricas --> RegistrarMLflow: RastreadorMLflow Observer
+                RegistrarMLflow --> [*]: Modelo e Métricas Rastreados
               }
 
-              state "Etapa 5: Diagnósticos & Visualização" as Etapa5 {
-                RegistrarMLflow --> GerarPerfisEstatisticos: AnalisadorClusters
-                GerarPerfisEstatisticos --> AtribuirPersonasERotulos: AvaliadorRegrasNegocio
-                AtribuirPersonasERotulos --> RenderizarGraficosPlotly: Dispersão 2D, Perfil, Tabela Resumo
-                RenderizarGraficosPlotly --> ExportarHTML: relatorio_clusters.html
+              ModelagemMLflow --> DiagnosticosVisualizacao: Clusters Ajustados
+
+              state DiagnosticosVisualizacao {
+                [*] --> GerarPerfisEstatisticos: AnalisadorClusters
+                GerarPerfisEstatisticos --> AtribuirPersonas: Regras de Negócio e Rótulos
+                AtribuirPersonas --> DecidirAnaliseTemporal: analise_temporal.habilitado?
+                DecidirAnaliseTemporal --> ProcessarSeriesTemporais: True (Agregação Diária/Semanal/Mensal)
+                DecidirAnaliseTemporal --> RenderizarGraficos: False (Apenas Perfis)
+                ProcessarSeriesTemporais --> DetectarAnomaliasPicos: Detector Z-Score Review Bombing
+                DetectarAnomaliasPicos --> RenderizarGraficos: Séries e Alertas
+                RenderizarGraficos --> ExportarRelatorioHTML: GeradorVisualizacoes (Plotly/Altair)
+                ExportarRelatorioHTML --> [*]: Relatório relatorio_clusters.html
               }
 
-              ExportarHTML --> [*]: ResultadoExecucaoPipeline Concluído
+              DiagnosticosVisualizacao --> [*]: Execução Concluída com Sucesso
           </div>
         </div>
       </div>
@@ -735,7 +978,7 @@
           <div class="mermaid">
             classDiagram
               class ProtocoloFonteDados {
-                <<interface>>
+                &lt;&lt;interface&gt;&gt;
                 +extrair_lote(identificador_origem, marcador_posicao, limite) tuple
                 +coletar_lote(appid, cursor, quantidade_por_pagina) tuple
               }
@@ -748,7 +991,7 @@
               ProtocoloFonteDados <|.. FonteSteam
 
               class ProtocoloRepositorioLakehouse {
-                <<interface>>
+                &lt;&lt;interface&gt;&gt;
                 +gravar_bronze(identificador, registros) str
                 +gravar_silver(identificador, dados) str
                 +gravar_gold(identificador, dados, sufixo_visao) str
@@ -769,7 +1012,7 @@
               ProtocoloRepositorioLakehouse <|.. RepositorioS3Lakehouse
 
               class ProtocoloMotorClustering {
-                <<interface>>
+                &lt;&lt;interface&gt;&gt;
                 +ajustar(matriz_treino) ProtocoloMotorClustering
                 +obter_rotulos() list~int~
                 +obter_centroides() ndarray
@@ -801,65 +1044,205 @@
               ProtocoloMotorClustering <|.. MotorHDBSCANSklearn
 
               class EstrategiaVisualizacao {
-                <<interface (GoF Strategy)>>
+                &lt;&lt;interface&gt;&gt;
                 +gerar_grafico_pca_2d()
                 +gerar_grafico_distribuicao_clusters()
                 +gerar_boxplot_atributos()
                 +gerar_grafico_dispersao_2_atributos()
                 +gerar_grafico_perfil_clusters()
                 +gerar_tabela_resumo_clusters()
+                +gerar_grafico_evolucao_temporal()
+                +gerar_grafico_area_empilhada_temporal()
                 +exportar_relatorio_html()
               }
               class EstrategiaVisualizacaoPlotly {
-                <<GoF Concrete Strategy>>
                 +gerar_grafico_pca_2d()
                 +gerar_grafico_distribuicao_clusters()
                 +gerar_boxplot_atributos()
                 +gerar_grafico_dispersao_2_atributos()
                 +gerar_grafico_perfil_clusters()
                 +gerar_tabela_resumo_clusters()
+                +gerar_grafico_evolucao_temporal()
+                +gerar_grafico_area_empilhada_temporal()
                 +exportar_relatorio_html()
               }
               class EstrategiaVisualizacaoAltair {
-                <<GoF Concrete Strategy>>
                 +gerar_grafico_pca_2d()
                 +gerar_grafico_distribuicao_clusters()
                 +gerar_boxplot_atributos()
                 +gerar_grafico_dispersao_2_atributos()
                 +gerar_grafico_perfil_clusters()
                 +gerar_tabela_resumo_clusters()
+                +gerar_grafico_evolucao_temporal()
+                +gerar_grafico_area_empilhada_temporal()
                 +exportar_relatorio_html()
               }
               EstrategiaVisualizacao <|.. EstrategiaVisualizacaoPlotly
               EstrategiaVisualizacao <|.. EstrategiaVisualizacaoAltair
 
               class FabricaVisualizacoes {
-                <<GoF Factory>>
                 +registrar_estrategia(engine, classe)
                 +criar_estrategia(engine) EstrategiaVisualizacao
               }
-              FabricaVisualizacoes ..> EstrategiaVisualizacao
+              FabricaVisualizacoes "1" ..> "1..*" EstrategiaVisualizacao : instancia
 
               class GeradorVisualizacoesClusters {
-                <<GoF Facade / Context>>
                 -_estrategia: EstrategiaVisualizacao
                 +resolver_estrategia() EstrategiaVisualizacao
               }
-              GeradorVisualizacoesClusters --> EstrategiaVisualizacao
-              GeradorVisualizacoesClusters ..> FabricaVisualizacoes
+              GeradorVisualizacoesClusters "1" --> "1" EstrategiaVisualizacao : delega
+              GeradorVisualizacoesClusters "1" ..> "1" FabricaVisualizacoes : obtém motor
+
+              class ProtocoloMotorProcessamento {
+                &lt;&lt;interface&gt;&gt;
+                +carregar_dados(caminho_arquivo) DataFrame
+                +salvar_dados(dados, caminho_arquivo) void
+                +deduplicar(dados, coluna_chave) DataFrame
+                +selecionar_colunas(dados, colunas) DataFrame
+              }
+              class ProcessadorTabela {
+                +processar(dados_bronze, config) DataFrame
+                +deduplicar()
+                +selecionar_colunas()
+              }
+              ProtocoloMotorProcessamento <|.. ProcessadorTabela
+
+              class ProtocoloObservadorExperimento {
+                &lt;&lt;interface&gt;&gt;
+                +registrar_parametros(parametros) void
+                +registrar_metricas(metricas) void
+                +registrar_tags(tags) void
+                +registrar_artefato(caminho_local, subpasta) void
+              }
+              class RastreadorMLflow {
+                -_habilitado: bool
+                -_experiment_name: str
+                +registrar_parametros()
+                +registrar_metricas()
+                +registrar_tags()
+                +registrar_artefato()
+              }
+              ProtocoloObservadorExperimento <|.. RastreadorMLflow
+
+              class AnalisadorTemporalClusters {
+                -_estrategia: EstrategiaAgregacaoTemporal
+                -_detector: DetectorAnomaliasTemporais
+                +analisar(dados, rotulos) ResumoAnaliseTemporal
+              }
+              class EstrategiaAgregacaoTemporal {
+                &lt;&lt;interface&gt;&gt;
+                +normalizar_periodos(serie) Series
+                +obter_nome_granularidade() str
+              }
+              class AgregadorDiario {
+                +normalizar_periodos()
+                +obter_nome_granularidade()
+              }
+              class AgregadorSemanal {
+                +normalizar_periodos()
+                +obter_nome_granularidade()
+              }
+              class AgregadorMensal {
+                +normalizar_periodos()
+                +obter_nome_granularidade()
+              }
+              class AgregadorAnual {
+                +normalizar_periodos()
+                +obter_nome_granularidade()
+              }
+              EstrategiaAgregacaoTemporal <|.. AgregadorDiario
+              EstrategiaAgregacaoTemporal <|.. AgregadorSemanal
+              EstrategiaAgregacaoTemporal <|.. AgregadorMensal
+              EstrategiaAgregacaoTemporal <|.. AgregadorAnual
+
+              class DetectorAnomaliasTemporais {
+                -_config: ConfigDeteccaoPicosInfo
+                +detectar_picos(pontos) list
+              }
+              AnalisadorTemporalClusters "1" --> "1" EstrategiaAgregacaoTemporal : discretiza
+              AnalisadorTemporalClusters "1" --> "1" DetectorAnomaliasTemporais : monitora picos
+
+              class ConfYAML {
+                +projeto: ConfigProjeto
+                +clustering: ConfigClustering
+                +datalake: ConfigDatalake
+                +pln: ConfigPLN
+                +analise_temporal: ConfigAnaliseTemporal
+                +validar_regras_globais() ConfYAML
+                +carregar_de_diretorio(caminho) ConfYAML
+              }
+              class ConstrutorConfiguracao {
+                +carregar_arquivo_yaml(caminho, modelo) BaseModel
+                +construir_valores(caminho_dir) dict
+              }
+              ConfYAML "1" ..> "1" ConstrutorConfiguracao : constrói via
+
+              class ProtocoloTratamentoPLN {
+                &lt;&lt;interface&gt;&gt;
+                +ajustar_e_transformar(textos) ndarray
+                +transformar(textos) ndarray
+                +obter_nomes_features() list~str~
+              }
+              class TratamentoSpacy {
+                -_modelo: Language
+                +ajustar_e_transformar()
+                +transformar()
+              }
+              class TratamentoTfidf {
+                -_vetorizador: TfidfVectorizer
+                +ajustar_e_transformar()
+                +transformar()
+              }
+              class TratamentoCount {
+                -_vetorizador: CountVectorizer
+                +ajustar_e_transformar()
+                +transformar()
+              }
+              ProtocoloTratamentoPLN <|.. TratamentoSpacy
+              ProtocoloTratamentoPLN <|.. TratamentoTfidf
+              ProtocoloTratamentoPLN <|.. TratamentoCount
+
+              class AvaliadorRegrasNegocio {
+                -_habilitado: bool
+                +aplicar_regras_amostras(dados) DataFrame
+                +avaliar_cluster(metricas) tuple
+              }
+
+              class EngenheiroAtributos {
+                -_config: ConfigAtributosInfo
+                +processar_e_persistir_gold(id, dados, config, repo) ArtefatoGold
+              }
+
+              class ColetorDados {
+                -_fonte: ProtocoloFonteDados
+                -_repositorio: ProtocoloRepositorioLakehouse
+                +executar_coleta(id) int
+              }
 
               class FachadaPipelineClustering {
                 -_repositorio: ProtocoloRepositorioLakehouse
                 -_fonte_dados: ProtocoloFonteDados
-                -_rastreador_mlflow: RastreadorMLflow
+                -_processador: ProtocoloMotorProcessamento
+                -_rastreador_mlflow: ProtocoloObservadorExperimento
                 -_avaliador_regras: AvaliadorRegrasNegocio
+                -_engenheiro: EngenheiroAtributos
+                -_analisador_temporal: AnalisadorTemporalClusters
+                -_tratamento_pln: ProtocoloTratamentoPLN
                 +executar(identificador, coletar_dados_novos, caminho_relatorio) ResultadoExecucaoPipeline
               }
 
-              FachadaPipelineClustering --> ProtocoloFonteDados
-              FachadaPipelineClustering --> ProtocoloRepositorioLakehouse
-              FachadaPipelineClustering --> ProtocoloMotorClustering
-              FachadaPipelineClustering --> GeradorVisualizacoesClusters
+              FachadaPipelineClustering "1" --> "1" ConfYAML : governa
+              FachadaPipelineClustering "1" --> "1" ProtocoloFonteDados : consome
+              FachadaPipelineClustering "1" --> "1" ProtocoloRepositorioLakehouse : armazena
+              FachadaPipelineClustering "1" --> "1" ProtocoloMotorClustering : treina
+              FachadaPipelineClustering "1" --> "1" ProtocoloMotorProcessamento : processa dados
+              FachadaPipelineClustering "1" --> "0..1" ProtocoloObservadorExperimento : rastreia MLflow
+              FachadaPipelineClustering "1" --> "1" GeradorVisualizacoesClusters : renderiza
+              FachadaPipelineClustering "1" --> "1" AvaliadorRegrasNegocio : avalia regras
+              FachadaPipelineClustering "1" --> "1" EngenheiroAtributos : engenharia gold
+              FachadaPipelineClustering "1" ..> "0..1" ColetorDados : orquestra coleta
+              FachadaPipelineClustering "1" --> "0..1" AnalisadorTemporalClusters : diagnostica
+              FachadaPipelineClustering "1" --> "0..1" ProtocoloTratamentoPLN : processa texto
           </div>
         </div>
       </div>
@@ -886,6 +1269,16 @@
                 FastAPI["api-fastapi (FastAPI :8000)"]
                 PipelineExec["Fachada Pipeline Clustering"]
                 ASTValidator["Avaliador AST Seguro"]
+                Configuracao["app/configuracao<br/>(GoF Facade, Composite & Builder)"]
+                AnaliseTemporal["app/analise_temporal<br/>(Agregadores & Detector Z-Score)"]
+                ProcessamentoPLN["app/processamento_pln<br/>(GoF Strategy: spaCy / TF-IDF)"]
+                GeradorViz["app/visualizacao<br/>(Estratégias Plotly & Altair)"]
+
+                PipelineExec --> Configuracao
+                PipelineExec --> AnaliseTemporal
+                PipelineExec --> ProcessamentoPLN
+                PipelineExec --> GeradorViz
+                PipelineExec --> ASTValidator
               end
 
               subgraph LakehouseStorage ["Camada de Armazenamento"]
@@ -940,16 +1333,23 @@
               autonumber
               actor Usuario as Usuário / CLI
               participant Fachada as FachadaPipeline
+              participant Conf as ConfYAML (Pydantic v2)
               participant Coletor as ColetorDados
               participant Fonte as ProtocoloFonteDados (Steam)
               participant Lakehouse as RepositorioLakehouse (S3)
               participant Processador as ProcessadorTabela
               participant Engenheiro as EngenheiroAtributos
+              participant PLN as FachadaPLN (GoF Strategy)
               participant Motor as ProtocoloMotorClustering
               participant MLflow as RastreadorMLflow
               participant Analisador as AnalisadorClusters
+              participant AnalisadorTemp as AnalisadorTemporal
+              participant GeradorViz as GeradorVisualizacoes
 
               Usuario->>Fachada: executar(identificador="730", coletar=True)
+              Fachada->>Conf: carregar_de_diretorio("config/")
+              Conf-->>Fachada: Instância tipada ConfYAML (Fail-Fast)
+
               opt Se coletar == True
                 Fachada->>Coletor: executar_coleta("730")
                 Coletor->>Fonte: extrair_lote("730")
@@ -966,7 +1366,13 @@
 
               Fachada->>Engenheiro: processar_e_persistir_gold("730", Silver)
               Engenheiro->>Lakehouse: gravar_gold("730", Gold, sufixo)
-              Engenheiro-->>Fachada: ArtefatoGold (Matriz Treino Normalizada)
+              Engenheiro-->>Fachada: ArtefatoGold (Matriz Treino Tabular)
+
+              opt Se pln.habilitado == True
+                Fachada->>PLN: processar_e_fundir(Silver, matriz_treino)
+                PLN->>PLN: vetorizar textos (spaCy / TF-IDF / Count)
+                PLN-->>Fachada: Matriz Treino enriquecida com vetores textuais
+              end
 
               Fachada->>Motor: ajustar(matriz_treino)
               Motor-->>Fachada: Rótulos de Cluster [-1, 0, 1, ...]
@@ -974,7 +1380,16 @@
 
               Fachada->>Analisador: gerar_resumo_estatistico()
               Analisador-->>Fachada: ResumoAnaliseClusters (Personas + Métricas)
-              Fachada->>Fachada: Gerar figuras Plotly e salvar HTML
+
+              opt Se analise_temporal.habilitado == True
+                Fachada->>AnalisadorTemp: analisar(dados_com_rotulos)
+                AnalisadorTemp->>AnalisadorTemp: agregar_periodos() & detectar_picos()
+                AnalisadorTemp-->>Fachada: ResumoAnaliseTemporal (Séries + Alertas)
+              end
+
+              Fachada->>GeradorViz: gerar_colecao_graficos(resumo, temporal)
+              GeradorViz-->>Fachada: Figuras renderizadas (Plotly / Altair)
+              Fachada->>Fachada: Salvar relatorio_clusters.html
               Fachada-->>Usuario: ResultadoExecucaoPipeline (Sucesso!)
           </div>
         </div>
@@ -985,15 +1400,214 @@
     <section id="yaml-guia">
       <div class="section-header">
         <span class="section-tag">Configuração Declarativa</span>
-        <h2>3. Instruções de Uso dos 14 Arquivos YAML</h2>
+        <h2>3. Arquitetura de Configuração com Pydantic v2 & Instruções dos 16 Arquivos YAML</h2>
       </div>
 
       <div class="card" id="yaml-resumo">
         <p>
           O sistema opera em modo <strong>Config-Driven</strong>: todo o comportamento analítico, tratamento de dados,
-          hiperparâmetros de Machine Learning e limites de API são governados por arquivos YAML localizados em <code>config/</code>.
+          hiperparâmetros de Machine Learning e limites de API são governados por 16 arquivos YAML localizados em <code>config/</code>.
           O carregador unificado <code>ConfYAML</code> valida tipos, obrigatoriedades e regras arquiteturais em tempo de inicialização.
         </p>
+      </div>
+
+      <!-- Card Especial: Arquitetura de Validação Pydantic v2 -->
+      <div class="card" id="pydantic-arquitetura" style="border-left: 4px solid var(--accent-cyan); background: linear-gradient(180deg, rgba(6, 182, 212, 0.04) 0%, rgba(17, 24, 39, 0.9) 100%);">
+        <div class="card-title">
+          <span>Camada de Validação & Modelagem com Pydantic v2 (Rust Core)</span>
+          <div class="badge-container" style="gap:6px;">
+            <span class="badge badge-cyan">Pydantic v2.10+</span>
+            <span class="badge badge-indigo">GoF Facade + Composite + Builder</span>
+            <span class="badge badge-emerald">Fail-Fast & Zero Any</span>
+            <span class="badge badge-amber">Segurança Arquitetural</span>
+          </div>
+        </div>
+
+        <p style="font-size:0.92rem; color:var(--text-secondary); margin-bottom:16px;">
+          Em pipelines de Big Data e Machine Learning (Lakehouse RustFS/S3, Scikit-learn, clustering), falhas em tempo de execução causadas
+          por parâmetros incorretos, variáveis de ambiente ausentes ou erros de digitação em arquivos YAML provocam desperdício crítico de recursos
+          computacionais e tempo de análise. O <strong>Pydantic v2</strong> atua como o <strong>Guardião de Integridade</strong> de todo o sistema,
+          executando validação estrutural instantânea via <code>pydantic-core</code> (compilado em Rust) logo no momento da inicialização
+          (<em>Fail-Fast</em>), antes de qualquer I/O pesado ou processamento de dados.
+        </p>
+
+        <!-- Diagrama Mermaid: Fluxo de Validação -->
+        <div class="code-container" style="margin-bottom:20px;">
+          <div class="code-header">
+            <span>Fluxo de Validação de Configuração: Do YAML ao Grafo de Objetos Tipados</span>
+            <span class="badge badge-cyan">Pydantic v2 Engine</span>
+          </div>
+          <div class="mermaid-box" style="margin:0; border:none; border-radius:0; background:transparent; padding:16px;">
+            <div class="mermaid">
+flowchart TD
+    classDef yaml fill:#1e293b,stroke:#38bdf8,stroke-width:1px,color:#f8fafc;
+    classDef builder fill:#1e1b4b,stroke:#818cf8,stroke-width:1px,color:#f8fafc;
+    classDef pydantic fill:#0f172a,stroke:#06b6d4,stroke-width:2px,color:#f8fafc;
+    classDef facade fill:#064e3b,stroke:#34d399,stroke-width:2px,color:#f8fafc;
+    classDef consumer fill:#312e81,stroke:#a78bfa,stroke-width:1px,color:#f8fafc;
+
+    Y1["16 Arquivos YAML<br/>(config/*.yaml)"]:::yaml --> E1["Expansão de Variáveis<br/>(${VAR:-default})"]:::yaml
+    E1 --> B1["ConstrutorConfiguracao<br/>(GoF Builder)"]:::builder
+    B1 --> M1["model_validate(dict)<br/>Pydantic Core (Rust)"]:::pydantic
+    M1 --> C1["Árvore de Modelos<br/>(GoF Composite)"]:::pydantic
+    C1 --> V1["@model_validator(mode='after')<br/>Validações Cruzadas Globais"]:::pydantic
+    V1 --> F1["ConfYAML<br/>(GoF Facade)"]:::facade
+    F1 --> P1["Pipeline de ML"]:::consumer
+    F1 --> P2["Lakehouse S3"]:::consumer
+    F1 --> P3["FastAPI REST"]:::consumer
+    F1 --> P4["MLflow & Métricas"]:::consumer
+            </div>
+          </div>
+        </div>
+
+        <!-- Padrões GoF Aplicados -->
+        <h4 style="color:#ffffff; font-size:1.05rem; margin:20px 0 12px; font-family:'Outfit',sans-serif;">
+          Padrões de Projeto GoF na Arquitetura de Configuração
+        </h4>
+        <div class="grid-3" style="margin-bottom:20px;">
+          <div class="card" style="background:rgba(15, 23, 42, 0.6); border:1px solid var(--border-color); padding:16px;">
+            <div class="card-title" style="font-size:1rem; margin-bottom:8px;">
+              <span>GoF Facade (<code>ConfYAML</code>)</span>
+              <span class="badge badge-emerald">Acesso Canônico</span>
+            </div>
+            <p style="font-size:0.83rem; color:var(--text-secondary); line-height:1.45;">
+              Centraliza e simplifica o acesso a todas as 16 configurações em uma única interface fortemente tipada
+              (<code>conf.clustering</code>, <code>conf.datalake</code>, etc.). Isola o restante da aplicação contra
+              detalhes físicos de arquivos em disco e garante um contrato imutável para os pipelines.
+            </p>
+          </div>
+
+          <div class="card" style="background:rgba(15, 23, 42, 0.6); border:1px solid var(--border-color); padding:16px;">
+            <div class="card-title" style="font-size:1rem; margin-bottom:8px;">
+              <span>GoF Composite (Modelos)</span>
+              <span class="badge badge-indigo">Hierarquia Tipada</span>
+            </div>
+            <p style="font-size:0.83rem; color:var(--text-secondary); line-height:1.45;">
+              Estrutura recursiva e modular em <code>app/configuracao/</code>. Nós de alto nível como <code>ConfigClustering</code>
+              agregam submodelos como <code>ConfigAlgoritmosClustering</code>, que encapsulam nós folha
+              como <code>ConfigParametrosKMeans</code>, propagando validações de tipos e defaults automaticamente.
+            </p>
+          </div>
+
+          <div class="card" style="background:rgba(15, 23, 42, 0.6); border:1px solid var(--border-color); padding:16px;">
+            <div class="card-title" style="font-size:1rem; margin-bottom:8px;">
+              <span>GoF Builder (Construtor)</span>
+              <span class="badge badge-cyan">Leitura & Expansão</span>
+            </div>
+            <p style="font-size:0.83rem; color:var(--text-secondary); line-height:1.45;">
+              <code>ConstrutorConfiguracao</code> orquestra a leitura física dos arquivos com UTF-8, injeção de defaults,
+              expansão segura de variáveis de ambiente no padrão <code>${VAR:-default}</code>, verificação de obrigatoriedade
+              e parsing seguro via <code>model_validate()</code> com Generics Python 3.12.
+            </p>
+          </div>
+        </div>
+
+        <!-- Tabela de Recursos Pydantic v2 -->
+        <h4 style="color:#ffffff; font-size:1.05rem; margin:20px 0 12px; font-family:'Outfit',sans-serif;">
+          Recursos do Pydantic v2 Implementados no Projeto
+        </h4>
+        <div class="table-container" style="margin-bottom:20px;">
+          <table>
+            <thead>
+              <tr>
+                <th style="width:22%;">Recurso Pydantic v2</th>
+                <th style="width:28%;">Implementação no Projeto</th>
+                <th>Finalidade e Garantia Arquitetural</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>BaseModel</code></td>
+                <td>Todos os modelos em <code>app/configuracao/*.py</code></td>
+                <td>Define esquemas estruturados e tipados para cada arquivo YAML, garantindo que nenhum tipo <code>Any</code> ou <code>object</code> trafegue na aplicação.</td>
+              </tr>
+              <tr>
+                <td><code>@model_validator(mode="after")</code></td>
+                <td><code>ConfYAML.validar_regras_globais()</code></td>
+                <td>Validação pós-instanciação de regras cruzadas entre arquivos múltiplos (ex: isolar identificadores de treino e consistência de flags de PLN).</td>
+              </tr>
+              <tr>
+                <td><code>Literal["sklearn", "pycaret"]</code></td>
+                <td><code>ConfigClusteringInfo.motor</code>, <code>algoritmo</code>, <code>tratamento</code></td>
+                <td>Restringe valores em tempo estático e de execução, impedindo digitações inválidas de algoritmos, motores ou modos de fusão de texto.</td>
+              </tr>
+              <tr>
+                <td><code>Field(default_factory=...)</code></td>
+                <td>Inicialização de submodelos e coleções mutáveis</td>
+                <td>Previne erros de estado mutável compartilhado em Python (ex: listas e dicionários compartilhados entre instâncias).</td>
+              </tr>
+              <tr>
+                <td><code>model_validate(dict)</code></td>
+                <td><code>ConstrutorConfiguracao.carregar_arquivo_yaml()</code></td>
+                <td>Método nativo em Rust do Pydantic v2 para validar e instanciar modelos a partir de dicionários YAML com máximo desempenho.</td>
+              </tr>
+              <tr>
+                <td><code>carregar_arquivo_yaml[T: BaseModel]</code></td>
+                <td>Generics Python 3.12 em <code>ConstrutorConfiguracao</code></td>
+                <td>Garante que o carregamento genérico de arquivos preserve o tipo exato do modelo Pydantic correspondente sem recorrer a casts dinâmicos ou <code>Any</code>.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Regras Arquiteturais Críticas -->
+        <div class="card" style="background:rgba(245, 158, 11, 0.08); border:1px solid rgba(245, 158, 11, 0.3); padding:16px; margin-bottom:20px;">
+          <div class="card-title" style="color:var(--accent-amber); font-size:1rem; margin-bottom:8px;">
+            <span>Regras Arquiteturais Validadas pelo Pydantic (Anti-Contaminação)</span>
+            <span class="badge badge-amber">Regra Rígida</span>
+          </div>
+          <ul style="color:var(--text-secondary); font-size:0.86rem; padding-left:20px; line-height:1.6;">
+            <li><strong>Isolamento Estrito de Identificadores:</strong> Colunas declaradas em <code>atributos.identificadores</code> (ex: <code>steamid</code>, <code>recommendationid</code>) são terminantemente proibidas de constar em <code>atributos.treino.colunas</code>. O <code>@model_validator</code> intercepta qualquer sobreposição antes do pipeline iniciar.</li>
+            <li><strong>Governança de PLN (NLP Off-by-Default):</strong> Se <code>funcionalidades.pln.habilitado</code> for <code>false</code>, o Pydantic rejeita qualquer configuração com <code>atributos.texto.incluir_no_treino: true</code>, forçando alinhamento explícito de intenção do usuário.</li>
+            <li><strong>Fail-Fast em Startup:</strong> Qualquer chave não reconhecida, tipo incompatível ou violação de contrato levanta imediatamente uma exceção tipada <code>ErroConfiguracao</code> com mensagem clara e rastreável.</li>
+          </ul>
+        </div>
+
+        <!-- Exemplo de Código Python -->
+        <div class="code-container">
+          <div class="code-header">
+            <span>Trecho Real: app/configuracao/fachada_configuracao.py & app/configuracao/clustering.py</span>
+            <button class="btn-copy" onclick="copiarCodigo(this)">Copiar</button>
+          </div>
+          <pre><code>from pydantic import BaseModel, Field, model_validator
+from typing import Literal
+from app.excecoes import ErroConfiguracao
+
+# Exemplo de modelo modular com Literal e Field default_factory (GoF Composite)
+class ConfigClusteringInfo(BaseModel):
+    motor: Literal["sklearn", "pycaret"] = "sklearn"
+    algoritmo: Literal["kmeans", "dbscan", "hdbscan"] = "kmeans"
+    random_state: int = 42
+    algoritmos: ConfigAlgoritmosClustering = Field(default_factory=ConfigAlgoritmosClustering)
+
+# Fachada unificada com validação cruzada global (GoF Facade)
+class ConfYAML(BaseModel):
+    projeto: ConfigProjeto
+    clustering: ConfigClustering
+    atributos: ConfigAtributos
+    pln: ConfigPLN = Field(default_factory=ConfigPLN)
+    # ... demais 12 módulos configuráveis ...
+
+    @model_validator(mode="after")
+    def validar_regras_globais(self) -> "ConfYAML":
+        # Regra 1: Identificadores não podem fazer parte dos atributos de treino
+        identificadores_set = set(self.atributos.atributos.identificadores)
+        treino_set = set(self.atributos.atributos.treino.colunas)
+        intersecao = identificadores_set.intersection(treino_set)
+        if intersecao:
+            raise ErroConfiguracao(
+                f"Identificadores não podem fazer parte dos atributos de treino: {sorted(intersecao)}"
+            )
+
+        # Regra 2: PLN desativado por padrão
+        pln_habilitado = self.projeto.funcionalidades.pln.habilitado or self.pln.pln.habilitado
+        if not pln_habilitado and self.atributos.atributos.texto.incluir_no_treino:
+            raise ErroConfiguracao(
+                "Inconsistência: funcionalidades.pln.habilitado é False, "
+                "mas atributos.texto.incluir_no_treino está True."
+            )
+        return self</code></pre>
+        </div>
       </div>
 
       <!-- 1. projeto.yaml -->
@@ -1126,22 +1740,26 @@ execucao:
             <button class="btn-copy" onclick="copiarCodigo(this)">Copiar</button>
           </div>
           <pre><code>datalake:
-  tipo: "rustfs" # rustfs | s3
+  habilitado: true
+  tipo: s3 # s3 | rustfs
+  formato: parquet
+  bucket: "${DATA_BUCKET:-steam-reviews}"
   endpoint_url: "${S3_ENDPOINT_URL:-http://127.0.0.1:9000}"
-  bucket: "${S3_BUCKET_NAME:-steam-reviews}"
   regiao: "${AWS_DEFAULT_REGION:-us-east-1}"
+  caminho: "${DATALAKE_PATH:-datalake}"
   bronze:
-    prefixo: "bronze"
-    formato: "json"
-    particionar_por_data: true
+    prefixo: bronze
+    caminho: "${DATALAKE_BRONZE_PATH:-bronze}"
   silver:
-    prefixo: "silver"
-    formato: "parquet"
-    particionar_por_data: true
+    prefixo: silver
+    caminho: "${DATALAKE_SILVER_PATH:-silver}"
   gold:
-    prefixo: "gold"
-    formato: "parquet"
-    particionar_por_data: false</code></pre>
+    prefixo: gold
+    caminho: "${DATALAKE_GOLD_PATH:-gold}"
+  metadados:
+    incluir_timestamp_coleta: true
+    incluir_appid: true
+    incluir_versao_schema: true</code></pre>
         </div>
       </div>
 
@@ -1515,6 +2133,107 @@ execucao:
     formato: "json"</code></pre>
         </div>
       </div>
+
+      <!-- 15. pln.yaml -->
+      <div class="card yaml-card" data-cat="ml" id="yaml-pln">
+        <div class="card-title">
+          <span>15. config/pln.yaml</span>
+          <span class="badge badge-purple">Processamento de Texto (PLN)</span>
+        </div>
+        <p style="font-size:0.88rem; color:var(--text-secondary);">
+          Controla o pré-processamento de linguagem natural das avaliações textuais (PLN desacoplado e desativado por padrão). 
+          Permite selecionar via GoF Strategy o tratamento desejado (<code>spacy</code>, <code>tfidf</code> ou <code>count</code>) e como combinar os vetores textuais com as variáveis tabulares da matriz de treinamento (<code>apenas_texto</code> ou <code>concatenar</code>).
+        </p>
+        <div class="code-container">
+          <div class="code-header">
+            <span>config/pln.yaml</span>
+            <button class="btn-copy" onclick="copiarCodigo(this)">Copiar</button>
+          </div>
+          <pre><code>pln:
+  habilitado: false
+  tratamento: "spacy"  # Opções: "spacy" (padrão), "tfidf", "count"
+  coluna_texto: "review"
+  fusao:
+    modo: "apenas_texto"  # "apenas_texto" ou "concatenar"
+    peso_texto: 1.0
+    peso_tabulares: 1.0
+
+  spacy:
+    modelo: "pt_core_news_sm"
+    remover_stopwords: true
+    remover_pontuacao: true
+    remover_numeros: false
+    lemmatizar: true
+    tamanho_lote: 256
+    dimensao_vetor: 96
+
+  tfidf:
+    max_features: 100
+    min_df: 2
+    max_df: 0.95
+    ngram_min: 1
+    ngram_max: 2
+
+  count:
+    max_features: 100
+    min_df: 2
+    max_df: 0.95
+    ngram_min: 1
+    ngram_max: 1
+    binario: false</code></pre>
+        </div>
+      </div>
+
+      <!-- 16. analise_temporal.yaml -->
+      <div class="card yaml-card" data-cat="ml" id="yaml-analise-temporal">
+        <div class="card-title">
+          <span>16. config/analise_temporal.yaml</span>
+          <span class="badge badge-cyan">Séries Temporais & Detecção de Picos</span>
+        </div>
+        <p style="font-size:0.88rem; color:var(--text-secondary);">
+          Governa a análise longitudinal pós-clustering das avaliações. Permite rastrear a evolução dos agrupamentos
+          ao longo do tempo (diária, semanal, mensal ou anual), preencher períodos vazios e detectar automaticamente
+          anomalias de volume e alertas de <em>review bombing</em> via Z-Score móvel, gerando visualizações interativas em Plotly e Altair.
+        </p>
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr><th>Chave</th><th>Tipo</th><th>Padrão</th><th>Descrição</th></tr>
+            </thead>
+            <tbody>
+              <tr><td><span class="tag-param">analise_temporal.habilitado</span></td><td><span class="tag-type">bool</span></td><td>true</td><td>Habilita o subsistema de análise temporal diagnóstica.</td></tr>
+              <tr><td><span class="tag-param">analise_temporal.coluna_referencia</span></td><td><span class="tag-type">str</span></td><td>timestamp_created</td><td>Coluna de timestamp no dataset (Unix ou ISO8601).</td></tr>
+              <tr><td><span class="tag-param">analise_temporal.granularidade</span></td><td><span class="tag-type">Literal</span></td><td>mensal</td><td>Agrupamento temporal: <code>diaria</code>, <code>semanal</code>, <code>mensal</code> ou <code>anual</code>.</td></tr>
+              <tr><td><span class="tag-param">deteccao_picos.limiar_desvio_padrao</span></td><td><span class="tag-type">float</span></td><td>2.5</td><td>Limiar de desvio padrão (Z-Score) para alerta de review bombing.</td></tr>
+              <tr><td><span class="tag-param">visualizacoes.grafico_evolucao_linhas</span></td><td><span class="tag-type">bool</span></td><td>true</td><td>Gera gráfico interativo de linhas de evolução por cluster.</td></tr>
+              <tr><td><span class="tag-param">visualizacoes.grafico_area_empilhada</span></td><td><span class="tag-type">bool</span></td><td>true</td><td>Gera gráfico de área 100% empilhada de proporção temporal.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="code-container">
+          <div class="code-header">
+            <span>config/analise_temporal.yaml</span>
+            <button class="btn-copy" onclick="copiarCodigo(this)">Copiar</button>
+          </div>
+          <pre><code>analise_temporal:
+  habilitado: true
+  coluna_referencia: "timestamp_created"
+  formato_origem: "unix_segundos" # unix_segundos | iso8601
+  granularidade: "mensal"         # diaria | semanal | mensal | anual
+  preencher_periodos_ausentes: true
+
+  deteccao_picos:
+    habilitado: true
+    limiar_desvio_padrao: 2.5
+    minimo_amostras_periodo: 5
+
+  visualizacoes:
+    grafico_evolucao_linhas: true
+    grafico_area_empilhada: true
+    titulo_evolucao: "Evolução Histórica dos Agrupamentos"
+    titulo_area_empilhada: "Composição Relativa dos Agrupamentos ao Longo do Tempo"</code></pre>
+        </div>
+      </div>
     </section>
 
     <!-- Seção 4: Catálogo de Gráficos e Regras de Negócio Associadas -->
@@ -1709,122 +2428,720 @@ execucao:
           </p>
         </div>
       </div>
-    </section>
 
-    <!-- Seção 5: Operação & Linha de Comando -->
-    <section id="operacao-cli">
-      <div class="section-header">
-        <span class="section-tag">Execução</span>
-        <h2>5. Operação e Guia de Comandos (executar.sh)</h2>
+      <!-- Gráficos Temporais 7, 8 e 9 -->
+      <div class="grid-2">
+        <!-- Gráfico 7: Evolução Temporal -->
+        <div class="card" id="grafico-evolucao-temporal">
+          <div class="card-title">
+            <span>7. Evolução Histórica dos Clusters (evolucao_linhas)</span>
+            <span class="badge badge-cyan">Plotly & Altair</span>
+          </div>
+          <p style="font-size:0.86rem; color:var(--text-secondary); margin-bottom: 10px;">
+            <strong>Chave de ativação:</strong> <code>config/analise_temporal.yaml -> visualizacoes.grafico_evolucao_linhas: true</code><br/>
+            Curva longitudinal de contagem absoluta de avaliações em cada cluster por janela temporal (diária, semanal, mensal ou anual).
+          </p>
+          <p style="font-size:0.84rem; color:var(--text-secondary); margin-bottom: 10px;">
+            <strong>Regras de Negócio & Diagnósticos:</strong> Permite à gestão do produto correlacionar picos e quedas de engajamento
+            com datas reais de patches, promoções na loja Steam ou grandes atualizações de jogabilidade, revelando quais perfis de jogadores
+            reagiram mais intensamente a cada evento.
+          </p>
+          <div class="table-container" style="margin-top:8px;">
+            <table>
+              <thead><tr><th>Campo</th><th>Tipo</th><th>Descrição</th></tr></thead>
+              <tbody>
+                <tr><td><code>periodo</code></td><td>Datetime</td><td>Período discretizado (ex: 2024-01).</td></tr>
+                <tr><td><code>cluster</code></td><td>str / int</td><td>Identificador do cluster ou ruído (-1).</td></tr>
+                <tr><td><code>quantidade</code></td><td>int</td><td>Volume total de avaliações alocadas no período.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Gráfico 8: Área Empilhada -->
+        <div class="card" id="grafico-area-empilhada">
+          <div class="card-title">
+            <span>8. Composição Relativa Temporal (area_empilhada)</span>
+            <span class="badge badge-indigo">100% Stacked Area</span>
+          </div>
+          <p style="font-size:0.86rem; color:var(--text-secondary); margin-bottom: 10px;">
+            <strong>Chave de ativação:</strong> <code>config/analise_temporal.yaml -> visualizacoes.grafico_area_empilhada: true</code><br/>
+            Área 100% empilhada exibindo a participação percentual relativa de cada cluster ao longo do tempo.
+          </p>
+          <p style="font-size:0.84rem; color:var(--text-secondary); margin-bottom: 10px;">
+            <strong>Regras de Negócio & Diagnósticos:</strong> Diagnostica transições demográficas na comunidade de jogadores.
+            Por exemplo, alerta quando a proporção de <em>"Veteranos Entusiastas"</em> sofre erosão contínua em favor de
+            <em>"Jogadores Casuais"</em> ou quando clusters com alerta de negócio (ex: <em>"Críticos Influentes"</em>)
+            expandem sua fatia percentual na base.
+          </p>
+          <div class="alert alert-info" style="margin-top:8px; padding:10px;">
+            <span style="font-size:1.1rem;">📊</span>
+            <span style="font-size:0.82rem;">Normalização automática entre 0% e 100% calculada dinamicamente via Pandas/Polars.</span>
+          </div>
+        </div>
       </div>
 
-      <div class="card">
-        <p style="font-size:0.9rem; color:var(--text-secondary); margin-bottom: 16px;">
-          O script utilitário <code>./executar.sh</code> encapsula todas as tarefas operacionais do repositório,
-          garantindo o carregamento correto de variáveis de ambiente e ativação do ambiente virtual.
+      <!-- Gráfico 9: Detecção de Anomalias de Volume & Review Bombing -->
+      <div class="card" id="deteccao-review-bombing" style="border-left: 4px solid var(--accent-amber);">
+        <div class="card-title">
+          <span>9. Detecção Estatística de Picos & Alertas de Review Bombing (deteccao_picos)</span>
+          <span class="badge badge-amber">Z-Score Móvel</span>
+        </div>
+        <p style="font-size:0.88rem; color:var(--text-secondary); margin-bottom: 12px;">
+          <strong>Chave de ativação:</strong> <code>config/analise_temporal.yaml -> deteccao_picos.habilitado: true</code>
+          (com limiar configurável <code>limiar_desvio_padrao: 2.5</code>).<br/>
+          Algoritmo estatístico que avalia o comportamento histórico das avaliações e identifica janelas onde o volume de comentários
+          apresenta desvio extremo em relação à média móvel amostral.
         </p>
         <div class="table-container">
           <table>
             <thead>
-              <tr><th>Comando</th><th>Ação</th><th>Exemplo de Uso</th></tr>
+              <tr><th>Parâmetro de Deteção</th><th>Tipo</th><th>Padrão</th><th>Função de Salvaguarda</th></tr>
+            </thead>
+            <tbody>
+              <tr><td><span class="tag-param">limiar_desvio_padrao</span></td><td>float</td><td>2.5</td><td>Multiplicador Z-Score mínimo para sinalizar evento crítico ($Z \ge 2.5$).</td></tr>
+              <tr><td><span class="tag-param">minimo_amostras_periodo</span></td><td>int</td><td>5</td><td>Evita falsos positivos em períodos iniciais com amostragem insuficiente.</td></tr>
+              <tr><td><span class="tag-param">preencher_periodos_ausentes</span></td><td>bool</td><td>true</td><td>Garante continuidade da série temporal preenchendo lacunas com zero.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="alert alert-warning" style="margin-top:14px;">
+          <span>⚠️</span>
+          <div>
+            <strong>Regra de Negócio: Protocolo de Review Bombing & Crise de Comunidade:</strong>
+            <p style="margin-top: 4px; font-size:0.85rem;">
+              Quando um pico anômalo ($Z \ge 2.5$) coincide com um cluster classificado pela regra de negócio como
+              <strong>"Críticos Influentes"</strong> ou com taxa de recomendação global inferior a 35%, o pipeline
+              emite uma anotação de auditoria destacada no sumário temporal com a data de início, intensidade e rótulo do cluster predominante,
+              subsidiando ações rápidas de contenção de crise pela equipe de relações comunitárias.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Seção 5: Manual Completo de Uso do Projeto -->
+    <section id="manual-uso">
+      <div class="section-header">
+        <span class="section-tag">Manual Operacional</span>
+        <h2>5. Manual Completo de Uso da Plataforma (Guia Prático Ponta a Ponta)</h2>
+      </div>
+
+      <!-- 5.1 Instalação e Pré-requisitos -->
+      <div class="card" id="manual-instalacao">
+        <div class="card-title">
+          <span>5.1 Pré-requisitos & Configuração do Ambiente Local</span>
+          <span class="badge badge-cyan">Setup Inicial</span>
+        </div>
+        <p style="font-size:0.9rem; color:var(--text-secondary); margin-bottom: 16px;">
+          A plataforma foi desenvolvida para ambientes Linux e macOS utilizando <strong>Python 3.12+</strong>,
+          com suporte completo a contêineres <strong>Docker Engine (24+)</strong> e <strong>Docker Compose v2</strong>.
+        </p>
+
+        <div class="grid-2" style="margin-bottom: 16px;">
+          <div class="card" style="background:rgba(15, 23, 42, 0.6); padding:16px; border:1px solid var(--border-color);">
+            <strong style="color:var(--accent-cyan); display:block; margin-bottom:8px;">Requisitos de Software:</strong>
+            <ul style="padding-left:18px; font-size:0.86rem; color:var(--text-secondary); line-height:1.6;">
+              <li><strong>Python:</strong> Versão 3.12.0 ou superior (com suporte ao <code>type</code> statement PEP 695).</li>
+              <li><strong>Docker & Compose:</strong> Docker Engine 24+ com plugin <code>docker compose</code> v2 instalado.</li>
+              <li><strong>Utilitários de Linha de Comando:</strong> <code>bash</code>, <code>git</code>, <code>curl</code> e <code>tar</code>.</li>
+              <li><strong>Memória RAM:</strong> Mínimo de 4 GB recomendados (8 GB para o ecossistema completo com MLflow e Grafana).</li>
+            </ul>
+          </div>
+          <div class="card" style="background:rgba(15, 23, 42, 0.6); padding:16px; border:1px solid var(--border-color);">
+            <strong style="color:var(--accent-emerald); display:block; margin-bottom:8px;">Variáveis de Ambiente (.env):</strong>
+            <p style="font-size:0.84rem; color:var(--text-secondary); line-height:1.5;">
+              O arquivo <code>.env</code> é carregado automaticamente pelo script <code>./executar.sh</code> e pelo Docker Compose.
+              Caso não exista, copie o arquivo de exemplo com credenciais e portas pré-configuradas para ambiente local:
+            </p>
+            <div class="code-container" style="margin-top:10px;">
+              <pre><code>cp .env.example .env</code></pre>
+            </div>
+          </div>
+        </div>
+
+        <h4 style="color:#ffffff; font-size:0.95rem; margin-bottom:10px;">Guia Passo a Passo de Instalação:</h4>
+        <div class="code-container">
+          <div class="code-header">
+            <span>Terminal Bash: Configuração do Ambiente Virtual</span>
+            <button class="btn-copy" onclick="copiarCodigo(this)">Copiar</button>
+          </div>
+          <pre><code># 1. Navegue até o diretório raiz do projeto
+cd agrupamento_comentarios_youtube
+
+# 2. Crie o ambiente virtual com Python 3.12
+python3.12 -m venv .venv
+
+# 3. Ative o ambiente virtual
+source .venv/bin/activate
+
+# 4. Atualize o gerenciador de pacotes e instale as dependências
+pip install --upgrade pip
+pip install -r requirements.txt
+
+# 5. Valide a integridade do ambiente com a suíte de testes (Ruff + Pytest + Pyright)
+./executar.sh test</code></pre>
+        </div>
+      </div>
+
+      <!-- 5.2 Orquestração da Infraestrutura via Docker Compose -->
+      <div class="card" id="manual-infra">
+        <div class="card-title">
+          <span>5.2 Orquestração da Infraestrutura via Docker Compose</span>
+          <span class="badge badge-emerald">Docker Compose</span>
+        </div>
+        <p style="font-size:0.9rem; color:var(--text-secondary); margin-bottom: 16px;">
+          Toda a infraestrutura de apoio (armazenamento de objetos Lakehouse S3, banco relacional do MLflow,
+          servidor de rastreamento e pilha completa de observabilidade) é iniciada com um único comando:
+        </p>
+
+        <div class="code-container" style="margin-bottom:16px;">
+          <div class="code-header">
+            <span>Iniciar Todos os Serviços de Suporte</span>
+            <button class="btn-copy" onclick="copiarCodigo(this)">Copiar</button>
+          </div>
+          <pre><code>./executar.sh infra</code></pre>
+        </div>
+
+        <div class="table-container" style="margin-bottom:16px;">
+          <table>
+            <thead>
+              <tr><th>Serviço</th><th>Porta Local</th><th>URL / Endpoint</th><th>Descrição & Credenciais Padrão</th></tr>
             </thead>
             <tbody>
               <tr>
-                <td><span class="tag-param">./executar.sh test</span></td>
-                <td>Executa ruff (linter/format), pytest (testes unitários) e checagem de tipos estrita (pyright).</td>
-                <td><code>./executar.sh test</code></td>
+                <td><strong>RustFS S3 (API)</strong></td>
+                <td><span class="tag-param">9000</span></td>
+                <td><code>http://localhost:9000</code></td>
+                <td>Armazenamento Lakehouse S3 compatível com AWS API. Bucket <code>steam-reviews</code> inicializado automaticamente.</td>
               </tr>
               <tr>
-                <td><span class="tag-param">./executar.sh pipeline [ID]</span></td>
-                <td>Executa o ciclo analítico completo para um ID de jogo (lendo do Lakehouse S3).</td>
-                <td><code>./executar.sh pipeline 730</code></td>
+                <td><strong>RustFS Console</strong></td>
+                <td><span class="tag-param">9001</span></td>
+                <td><code>http://localhost:9001</code></td>
+                <td>Console web para navegação nas camadas Bronze, Silver e Gold (User: <code>rustfsadmin</code> / Pass: <code>rustfsadmin</code>).</td>
               </tr>
               <tr>
-                <td><span class="tag-param">./executar.sh pipeline [ID] --coletar</span></td>
-                <td>Extrai dados novos da API externa antes de rodar o pipeline analítico.</td>
-                <td><code>./executar.sh pipeline 730 --coletar</code></td>
+                <td><strong>MLflow Server</strong></td>
+                <td><span class="tag-param">5000</span></td>
+                <td><code>http://localhost:5000</code></td>
+                <td>Interface gráfica de experimentos, métricas, comparação de modelos e download de artefatos.</td>
               </tr>
               <tr>
-                <td><span class="tag-param">./executar.sh api [--docker]</span></td>
-                <td>Inicia a API REST FastAPI localmente ou em contêiner Docker Compose.</td>
-                <td><code>./executar.sh api --docker</code></td>
+                <td><strong>PostgreSQL 16</strong></td>
+                <td><span class="tag-param">5432</span></td>
+                <td><code>localhost:5432</code></td>
+                <td>Banco relacional de backend para o MLflow Server (Database: <code>mlflow_db</code>, User: <code>mlflow_user</code>).</td>
               </tr>
               <tr>
-                <td><span class="tag-param">./executar.sh infra</span></td>
-                <td>Sobe contêineres de suporte (RustFS S3, PostgreSQL, MLflow, Prometheus, Grafana).</td>
-                <td><code>./executar.sh infra</code></td>
+                <td><strong>Prometheus</strong></td>
+                <td><span class="tag-param">9090</span></td>
+                <td><code>http://localhost:9090</code></td>
+                <td>Coletor de séries temporais de métricas da API FastAPI e métricas analíticas de clustering.</td>
               </tr>
               <tr>
-                <td><span class="tag-param">./executar.sh infra-down</span></td>
-                <td>Encerra todos os contêineres de suporte.</td>
-                <td><code>./executar.sh infra-down</code></td>
+                <td><strong>Grafana</strong></td>
+                <td><span class="tag-param">3000</span></td>
+                <td><code>http://localhost:3000</code></td>
+                <td>Dashboards integrados de performance, tráfego de inferência e perfis de cluster (User: <code>admin</code> / Pass: <code>admin</code>).</td>
+              </tr>
+              <tr>
+                <td><strong>Loki</strong></td>
+                <td><span class="tag-param">3100</span></td>
+                <td><code>http://localhost:3100</code></td>
+                <td>Mecanismo de agregação e indexação de logs estruturados em tempo real.</td>
+              </tr>
+              <tr>
+                <td><strong>Alloy</strong></td>
+                <td><span class="tag-param">12345</span></td>
+                <td><code>http://localhost:12345</code></td>
+                <td>Coletor OpenTelemetry para telemetria contínua e exportação unificada para Loki e Prometheus.</td>
               </tr>
             </tbody>
           </table>
         </div>
-      </div>
 
-      <!-- Seção Docker Compose -->
-      <div class="card" id="docker-compose">
-        <div class="card-title">
-          <span>Serviços e Portas no Docker Compose</span>
-          <span class="badge badge-emerald">Infraestrutura</span>
-        </div>
         <div class="grid-2">
           <div class="code-container">
             <div class="code-header">
-              <span>Mapeamento de Portas Locais</span>
+              <span>Verificar Status dos Serviços</span>
+              <button class="btn-copy" onclick="copiarCodigo(this)">Copiar</button>
             </div>
-            <pre><code>• API FastAPI:        http://localhost:8000
-• MLflow UI:          http://localhost:5000
-• RustFS (S3 API):    http://localhost:9000
-• RustFS (Console):   http://localhost:9001
-• Prometheus:         http://localhost:9090
-• Grafana:            http://localhost:3000
-• Loki:               http://localhost:3100
-• PostgreSQL:         localhost:5432</code></pre>
+            <pre><code># Exibe o status e saúde de todos os contêineres
+./executar.sh status</code></pre>
           </div>
-          <div style="font-size:0.86rem; color:var(--text-secondary); padding: 8px;">
-            <p><strong>Hot-reload de Configurações:</strong></p>
-            <p style="margin-top:6px;">
-              O contêiner <code>api-fastapi</code> monta o volume <code>./config:/app/config:ro</code>. Qualquer modificação
-              feita nos arquivos YAML é refletida imediatamente nas novas predições e requisições sem necessidade de reconstruir a imagem Docker.
-            </p>
-            <p style="margin-top:10px;">
-              <strong>Perfis do Compose:</strong> O serviço da API utiliza os perfis <code>--profile servico_ml --profile api</code>
-              para iniciar conjuntamente as dependências de armazenamento S3 e rastreamento MLflow.
-            </p>
+          <div class="code-container">
+            <div class="code-header">
+              <span>Encerrar Serviços de Suporte</span>
+              <button class="btn-copy" onclick="copiarCodigo(this)">Copiar</button>
+            </div>
+            <pre><code># Encerra os contêineres liberando memória e portas
+./executar.sh infra-down</code></pre>
           </div>
         </div>
       </div>
 
-      <!-- Seção API Endpoints -->
-      <div class="card" id="api-endpoints">
+      <!-- 5.3 Execução do Pipeline via CLI -->
+      <div class="card" id="manual-pipeline">
         <div class="card-title">
-          <span>Endpoints REST da API FastAPI</span>
-          <span class="badge badge-cyan">REST / OpenAPI</span>
+          <span>5.3 Execução do Pipeline de Clustering via Linha de Comando</span>
+          <span class="badge badge-indigo">CLI Orquestrador</span>
         </div>
-        <p style="font-size:0.88rem; color:var(--text-secondary); margin-bottom: 12px;">
-          Exemplo de predição online via cURL para classificar o perfil comportamental de uma avaliação em tempo real:
+        <p style="font-size:0.9rem; color:var(--text-secondary); margin-bottom: 16px;">
+          O pipeline pode ser executado em diferentes modalidades através do script <code>./executar.sh pipeline</code>
+          ou diretamente via Python com <code>main.py</code>.
         </p>
+
+        <!-- Modos de Operação -->
+        <div class="grid-2" style="margin-bottom:16px;">
+          <div class="card" style="background:rgba(15, 23, 42, 0.6); padding:16px; border:1px solid var(--border-color);">
+            <strong style="color:var(--accent-cyan); display:block; margin-bottom:6px;">Modo 1: Coleta ao Vivo + Pipeline Completo</strong>
+            <p style="font-size:0.84rem; color:var(--text-secondary); line-height:1.5; margin-bottom:10px;">
+              Consulta a Steam Web API para baixar avaliações recentes do jogo indicado, grava o JSON bruto na camada Bronze do S3 e executa as camadas Silver e Gold, o clustering, o MLflow e a geração do relatório HTML:
+            </p>
+            <div class="code-container">
+              <pre><code>./executar.sh pipeline 730 --coletar</code></pre>
+            </div>
+          </div>
+
+          <div class="card" style="background:rgba(15, 23, 42, 0.6); padding:16px; border:1px solid var(--border-color);">
+            <strong style="color:var(--accent-emerald); display:block; margin-bottom:6px;">Modo 2: Reprocessamento Rápido no Lakehouse</strong>
+            <p style="font-size:0.84rem; color:var(--text-secondary); line-height:1.5; margin-bottom:10px;">
+              Lê diretamente as camadas Bronze ou Silver já persistidas no Lakehouse S3 sem fazer novas requisições externas à Steam API. Ideal para testar novos algoritmos ou hiperparâmetros em segundos:
+            </p>
+            <div class="code-container">
+              <pre><code>./executar.sh pipeline 730</code></pre>
+            </div>
+          </div>
+        </div>
+
+        <div class="code-container" style="margin-bottom:16px;">
+          <div class="code-header">
+            <span>Opções Adicionais e Customização de Saída</span>
+            <button class="btn-copy" onclick="copiarCodigo(this)">Copiar</button>
+          </div>
+          <pre><code># Executa para outro AppID Steam (ex: Dota 2 = 570) especificando o destino do relatório HTML
+./executar.sh pipeline 570 --relatorio docs/relatorio_dota2.html
+
+# Ou invocando diretamente o interpretador Python da venv
+python main.py pipeline --identificador 730 --coletar --relatorio relatorio_cs2.html</code></pre>
+        </div>
+
+        <!-- Exemplo de Saída no Terminal -->
+        <h4 style="color:#ffffff; font-size:0.95rem; margin-bottom:10px;">Exemplo de Log de Execução Bem-Sucedida no Terminal:</h4>
         <div class="code-container">
           <div class="code-header">
-            <span>Exemplo cURL: POST /api/v1/prever</span>
+            <span>Saída Padrão do Terminal (stdout)</span>
+          </div>
+          <pre style="color:#a7f3d0;"><code>[INFO] Carregando variáveis de ambiente de .env...
+[INFO] Iniciando execução do pipeline para o jogo/identificador '730'...
+[*] Carregando configurações YAML de 'config'...
+[*] Inicializando Fachada do Pipeline para identificador '730'...
+[*] Executando pipeline (coletar_dados_novos=False)...
+[INFO] Camada Silver carregada: 850 avaliações saneadas.
+[INFO] Engenharia Gold concluída: matriz de treino com shape (850, 6).
+[INFO] Motor de clustering 'kmeans' ajustado. Quantidade de clusters: 3.
+[INFO] Métricas calculadas: Silhouette=0.5214, Davies-Bouldin=0.6832.
+[INFO] Execução registrada no MLflow Server. Run ID: 4f8b2c1a9e3d4021
+[INFO] Coleção de 8 gráficos renderizados via EstrategiaVisualizacaoPlotly.
+
+============================================================
+ PIPELINE DE CLUSTERING EXECUTADO COM SUCESSO 
+============================================================
+Identificador: 730
+Registros processados: 850
+Algoritmo: kmeans
+Quantidade de clusters: 3
+Pontos ruído (-1): 0
+Silhouette Score: 0.5214
+Davies-Bouldin Index: 0.6832
+Run ID MLflow: 4f8b2c1a9e3d4021
+Relatório HTML interativo salvo em: relatorio_clusters.html
+============================================================
+
+[SUCESSO] Execução do pipeline finalizada!</code></pre>
+        </div>
+      </div>
+
+      <!-- 5.4 Cenários Práticos de Customização via YAML -->
+      <div class="card" id="manual-cenarios-yaml">
+        <div class="card-title">
+          <span>5.4 Cenários Práticos de Customização Declarativa (Arquivos YAML)</span>
+          <span class="badge badge-amber">100% Config-Driven</span>
+        </div>
+        <p style="font-size:0.9rem; color:var(--text-secondary); margin-bottom: 16px;">
+          O grande diferencial da arquitetura é a capacidade de alterar o comportamento do pipeline analítico
+          <strong>sem modificar código Python</strong>, apenas ajustando as configurações em <code>config/</code>.
+        </p>
+
+        <div class="grid-2">
+          <!-- Cenário A -->
+          <div class="card" style="background:rgba(15, 23, 42, 0.6); padding:16px; border:1px solid var(--border-color);">
+            <strong style="color:var(--accent-cyan); display:block; margin-bottom:6px;">Cenário A: Alternando de KMeans para DBSCAN ou HDBSCAN</strong>
+            <p style="font-size:0.83rem; color:var(--text-secondary); line-height:1.45; margin-bottom:10px;">
+              Edite <code>config/clustering.yaml</code> para trocar o algoritmo e ajustar hiperparâmetros de densidade:
+            </p>
+            <div class="code-container">
+              <pre><code># config/clustering.yaml
+clustering:
+  algoritmo: "dbscan"       # Opções: kmeans, dbscan, hdbscan
+  dbscan:
+    eps: 0.8
+    min_samples: 5
+    metric: "euclidean"</code></pre>
+            </div>
+          </div>
+
+          <!-- Cenário B -->
+          <div class="card" style="background:rgba(15, 23, 42, 0.6); padding:16px; border:1px solid var(--border-color);">
+            <strong style="color:var(--accent-emerald); display:block; margin-bottom:6px;">Cenário B: Ativando a Análise Temporal e Detecção de Picos</strong>
+            <p style="font-size:0.83rem; color:var(--text-secondary); line-height:1.45; margin-bottom:10px;">
+              Edite <code>config/analises.yaml</code> para habilitar os gráficos temporais e a detecção de review bombing:
+            </p>
+            <div class="code-container">
+              <pre><code># config/analises.yaml
+analises:
+  analise_temporal:
+    habilitado: true        # Ativa gráficos e alertas temporais
+    granularidade_padrao: "semanal"  # diario, semanal, mensal
+    deteccao_picos:
+      habilitado: true
+      limiar_zscore: 2.5    # Picos com Z >= 2.5 disparam alertas</code></pre>
+            </div>
+          </div>
+
+          <!-- Cenário C -->
+          <div class="card" style="background:rgba(15, 23, 42, 0.6); padding:16px; border:1px solid var(--border-color);">
+            <strong style="color:var(--accent-indigo); display:block; margin-bottom:6px;">Cenário C: Ativando Processamento de Linguagem Natural (PLN)</strong>
+            <p style="font-size:0.83rem; color:var(--text-secondary); line-height:1.45; margin-bottom:10px;">
+              Edite <code>config/pln.yaml</code> para vetorizar o texto da avaliação e fundir com os atributos numéricos:
+            </p>
+            <div class="code-container">
+              <pre><code># config/pln.yaml
+pln:
+  habilitado: true          # Desativado por padrão conforme regras
+  vetorizador: "tfidf"      # spacy, tfidf, count
+  max_features: 50
+  modo_fusao: "concatenar"  # concatenar ou apenas_texto</code></pre>
+            </div>
+          </div>
+
+          <!-- Cenário D -->
+          <div class="card" style="background:rgba(15, 23, 42, 0.6); padding:16px; border:1px solid var(--border-color);">
+            <strong style="color:var(--accent-amber); display:block; margin-bottom:6px;">Cenário D: Seleção de Atributos e Escalonamento</strong>
+            <p style="font-size:0.83rem; color:var(--text-secondary); line-height:1.45; margin-bottom:10px;">
+              Edite <code>config/atributos.yaml</code> e <code>config/preprocessamento.yaml</code> para alterar variáveis e transformações:
+            </p>
+            <div class="code-container">
+              <pre><code># config/preprocessamento.yaml
+preprocessamento:
+  escalonamento:
+    metodo: "robusto"      # padrao (StandardScaler) ou robusto (RobustScaler)
+  transformacoes:
+    - coluna: "author_playtime_forever"
+      operacao: "log1p"    # np.log1p seguro</code></pre>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 5.5 Operação e Consumo da API REST FastAPI -->
+      <div class="card" id="manual-api-rest">
+        <div class="card-title">
+          <span>5.5 Operação e Consumo da API REST FastAPI</span>
+          <span class="badge badge-cyan">Microsserviço de Inferência</span>
+        </div>
+        <p style="font-size:0.9rem; color:var(--text-secondary); margin-bottom: 16px;">
+          A API REST expõe o motor de inferência para predições online em tempo real, monitoramento de saúde dos componentes,
+          métricas do Prometheus e acionamento remoto de pipelines.
+        </p>
+
+        <div class="grid-2" style="margin-bottom:16px;">
+          <div class="code-container">
+            <div class="code-header">
+              <span>Opção 1: Execução Local para Desenvolvimento</span>
+              <button class="btn-copy" onclick="copiarCodigo(this)">Copiar</button>
+            </div>
+            <pre><code># Inicia Uvicorn localmente na porta 8000 com recarga automática
+./executar.sh api</code></pre>
+          </div>
+          <div class="code-container">
+            <div class="code-header">
+              <span>Opção 2: Execução em Contêiner Docker Compose</span>
+              <button class="btn-copy" onclick="copiarCodigo(this)">Copiar</button>
+            </div>
+            <pre><code># Inicia o contêiner api-fastapi no Docker Compose
+./executar.sh api --docker
+
+# Para encerrar o contêiner da API:
+./executar.sh api-down</code></pre>
+          </div>
+        </div>
+
+        <div class="table-container" style="margin-bottom:16px;">
+          <table>
+            <thead>
+              <tr><th>Método</th><th>Rota</th><th>Finalidade</th><th>Exemplo de Resposta / Status</th></tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><span class="badge badge-emerald">GET</span></td>
+                <td><code>/health</code> ou <code>/api/v1/saude</code></td>
+                <td>Healthcheck e verificação de conectividade com S3 e motor de ML.</td>
+                <td><code>{"status": "saudavel", "lakehouse": "conectado"}</code> (200 OK)</td>
+              </tr>
+              <tr>
+                <td><span class="badge badge-emerald">GET</span></td>
+                <td><code>/metrics</code></td>
+                <td>Métricas de telemetria no formato oficial do Prometheus.</td>
+                <td>Contadores de latência, erros e predições por cluster.</td>
+              </tr>
+              <tr>
+                <td><span class="badge badge-emerald">GET</span></td>
+                <td><code>/api/v1/clusters/resumo</code></td>
+                <td>Retorna estatísticas, personas e métricas do último modelo treinado.</td>
+                <td>JSON com contagem por cluster, silhueta e perfis médios.</td>
+              </tr>
+              <tr>
+                <td><span class="badge badge-cyan">POST</span></td>
+                <td><code>/api/v1/prever</code></td>
+                <td>Classifica uma avaliação em tempo real (cluster, persona, alertas e distância).</td>
+                <td>JSON com <code>cluster_id</code>, <code>persona</code>, <code>distancia_centroide</code>.</td>
+              </tr>
+              <tr>
+                <td><span class="badge badge-indigo">POST</span></td>
+                <td><code>/api/v1/executar-pipeline</code></td>
+                <td>Dispara o re-treinamento assíncrono do pipeline analítico.</td>
+                <td><code>{"tarefa_id": "...", "status": "em_processamento"}</code> (202 Accepted)</td>
+              </tr>
+              <tr>
+                <td><span class="badge">DOCS</span></td>
+                <td><code>/docs</code> e <code>/redoc</code></td>
+                <td>Documentação interativa Swagger OpenAPI e ReDoc.</td>
+                <td>Interface gráfica no navegador para testar requisições.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Exemplo cURL Completo de Predição -->
+        <h4 style="color:#ffffff; font-size:0.95rem; margin-bottom:10px;">Exemplo de Predição Online via cURL:</h4>
+        <div class="code-container" style="margin-bottom:16px;">
+          <div class="code-header">
+            <span>Requisição: POST /api/v1/prever</span>
             <button class="btn-copy" onclick="copiarCodigo(this)">Copiar</button>
           </div>
           <pre><code>curl -X POST "http://localhost:8000/api/v1/prever" \
   -H "Content-Type: application/json" \
   -d '{
     "atributos": {
-      "author_playtime_forever": 350.0,
-      "author_playtime_at_review": 120.0,
-      "author_num_games_owned": 45,
-      "author_num_reviews": 12,
-      "votes_up": 15,
-      "votes_funny": 2,
-      "comment_count": 3
+      "author_playtime_forever": 450.0,
+      "author_playtime_at_review": 180.0,
+      "author_num_games_owned": 80,
+      "author_num_reviews": 15,
+      "votes_up": 22,
+      "votes_funny": 4,
+      "comment_count": 5
     }
   }'</code></pre>
+        </div>
+
+        <h4 style="color:#ffffff; font-size:0.95rem; margin-bottom:10px;">Payload de Resposta JSON Detalhado:</h4>
+        <div class="code-container">
+          <div class="code-header">
+            <span>Resposta: HTTP 200 OK</span>
+          </div>
+          <pre style="color:#a7f3d0;"><code>{
+  "sucesso": true,
+  "cluster_id": 1,
+  "persona": "Veteranos e Formadores de Opinião",
+  "descricao_persona": "Jogadores com mais de 300h de jogo e alto engajamento comunitário em votos úteis.",
+  "distancia_centroide": 0.4287,
+  "alerta_regra_negocio": null,
+  "algoritmo_ativo": "kmeans",
+  "tempo_inferencia_ms": 3.84
+}</code></pre>
+        </div>
+      </div>
+
+      <!-- 5.6 Rastreamento de Experimentos no MLflow -->
+      <div class="card" id="manual-mlflow">
+        <div class="card-title">
+          <span>5.6 Rastreamento de Experimentos com MLflow Tracking</span>
+          <span class="badge badge-indigo">MLflow UI</span>
+        </div>
+        <p style="font-size:0.9rem; color:var(--text-secondary); margin-bottom: 16px;">
+          Todas as execuções do pipeline registram automaticamente hiperparâmetros, métricas intrínsecas e artefatos
+          no MLflow Server, acessível via navegador em <a href="http://localhost:5000" target="_blank" style="color:var(--accent-cyan); text-decoration:underline;">http://localhost:5000</a>.
+        </p>
+
+        <div class="grid-3" style="margin-bottom:16px;">
+          <div class="card" style="background:rgba(15, 23, 42, 0.6); padding:16px; border:1px solid var(--border-color);">
+            <strong style="color:var(--accent-cyan); display:block; margin-bottom:6px;">1. Hiperparâmetros Rastreados:</strong>
+            <ul style="padding-left:16px; font-size:0.83rem; color:var(--text-secondary); line-height:1.5;">
+              <li><code>algoritmo</code> (kmeans / dbscan / hdbscan)</li>
+              <li><code>n_clusters</code> / <code>eps</code> / <code>min_samples</code></li>
+              <li><code>escalonamento_metodo</code> (Standard / Robust)</li>
+              <li><code>pln_habilitado</code> e <code>vetorizador</code></li>
+              <li><code>motor_processamento</code> (pandas / polars)</li>
+            </ul>
+          </div>
+
+          <div class="card" style="background:rgba(15, 23, 42, 0.6); padding:16px; border:1px solid var(--border-color);">
+            <strong style="color:var(--accent-emerald); display:block; margin-bottom:6px;">2. Métricas de Agrupamento:</strong>
+            <ul style="padding-left:16px; font-size:0.83rem; color:var(--text-secondary); line-height:1.5;">
+              <li><code>silhouette_score</code> (Coesão vs Separação)</li>
+              <li><code>davies_bouldin_index</code> (Similaridade intra/inter)</li>
+              <li><code>calinski_harabasz_index</code> (Dispersão)</li>
+              <li><code>quantidade_clusters</code> detectados</li>
+              <li><code>taxa_pontos_ruido</code> (pontos -1)</li>
+            </ul>
+          </div>
+
+          <div class="card" style="background:rgba(15, 23, 42, 0.6); padding:16px; border:1px solid var(--border-color);">
+            <strong style="color:var(--accent-amber); display:block; margin-bottom:6px;">3. Artefatos Versionados:</strong>
+            <ul style="padding-left:16px; font-size:0.83rem; color:var(--text-secondary); line-height:1.5;">
+              <li><code>relatorio_clusters.html</code> (Relatório interativo)</li>
+              <li><code>modelo_clustering.pkl</code> (Modelo serializado)</li>
+              <li><code>centroides.json</code> (Coordenadas multidimensionais)</li>
+              <li><code>config_snapshot.yaml</code> (Configuração exata)</li>
+            </ul>
+          </div>
+        </div>
+
+        <p style="font-size:0.86rem; color:var(--text-secondary);">
+          <strong>Como Comparar Múltiplas Execuções:</strong> Na interface web do MLflow, selecione duas ou mais corridas
+          (<em>Runs</em>) do experimento <code>steam-clustering-analise</code> e clique em <strong>Compare</strong>.
+          A UI gera gráficos de dispersão comparando Silhouette Score versus número de clusters, auxiliando na escolha do ponto ótimo.
+        </p>
+      </div>
+
+      <!-- 5.7 Observabilidade com Grafana, Prometheus & Loki -->
+      <div class="card" id="manual-observabilidade">
+        <div class="card-title">
+          <span>5.7 Observabilidade Analítica e Operacional (Grafana, Prometheus & Loki)</span>
+          <span class="badge badge-emerald">Observabilidade</span>
+        </div>
+        <p style="font-size:0.9rem; color:var(--text-secondary); margin-bottom: 16px;">
+          O ambiente integra métricas em tempo real e centralização de logs estruturados para monitoramento 24/7
+          de serviços em produção:
+        </p>
+
+        <div class="grid-2" style="margin-bottom:16px;">
+          <div class="card" style="background:rgba(15, 23, 42, 0.6); padding:16px; border:1px solid var(--border-color);">
+            <strong style="color:var(--accent-cyan); display:block; margin-bottom:6px;">Grafana Dashboards (Porta 3000):</strong>
+            <p style="font-size:0.84rem; color:var(--text-secondary); line-height:1.5;">
+              Acesse <a href="http://localhost:3000" target="_blank" style="color:var(--accent-cyan);">http://localhost:3000</a> (usuário <code>admin</code>, senha <code>admin</code>). Os dashboards incluem:
+            </p>
+            <ul style="padding-left:16px; font-size:0.83rem; color:var(--text-secondary); line-height:1.5; margin-top:6px;">
+              <li><strong>Taxa de Requisições por Segundo (RPS):</strong> Volume de predições em tempo real.</li>
+              <li><strong>Latência Percentil da API:</strong> Tempos de resposta p50, p95 e p99.</li>
+              <li><strong>Distribuição de Frequência por Cluster:</strong> Proporção de clientes atribuídos a cada persona.</li>
+            </ul>
+          </div>
+
+          <div class="card" style="background:rgba(15, 23, 42, 0.6); padding:16px; border:1px solid var(--border-color);">
+            <strong style="color:var(--accent-emerald); display:block; margin-bottom:6px;">Pesquisa de Logs no Loki (Porta 3100):</strong>
+            <p style="font-size:0.84rem; color:var(--text-secondary); line-height:1.5;">
+              No menu <em>Explore</em> do Grafana, selecione a fonte de dados <strong>Loki</strong> e execute consultas com LogQL:
+            </p>
+            <div class="code-container" style="margin-top:8px;">
+              <pre><code># Filtra logs estruturados do serviço ML com nível de erro
+{service_name="servico_ml"} |= "ERROR"
+
+# Filtra predições online com anomalias de regras de negócio
+{service_name="servico_ml"} |= "alerta_regra_negocio"</code></pre>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 5.8 Garantia de Qualidade & CI/CD Local -->
+      <div class="card" id="manual-qualidade">
+        <div class="card-title">
+          <span>5.8 Garantia de Qualidade, Testes Automatizados & CI/CD</span>
+          <span class="badge badge-cyan">Zero Any & 90 Testes</span>
+        </div>
+        <p style="font-size:0.9rem; color:var(--text-secondary); margin-bottom: 16px;">
+          O projeto impõe o mais rigoroso padrão de engenharia de software e tipagem estática.
+          O comando unificado executa as 3 etapas de validação em sequência:
+        </p>
+
+        <div class="code-container" style="margin-bottom:16px;">
+          <div class="code-header">
+            <span>Executar Suíte Completa de Qualidade</span>
+            <button class="btn-copy" onclick="copiarCodigo(this)">Copiar</button>
+          </div>
+          <pre><code>./executar.sh test</code></pre>
+        </div>
+
+        <div class="grid-3">
+          <div class="card" style="background:rgba(15, 23, 42, 0.6); padding:16px; border:1px solid var(--border-color);">
+            <strong style="color:var(--accent-cyan); display:block; margin-bottom:6px;">1. Linter & Formatação (Ruff):</strong>
+            <p style="font-size:0.83rem; color:var(--text-secondary); line-height:1.45;">
+              Verifica padrões PEP 8, formatação consistente, remoção de imports não utilizados e regras de modernização Python 3.12 (UP040, RUF022).
+            </p>
+          </div>
+
+          <div class="card" style="background:rgba(15, 23, 42, 0.6); padding:16px; border:1px solid var(--border-color);">
+            <strong style="color:var(--accent-emerald); display:block; margin-bottom:6px;">2. Testes Unitários (Pytest):</strong>
+            <p style="font-size:0.83rem; color:var(--text-secondary); line-height:1.45;">
+              Executa <strong>90 testes automatizados</strong> cobrindo Lakehouse S3, algoritmos de clustering, análise temporal, detector de picos, AST de regras e API REST.
+            </p>
+          </div>
+
+          <div class="card" style="background:rgba(15, 23, 42, 0.6); padding:16px; border:1px solid var(--border-color);">
+            <strong style="color:var(--accent-amber); display:block; margin-bottom:6px;">3. Tipagem Estática (Pyright):</strong>
+            <p style="font-size:0.83rem; color:var(--text-secondary); line-height:1.45;">
+              Análise estática rigorosa no modo estrito. <strong>Zero Any</strong> em todo o codebase, garantindo segurança de runtime antes da implantação.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- 5.9 Guia de Troubleshooting -->
+      <div class="card" id="manual-troubleshooting">
+        <div class="card-title">
+          <span>5.9 Guia de Resolução de Problemas Comuns (Troubleshooting)</span>
+          <span class="badge badge-amber">Diagnóstico Rápido</span>
+        </div>
+        <p style="font-size:0.9rem; color:var(--text-secondary); margin-bottom: 16px;">
+          Tabela de diagnóstico rápido para incidentes operacionais frequentes durante o desenvolvimento ou implantação:
+        </p>
+
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr><th>Sintoma / Mensagem de Erro</th><th>Causa Mais Provável</th><th>Solução Recomendada Passo a Passo</th></tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>ConnectionRefusedError: [Errno 111] Connect to localhost:9000 failed</code></td>
+                <td>O contêiner do RustFS S3 não está ativo ou ainda está inicializando.</td>
+                <td>Execute <code>./executar.sh infra</code> e aguarde 5 segundos. Verifique o status com <code>./executar.sh status</code>.</td>
+              </tr>
+              <tr>
+                <td><code>HTTP 422 Unprocessable Entity ao enviar predição</code></td>
+                <td>O payload contém identificadores proibidos (<code>steamid</code> ou <code>recommendationid</code>) ou campos com tipo incorreto.</td>
+                <td>Remova os identificadores do payload JSON. Deixe apenas os atributos numéricos definidos em <code>config/atributos.yaml</code>.</td>
+              </tr>
+              <tr>
+                <td><code>pydantic_core._pydantic_core.ValidationError ao iniciar</code></td>
+                <td>Um dos 16 arquivos YAML contém valor com tipo inválido, chave ausente ou violação de regra de negócio cruzada.</td>
+                <td>Leia a mensagem do Pydantic no terminal: ela indica com precisão o arquivo YAML, a chave exata e o valor esperado (ex: literal permitido).</td>
+              </tr>
+              <tr>
+                <td><code>Algoritmo DBSCAN classificando 90%+ dos pontos como ruído (-1)</code></td>
+                <td>O hiperparâmetro <code>eps</code> está muito restrito para a escala dos atributos normalizados.</td>
+                <td>Edite <code>config/clustering.yaml</code> e aumente gradualmente o valor de <code>eps</code> (ex: de 0.5 para 0.8 ou 1.2) ou diminua <code>min_samples</code>.</td>
+              </tr>
+              <tr>
+                <td><code>Bind for 0.0.0.0:8000 failed: port is already allocated</code></td>
+                <td>Existe outra instância da API ou processo local ocupando a porta 8000.</td>
+                <td>Descubra o processo com <code>lsof -i :8000</code> e encerre-o com <code>kill -9 &lt;PID&gt;</code>, ou inicie a API em outra porta com <code>python main.py api -p 8080</code>.</td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       </div>
     </section>
@@ -1833,6 +3150,18 @@ execucao:
 
   <!-- Mobile Nav Toggle -->
   <button class="mobile-toggle" onclick="toggleSidebar()">☰</button>
+
+  <!-- Modal Fullscreen para Diagramas -->
+  <div id="diagramModal" class="diagram-modal">
+    <div class="diagram-modal-header">
+      <span id="diagramModalTitle" class="diagram-modal-title">Visualização Expandida do Diagrama</span>
+      <div style="display:flex; align-items:center; gap:8px;">
+        <div id="diagramModalControls" class="diagram-controls" style="position:static;"></div>
+        <button class="diagram-modal-close" onclick="fecharModalDiagrama()">✕ Fechar (Esc)</button>
+      </div>
+    </div>
+    <div class="diagram-modal-body" id="diagramModalBody"></div>
+  </div>
 
   <script>
     // Inicialização do Mermaid
@@ -1849,6 +3178,506 @@ execucao:
         secondaryColor: '#312e81',
         tertiaryColor: '#0f172a'
       }
+    });
+
+    // Utilitário para extrair dimensões intrínsecas reais do SVG
+    function extrairDimensoesSvg(svg) {
+      let w = 0, h = 0;
+      if (svg.viewBox && svg.viewBox.baseVal && svg.viewBox.baseVal.width > 0) {
+        w = svg.viewBox.baseVal.width;
+        h = svg.viewBox.baseVal.height;
+      } else if (svg.getAttribute('viewBox')) {
+        const parts = svg.getAttribute('viewBox').trim().split(/[\s,]+/);
+        if (parts.length >= 4) {
+          w = parseFloat(parts[2]);
+          h = parseFloat(parts[3]);
+        }
+      }
+      if (!w || !h) {
+        try {
+          const bbox = svg.getBBox();
+          if (bbox.width > 0) {
+            w = bbox.width;
+            h = bbox.height;
+          }
+        } catch (_) {}
+      }
+      return { width: w || 1400, height: h || 900 };
+    }
+
+    // Função para anexar controles de zoom e pan aos diagramas Mermaid
+    function inicializarZoomDiagramas() {
+      const boxes = document.querySelectorAll('.mermaid-box');
+      
+      boxes.forEach((box) => {
+        if (box.dataset.zoomInitialized) return;
+        
+        const mermaidEl = box.querySelector('.mermaid');
+        if (!mermaidEl) return;
+        
+        const svg = mermaidEl.querySelector('svg');
+        if (!svg) {
+          setTimeout(inicializarZoomDiagramas, 200);
+          return;
+        }
+
+        box.dataset.zoomInitialized = 'true';
+
+        // Dimensões nativas do SVG
+        const { width: vbWidth, height: vbHeight } = extrairDimensoesSvg(svg);
+
+        // Remove width percentual forçado e fixa dimensão real do desenho
+        svg.removeAttribute('width');
+        svg.removeAttribute('height');
+        svg.style.width = `${vbWidth}px`;
+        svg.style.height = `${vbHeight}px`;
+        svg.style.maxWidth = 'none';
+
+        // Estrutura de viewport e content
+        const viewport = document.createElement('div');
+        viewport.className = 'mermaid-viewport';
+
+        const content = document.createElement('div');
+        content.className = 'mermaid-content';
+
+        box.insertBefore(viewport, mermaidEl);
+        content.appendChild(mermaidEl);
+        viewport.appendChild(content);
+
+        // Função de cálculo de escala de ajuste (Fit to Viewport)
+        function calcularFitScale(padding = 50) {
+          const vRect = viewport.getBoundingClientRect();
+          const sX = (vRect.width - padding) / vbWidth;
+          const sY = (vRect.height - padding) / vbHeight;
+          return Math.min(sX, sY);
+        }
+
+        // Estado do zoom e pan
+        let fitScale = calcularFitScale();
+        let scale = Math.min(fitScale, 1.0);
+        let translateX = 0;
+        let translateY = 0;
+        let isDragging = false;
+        let startX = 0;
+        let startY = 0;
+
+        function atualizarTransform(animar = true) {
+          if (animar) {
+            content.classList.remove('dragging');
+          } else {
+            content.classList.add('dragging');
+          }
+          content.style.transform = `translate(${translateX}px, ${translateY}px) scale(${scale})`;
+          scaleText.innerText = `${Math.round(scale * 100)}%`;
+        }
+
+        function aplicarFit(animar = true) {
+          fitScale = calcularFitScale();
+          scale = fitScale;
+          translateX = 0;
+          translateY = 0;
+          atualizarTransform(animar);
+        }
+
+        function aplicar1to1(animar = true) {
+          scale = 1.0;
+          translateX = 0;
+          translateY = 0;
+          atualizarTransform(animar);
+        }
+
+        // Barra de Ferramentas Flutuante
+        const controls = document.createElement('div');
+        controls.className = 'diagram-controls';
+
+        // Botão Zoom Out (-)
+        const btnZoomOut = document.createElement('button');
+        btnZoomOut.className = 'diagram-btn';
+        btnZoomOut.title = 'Diminuir Zoom (Passo -15%)';
+        btnZoomOut.innerHTML = '−';
+        btnZoomOut.onclick = (e) => {
+          e.stopPropagation();
+          scale = Math.max(0.08, Math.round(scale * 0.85 * 100) / 100);
+          atualizarTransform(true);
+        };
+
+        // Indicador de Escala
+        const scaleText = document.createElement('span');
+        scaleText.className = 'diagram-scale-text';
+        scaleText.title = 'Escala atual. Clique para alternar entre 100% e Ajustar';
+        scaleText.innerText = `${Math.round(scale * 100)}%`;
+        scaleText.onclick = (e) => {
+          e.stopPropagation();
+          if (Math.abs(scale - 1.0) < 0.05) aplicarFit(true);
+          else aplicar1to1(true);
+        };
+
+        // Botão Zoom In (+)
+        const btnZoomIn = document.createElement('button');
+        btnZoomIn.className = 'diagram-btn';
+        btnZoomIn.title = 'Aumentar Zoom (Passo +15%)';
+        btnZoomIn.innerHTML = '+';
+        btnZoomIn.onclick = (e) => {
+          e.stopPropagation();
+          scale = Math.min(6.0, Math.round(scale * 1.18 * 100) / 100);
+          atualizarTransform(true);
+        };
+
+        // Botão Ajustar à Tela (Fit)
+        const btnFit = document.createElement('button');
+        btnFit.className = 'diagram-btn';
+        btnFit.title = 'Ajustar Diagrama Inteiro ao Espaço Visível (Fit)';
+        btnFit.innerHTML = '⤢ Fit';
+        btnFit.onclick = (e) => {
+          e.stopPropagation();
+          aplicarFit(true);
+        };
+
+        // Botão Tamanho Real (1:1)
+        const btn1to1 = document.createElement('button');
+        btn1to1.className = 'diagram-btn';
+        btn1to1.title = 'Visualizar em Tamanho Real Legível (100% de Escala)';
+        btn1to1.innerHTML = '1:1';
+        btn1to1.onclick = (e) => {
+          e.stopPropagation();
+          aplicar1to1(true);
+        };
+
+        // Botão Reset (↺)
+        const btnReset = document.createElement('button');
+        btnReset.className = 'diagram-btn';
+        btnReset.title = 'Redefinir e Centralizar';
+        btnReset.innerHTML = '↺';
+        btnReset.onclick = (e) => {
+          e.stopPropagation();
+          aplicarFit(true);
+        };
+
+        // Botão Tela Cheia (⛶)
+        const btnFullscreen = document.createElement('button');
+        btnFullscreen.className = 'diagram-btn';
+        btnFullscreen.title = 'Expandir em Tela Cheia';
+        btnFullscreen.innerHTML = '⛶';
+        btnFullscreen.onclick = (e) => {
+          e.stopPropagation();
+          const card = box.closest('.card') || box.closest('.code-container');
+          const title = card ? (card.querySelector('.card-title span, .code-header span')?.innerText || 'Diagrama') : 'Diagrama';
+          abrirModalDiagrama(svg, vbWidth, vbHeight, title);
+        };
+
+        controls.appendChild(btnZoomOut);
+        controls.appendChild(scaleText);
+        controls.appendChild(btnZoomIn);
+        controls.appendChild(btnFit);
+        controls.appendChild(btn1to1);
+        controls.appendChild(btnReset);
+        controls.appendChild(btnFullscreen);
+        box.appendChild(controls);
+
+        // Dica de Interação
+        const hint = document.createElement('div');
+        hint.className = 'diagram-hint';
+        hint.innerHTML = 'Arraste para mover • Scroll para zoom focado • Duplo clique para Fit / 1:1';
+        box.appendChild(hint);
+
+        // Eventos de Pan (Mouse Drag)
+        viewport.addEventListener('mousedown', (e) => {
+          if (e.button !== 0) return;
+          isDragging = true;
+          startX = e.clientX - translateX;
+          startY = e.clientY - translateY;
+          viewport.classList.add('grabbing');
+          content.classList.add('dragging');
+        });
+
+        window.addEventListener('mousemove', (e) => {
+          if (!isDragging) return;
+          translateX = e.clientX - startX;
+          translateY = e.clientY - startY;
+          atualizarTransform(false);
+        });
+
+        window.addEventListener('mouseup', () => {
+          if (isDragging) {
+            isDragging = false;
+            viewport.classList.remove('grabbing');
+            content.classList.remove('dragging');
+          }
+        });
+
+        // Evento de Wheel: Zoom em direção ao cursor do mouse
+        viewport.addEventListener('wheel', (e) => {
+          e.preventDefault();
+          const zoomFactor = e.deltaY < 0 ? 1.15 : 0.87;
+          const newScale = Math.min(6.0, Math.max(0.08, Math.round(scale * zoomFactor * 1000) / 1000));
+          
+          const vRect = viewport.getBoundingClientRect();
+          const mouseX = e.clientX - vRect.left - vRect.width / 2;
+          const mouseY = e.clientY - vRect.top - vRect.height / 2;
+
+          translateX = mouseX - (mouseX - translateX) * (newScale / scale);
+          translateY = mouseY - (mouseY - translateY) * (newScale / scale);
+          scale = newScale;
+          
+          atualizarTransform(true);
+        }, { passive: false });
+
+        // Duplo clique alterna entre Fit e 1:1
+        viewport.addEventListener('dblclick', (e) => {
+          if (e.target.closest('.diagram-controls')) return;
+          if (Math.abs(scale - fitScale) < 0.05) {
+            aplicar1to1(true);
+          } else {
+            aplicarFit(true);
+          }
+        });
+
+        // Suporte a Touch (Mobile / Tablet)
+        let initialDistance = 0;
+        let touchStartX = 0;
+        let touchStartY = 0;
+
+        viewport.addEventListener('touchstart', (e) => {
+          if (e.touches.length === 1) {
+            isDragging = true;
+            touchStartX = e.touches[0].clientX - translateX;
+            touchStartY = e.touches[0].clientY - translateY;
+          } else if (e.touches.length === 2) {
+            isDragging = false;
+            initialDistance = Math.hypot(
+              e.touches[0].clientX - e.touches[1].clientX,
+              e.touches[0].clientY - e.touches[1].clientY
+            );
+          }
+        }, { passive: true });
+
+        viewport.addEventListener('touchmove', (e) => {
+          if (e.touches.length === 1 && isDragging) {
+            translateX = e.touches[0].clientX - touchStartX;
+            translateY = e.touches[0].clientY - touchStartY;
+            atualizarTransform(false);
+          } else if (e.touches.length === 2) {
+            const currentDistance = Math.hypot(
+              e.touches[0].clientX - e.touches[1].clientX,
+              e.touches[0].clientY - e.touches[1].clientY
+            );
+            const factor = currentDistance / (initialDistance || currentDistance);
+            scale = Math.min(6.0, Math.max(0.08, scale * factor));
+            initialDistance = currentDistance;
+            atualizarTransform(false);
+          }
+        }, { passive: true });
+
+        viewport.addEventListener('touchend', () => {
+          isDragging = false;
+        }, { passive: true });
+
+        // Inicializa com Fit perfeito
+        setTimeout(() => {
+          aplicarFit(false);
+        }, 50);
+
+      });
+    }
+
+    // Modal Fullscreen para Diagramas com Auto-Fit e Zoom Focado
+    let modalScale = 1.0;
+    let modalTranslateX = 0;
+    let modalTranslateY = 0;
+    let modalIsDragging = false;
+    let modalStartX = 0;
+    let modalStartY = 0;
+
+    function abrirModalDiagrama(originalSvg, vbWidth, vbHeight, titulo) {
+      const modal = document.getElementById('diagramModal');
+      const modalTitle = document.getElementById('diagramModalTitle');
+      const modalBody = document.getElementById('diagramModalBody');
+      const modalControls = document.getElementById('diagramModalControls');
+
+      modalTitle.innerText = titulo || 'Visualização em Tela Cheia';
+      modalBody.innerHTML = '';
+      modalControls.innerHTML = '';
+
+      const viewport = document.createElement('div');
+      viewport.className = 'mermaid-viewport';
+      viewport.style.height = '100%';
+      viewport.style.width = '100%';
+
+      const content = document.createElement('div');
+      content.className = 'mermaid-content';
+      content.style.width = 'auto';
+
+      const cloneSvg = originalSvg.cloneNode(true);
+      cloneSvg.removeAttribute('width');
+      cloneSvg.removeAttribute('height');
+      cloneSvg.style.width = `${vbWidth}px`;
+      cloneSvg.style.height = `${vbHeight}px`;
+      cloneSvg.style.maxWidth = 'none';
+
+      content.appendChild(cloneSvg);
+      viewport.appendChild(content);
+      modalBody.appendChild(viewport);
+
+      function calcularModalFit() {
+        const mRect = modalBody.getBoundingClientRect();
+        const sX = (mRect.width - 60) / vbWidth;
+        const sY = (mRect.height - 60) / vbHeight;
+        return Math.min(sX, sY);
+      }
+
+      let modalFitScale = calcularModalFit();
+      modalScale = modalFitScale;
+      modalTranslateX = 0;
+      modalTranslateY = 0;
+
+      function atualizarModalTransform(animar = true) {
+        if (animar) content.classList.remove('dragging');
+        else content.classList.add('dragging');
+        content.style.transform = `translate(${modalTranslateX}px, ${modalTranslateY}px) scale(${modalScale})`;
+        modalScaleText.innerText = `${Math.round(modalScale * 100)}%`;
+      }
+
+      function aplicarModalFit(animar = true) {
+        modalFitScale = calcularModalFit();
+        modalScale = modalFitScale;
+        modalTranslateX = 0;
+        modalTranslateY = 0;
+        atualizarModalTransform(animar);
+      }
+
+      function aplicarModal1to1(animar = true) {
+        modalScale = 1.0;
+        modalTranslateX = 0;
+        modalTranslateY = 0;
+        atualizarModalTransform(animar);
+      }
+
+      // Controles do Modal
+      const btnOut = document.createElement('button');
+      btnOut.className = 'diagram-btn';
+      btnOut.innerHTML = '−';
+      btnOut.title = 'Diminuir Zoom';
+      btnOut.onclick = () => {
+        modalScale = Math.max(0.08, Math.round(modalScale * 0.85 * 100) / 100);
+        atualizarModalTransform(true);
+      };
+
+      const modalScaleText = document.createElement('span');
+      modalScaleText.className = 'diagram-scale-text';
+      modalScaleText.innerText = `${Math.round(modalScale * 100)}%`;
+      modalScaleText.title = 'Alternar entre 100% e Ajustar à Tela';
+      modalScaleText.onclick = () => {
+        if (Math.abs(modalScale - 1.0) < 0.05) aplicarModalFit(true);
+        else aplicarModal1to1(true);
+      };
+
+      const btnIn = document.createElement('button');
+      btnIn.className = 'diagram-btn';
+      btnIn.innerHTML = '+';
+      btnIn.title = 'Aumentar Zoom';
+      btnIn.onclick = () => {
+        modalScale = Math.min(6.0, Math.round(modalScale * 1.18 * 100) / 100);
+        atualizarModalTransform(true);
+      };
+
+      const btnFit = document.createElement('button');
+      btnFit.className = 'diagram-btn';
+      btnFit.innerHTML = '⤢ Fit';
+      btnFit.title = 'Ajustar à Tela Cheia';
+      btnFit.onclick = () => aplicarModalFit(true);
+
+      const btn1to1 = document.createElement('button');
+      btn1to1.className = 'diagram-btn';
+      btn1to1.innerHTML = '1:1';
+      btn1to1.title = 'Tamanho Real Legível (100%)';
+      btn1to1.onclick = () => aplicarModal1to1(true);
+
+      const btnReset = document.createElement('button');
+      btnReset.className = 'diagram-btn';
+      btnReset.innerHTML = '↺';
+      btnReset.title = 'Redefinir';
+      btnReset.onclick = () => aplicarModalFit(true);
+
+      modalControls.appendChild(btnOut);
+      modalControls.appendChild(modalScaleText);
+      modalControls.appendChild(btnIn);
+      modalControls.appendChild(btnFit);
+      modalControls.appendChild(btn1to1);
+      modalControls.appendChild(btnReset);
+
+      viewport.addEventListener('mousedown', (e) => {
+        if (e.button !== 0) return;
+        modalIsDragging = true;
+        modalStartX = e.clientX - modalTranslateX;
+        modalStartY = e.clientY - modalTranslateY;
+        viewport.classList.add('grabbing');
+        content.classList.add('dragging');
+      });
+
+      window.addEventListener('mousemove', (e) => {
+        if (!modalIsDragging) return;
+        modalTranslateX = e.clientX - modalStartX;
+        modalTranslateY = e.clientY - modalStartY;
+        atualizarModalTransform(false);
+      });
+
+      window.addEventListener('mouseup', () => {
+        if (modalIsDragging) {
+          modalIsDragging = false;
+          viewport.classList.remove('grabbing');
+          content.classList.remove('dragging');
+        }
+      });
+
+      viewport.addEventListener('wheel', (e) => {
+        e.preventDefault();
+        const zoomFactor = e.deltaY < 0 ? 1.15 : 0.87;
+        const newScale = Math.min(6.0, Math.max(0.08, Math.round(modalScale * zoomFactor * 1000) / 1000));
+        
+        const mRect = viewport.getBoundingClientRect();
+        const mouseX = e.clientX - mRect.left - mRect.width / 2;
+        const mouseY = e.clientY - mRect.top - mRect.height / 2;
+
+        modalTranslateX = mouseX - (mouseX - modalTranslateX) * (newScale / modalScale);
+        modalTranslateY = mouseY - (mouseY - modalTranslateY) * (newScale / modalScale);
+        modalScale = newScale;
+        
+        atualizarModalTransform(true);
+      }, { passive: false });
+
+      viewport.addEventListener('dblclick', (e) => {
+        if (e.target.closest('.diagram-controls')) return;
+        if (Math.abs(modalScale - modalFitScale) < 0.05) {
+          aplicarModal1to1(true);
+        } else {
+          aplicarModalFit(true);
+        }
+      });
+
+      modal.classList.add('active');
+      document.body.style.overflow = 'hidden';
+      
+      // Ajusta imediatamente ao abrir
+      setTimeout(() => {
+        aplicarModalFit(false);
+      }, 30);
+    }
+
+    function fecharModalDiagrama() {
+      const modal = document.getElementById('diagramModal');
+      modal.classList.remove('active');
+      document.body.style.overflow = '';
+    }
+
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') fecharModalDiagrama();
+    });
+
+    // Inicialização ao carregar a página
+    window.addEventListener('load', () => {
+      setTimeout(inicializarZoomDiagramas, 300);
+      setTimeout(inicializarZoomDiagramas, 800);
+      setTimeout(inicializarZoomDiagramas, 1600);
     });
 
     // Copiar código

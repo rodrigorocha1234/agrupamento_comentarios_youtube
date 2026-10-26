@@ -7,6 +7,7 @@ import pandas as pd
 
 from app.contratos.fonte_dados import ProtocoloFonteDados
 from app.contratos.repositorio import ProtocoloRepositorioLakehouse
+from app.contratos.tipos_dados import DicionarioJson, RegistroDado
 
 COLUNAS_NUMERICAS_PADRAO: Final[list[str]] = [
     "votes_up",
@@ -40,7 +41,7 @@ class ColetorDados:
         limite_total_registros: int = 1000,
         tamanho_lote: int = 100,
         pausa_entre_lotes_segundos: float = 0.2,
-    ) -> dict[str, object]:
+    ) -> DicionarioJson:
         """Executa a coleta paginada persistindo lotes na Bronze e consolidado na Silver.
 
         Args:
@@ -55,7 +56,7 @@ class ColetorDados:
         """
         inicio_execucao = time.time()
         marcador_atual = marcador_inicial
-        todos_registros: list[dict[str, object]] = []
+        todos_registros: list[RegistroDado] = []
         chaves_vistas: set[str] = set()
         duplicatas_ignoradas = 0
 
@@ -114,7 +115,7 @@ class ColetorDados:
             "duracao_segundos": duracao,
         }
 
-    def _normalizar_dataframe_silver(self, registros: list[dict[str, object]]) -> pd.DataFrame:
+    def _normalizar_dataframe_silver(self, registros: list[RegistroDado]) -> pd.DataFrame:
         """Converte dicionários brutos em DataFrame tipado para a camada Silver."""
         df = pd.DataFrame(registros)
 

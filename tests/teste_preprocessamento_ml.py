@@ -19,6 +19,7 @@ from app.conf_yaml import (
     ConfigValoresAusentes,
 )
 from app.contratos.repositorio import ProtocoloRepositorioLakehouse
+from app.contratos.tipos_dados import RegistroDado
 from app.excecoes import ErroPreprocessamento
 from app.preprocessamento_ml.engenheiro_atributos import EngenheiroAtributos
 from app.preprocessamento_ml.preparador_dados import PreparadorDados
@@ -32,7 +33,7 @@ class RepositorioGoldFake(ProtocoloRepositorioLakehouse):
         self.gold_salvo: dict[str, pd.DataFrame] = {}
 
     @override
-    def gravar_bronze(self, identificador: str | int, registros: Sequence[dict[str, object]]) -> str:
+    def gravar_bronze(self, identificador: str | int, registros: Sequence[RegistroDado]) -> str:
         return ""
 
     @override

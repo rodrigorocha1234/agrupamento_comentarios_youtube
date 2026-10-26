@@ -1,0 +1,17 @@
+analise_temporal:
+  habilitado: true
+  coluna_referencia: "timestamp_created"
+  formato_origem: "unix_segundos" # unix_segundos | iso8601
+  granularidade: "mensal"         # diaria | semanal | mensal | anual
+  preencher_periodos_ausentes: true
+
+  deteccao_picos:
+    habilitado: true
+    limiar_desvio_padrao: 2.5
+    minimo_amostras_periodo: 5
+
+  visualizacoes:
+    grafico_evolucao_linhas: true
+    grafico_area_empilhada: true
+    titulo_evolucao: "Evolução Histórica dos Agrupamentos"
+    titulo_area_empilhada: "Composição Relativa dos Agrupamentos ao Longo do Tempo"

@@ -5,13 +5,18 @@ datalake:
   bucket: "${DATA_BUCKET:-steam-reviews}"
   endpoint_url: "${S3_ENDPOINT_URL:-http://127.0.0.1:9000}"
   regiao: "${AWS_DEFAULT_REGION:-us-east-1}"
+  caminho: "${DATALAKE_PATH:-datalake}"
   bronze:
     prefixo: bronze
+    caminho: "${DATALAKE_BRONZE_PATH:-bronze}"
   silver:
     prefixo: silver
+    caminho: "${DATALAKE_SILVER_PATH:-silver}"
   gold:
     prefixo: gold
+    caminho: "${DATALAKE_GOLD_PATH:-gold}"
   metadados:
     incluir_timestamp_coleta: true
     incluir_appid: true
     incluir_versao_schema: true
+

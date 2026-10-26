@@ -6,10 +6,14 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
-import plotly.graph_objects as go
 
 from app.analise_clusters.analisador_clusters import ResumoAnaliseClusters
-from app.analise_clusters.estrategia_visualizacao import EstrategiaVisualizacao
+from app.analise_clusters.estrategia_visualizacao import (
+    EstrategiaVisualizacao,
+    FiguraAnalitica,
+)
+from app.analise_temporal.contratos import ResumoAnaliseTemporal
+from app.contratos.tipos_dados import DicionarioJson
 
 if TYPE_CHECKING:
     from app.conf_yaml import ConfigAnalisesInfo
@@ -24,7 +28,7 @@ class EstrategiaVisualizacaoAltair(EstrategiaVisualizacao):
         rotulos: list[int],
         titulo: str | None = None,
         config_analises: "ConfigAnalisesInfo | None" = None,
-    ) -> dict[str, object]:
+    ) -> DicionarioJson:
         cfg = config_analises
         titulo_final = (
             titulo
@@ -46,7 +50,7 @@ class EstrategiaVisualizacaoAltair(EstrategiaVisualizacao):
         rotulos: list[int],
         titulo: str | None = None,
         config_analises: "ConfigAnalisesInfo | None" = None,
-    ) -> dict[str, object]:
+    ) -> DicionarioJson:
         cfg = config_analises
         titulo_final = (
             titulo
@@ -75,7 +79,7 @@ class EstrategiaVisualizacaoAltair(EstrategiaVisualizacao):
         rotulos: list[int] | None = None,
         titulo: str | None = None,
         config_analises: "ConfigAnalisesInfo | None" = None,
-    ) -> dict[str, object]:
+    ) -> DicionarioJson:
         return {
             "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
             "title": titulo or f"Distribuição de '{atributo}' por Cluster",
@@ -90,7 +94,7 @@ class EstrategiaVisualizacaoAltair(EstrategiaVisualizacao):
         rotulos: list[int] | None = None,
         titulo: str | None = None,
         config_analises: "ConfigAnalisesInfo | None" = None,
-    ) -> dict[str, object]:
+    ) -> DicionarioJson:
         return {
             "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
             "title": titulo or f"Dispersão: {atributo_x} vs {atributo_y}",
@@ -102,7 +106,7 @@ class EstrategiaVisualizacaoAltair(EstrategiaVisualizacao):
         resumo: ResumoAnaliseClusters,
         titulo: str | None = None,
         config_analises: "ConfigAnalisesInfo | None" = None,
-    ) -> dict[str, object]:
+    ) -> DicionarioJson:
         return {
             "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
             "title": titulo or "Perfil Médio dos Atributos por Cluster",
@@ -114,16 +118,50 @@ class EstrategiaVisualizacaoAltair(EstrategiaVisualizacao):
         resumo: ResumoAnaliseClusters,
         titulo: str | None = None,
         config_analises: "ConfigAnalisesInfo | None" = None,
-    ) -> dict[str, object]:
+    ) -> DicionarioJson:
         return {
             "tipo": "tabela_resumo_altair",
             "titulo": titulo or "Resumo Estatístico dos Clusters",
             "perfis": len(resumo.perfis),
         }
 
+    def gerar_grafico_evolucao_temporal(
+        self,
+        resumo_temporal: ResumoAnaliseTemporal,
+        titulo: str | None = None,
+        config_analises: "ConfigAnalisesInfo | None" = None,
+    ) -> DicionarioJson:
+        return {
+            "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+            "title": titulo or "Evolução Histórica do Volume por Agrupamento (Altair)",
+            "mark": "line",
+            "encoding": {
+                "x": {"field": "periodo", "type": "ordinal"},
+                "y": {"field": "quantidade", "type": "quantitative"},
+                "color": {"field": "cluster", "type": "nominal"},
+            },
+        }
+
+    def gerar_grafico_area_empilhada_temporal(
+        self,
+        resumo_temporal: ResumoAnaliseTemporal,
+        titulo: str | None = None,
+        config_analises: "ConfigAnalisesInfo | None" = None,
+    ) -> DicionarioJson:
+        return {
+            "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+            "title": titulo or "Composição Relativa dos Agrupamentos (Altair)",
+            "mark": "area",
+            "encoding": {
+                "x": {"field": "periodo", "type": "ordinal"},
+                "y": {"field": "proporcao", "type": "quantitative", "stack": "normalize"},
+                "color": {"field": "cluster", "type": "nominal"},
+            },
+        }
+
     def exportar_relatorio_html(
         self,
-        figuras: list[go.Figure | object],
+        figuras: list[FiguraAnalitica],
         caminho_saida: str | Path,
         titulo: str | None = None,
         subtitulo: str | None = None,

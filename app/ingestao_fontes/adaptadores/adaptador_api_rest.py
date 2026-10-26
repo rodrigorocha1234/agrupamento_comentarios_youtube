@@ -1,8 +1,7 @@
-"""Adaptador de fonte de dados para APIs REST genéricas com paginação configurável."""
-
 from typing import override
 
 from app.contratos.fonte_dados import ProtocoloFonteDados
+from app.contratos.tipos_dados import RegistroDado
 from app.ingestao_fontes.cliente_http_resiliente import ClienteHTTPResiliente
 
 
@@ -37,7 +36,7 @@ class AdaptadorAPIRest(ProtocoloFonteDados):
         identificador_origem: str | int,
         marcador_posicao: str | None = None,
         limite: int = 100,
-    ) -> tuple[list[dict[str, object]], str | None, bool]:
+    ) -> tuple[list[RegistroDado], str | None, bool]:
         """Extrai lote de dados da API REST utilizando marcador de paginação."""
         url = self._formatar_url(identificador_origem)
 
@@ -63,11 +62,16 @@ class AdaptadorAPIRest(ProtocoloFonteDados):
                     itens_brutos = candidato
                     break
 
-        registros: list[dict[str, object]] = []
+        registros: list[RegistroDado] = []
         if isinstance(itens_brutos, list):
             for item in itens_brutos:
                 if isinstance(item, dict):
-                    registros.append(dict(item))
+                    registro_limpo: RegistroDado = {
+                        str(k): v
+                        for k, v in item.items()
+                        if isinstance(v, (str, int, float, bool)) or v is None
+                    }
+                    registros.append(registro_limpo)
 
         proximo_cursor_bruto = (
             resposta.get(self._campo_resposta_proximo_cursor)
@@ -86,7 +90,7 @@ class AdaptadorAPIRest(ProtocoloFonteDados):
         appid: int,
         cursor: str,
         quantidade_por_pagina: int,
-    ) -> tuple[list[dict[str, object]], str, bool]:
+    ) -> tuple[list[RegistroDado], str, bool]:
         registros, prox_cursor, tem_mais = self.extrair_lote(
             identificador_origem=appid,
             marcador_posicao=cursor,

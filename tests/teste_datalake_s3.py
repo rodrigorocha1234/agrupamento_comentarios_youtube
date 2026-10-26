@@ -1,5 +1,3 @@
-"""Testes unitários para o RepositorioS3Lakehouse e camadas do Data Lakehouse remoto."""
-
 import io
 
 import pandas as pd
@@ -8,6 +6,7 @@ from botocore.exceptions import ClientError
 from botocore.response import StreamingBody
 
 from app.conf_yaml import ConfigCamadaLake, ConfigDatalakeInfo
+from app.contratos.tipos_dados import DicionarioJson, RegistroDado
 from app.excecoes import ErroDatalake
 from app.gestao_datalake.repositorio_s3_lakehouse import RepositorioS3Lakehouse
 
@@ -26,17 +25,28 @@ class ClienteS3Fake:
     def __init__(self) -> None:
         self.objetos: dict[tuple[str, str], bytes] = {}
 
-    def put_object(self, **kwargs: object) -> dict[str, object]:
-        bucket = str(kwargs["Bucket"])
-        key = str(kwargs["Key"])
-        body = kwargs["Body"]
-        conteudo = bytes(body) if isinstance(body, (bytes, bytearray)) else body.read()  # type: ignore[union-attr]
+    def put_object(
+        self,
+        *,
+        Bucket: str,
+        Key: str,
+        Body: bytes | io.BytesIO | str,
+        ContentType: str = "application/x-parquet",
+    ) -> DicionarioJson:
+        bucket = str(Bucket)
+        key = str(Key)
+        if isinstance(Body, (bytes, bytearray)):
+            conteudo = bytes(Body)
+        elif isinstance(Body, io.BytesIO):
+            conteudo = Body.getvalue()
+        else:
+            conteudo = str(Body).encode("utf-8")
         self.objetos[(bucket, key)] = conteudo
         return {"ETag": "fake-etag"}
 
-    def get_object(self, **kwargs: object) -> RespostaGetObjectFake:
-        bucket = str(kwargs["Bucket"])
-        key = str(kwargs["Key"])
+    def get_object(self, *, Bucket: str, Key: str) -> RespostaGetObjectFake:
+        bucket = str(Bucket)
+        key = str(Key)
         if (bucket, key) not in self.objetos:
             raise ClientError(
                 error_response={"Error": {"Code": "NoSuchKey", "Message": "Key not found"}},
@@ -45,10 +55,10 @@ class ClienteS3Fake:
         conteudo = self.objetos[(bucket, key)]
         return RespostaGetObjectFake(conteudo)
 
-    def list_objects_v2(self, **kwargs: object) -> dict[str, list[dict[str, object]]]:
-        bucket = str(kwargs.get("Bucket", ""))
-        prefix = str(kwargs.get("Prefix", ""))
-        contents: list[dict[str, object]] = []
+    def list_objects_v2(self, *, Bucket: str = "", Prefix: str = "") -> dict[str, list[dict[str, str]]]:
+        bucket = str(Bucket)
+        prefix = str(Prefix)
+        contents: list[dict[str, str]] = []
         for b, k in self.objetos:
             if b == bucket and k.startswith(prefix):
                 contents.append({"Key": k})
@@ -64,7 +74,7 @@ def test_gravar_bronze_gera_parquet_no_s3() -> None:
     )
     repo = RepositorioS3Lakehouse(config=config, cliente_s3=cliente_s3)
 
-    registros: list[dict[str, object]] = [{"id": 1, "review": "otimo"}, {"id": 2, "review": "ruim"}]
+    registros: list[RegistroDado] = [{"id": 1, "review": "otimo"}, {"id": 2, "review": "ruim"}]
     uri = repo.gravar_bronze(identificador=730, registros=registros)
 
     assert uri.startswith("s3://test-bucket/bronze/730/ano=")

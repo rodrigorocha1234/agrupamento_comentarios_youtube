@@ -9,6 +9,8 @@ import pandas as pd
 import plotly.graph_objects as go
 
 from app.analise_clusters.analisador_clusters import ResumoAnaliseClusters
+from app.analise_temporal.contratos import ResumoAnaliseTemporal
+from app.contratos.tipos_dados import DicionarioJson
 
 if TYPE_CHECKING:
     from app.conf_yaml import ConfigAnalisesInfo
@@ -16,6 +18,8 @@ if TYPE_CHECKING:
 AVISO_PCA: Final[str] = (
     "Projeção meramente exploratória via PCA 2D. Não representa a totalidade da geometria original."
 )
+
+type FiguraAnalitica = go.Figure | DicionarioJson
 
 
 class EstrategiaVisualizacao(ABC):
@@ -28,7 +32,7 @@ class EstrategiaVisualizacao(ABC):
         rotulos: list[int],
         titulo: str | None = None,
         config_analises: "ConfigAnalisesInfo | None" = None,
-    ) -> go.Figure | object:
+    ) -> FiguraAnalitica:
         """Gera projeção dimensional 2D."""
 
     @abstractmethod
@@ -37,7 +41,7 @@ class EstrategiaVisualizacao(ABC):
         rotulos: list[int],
         titulo: str | None = None,
         config_analises: "ConfigAnalisesInfo | None" = None,
-    ) -> go.Figure | object:
+    ) -> FiguraAnalitica:
         """Gera gráfico de distribuição e contagem por cluster."""
 
     @abstractmethod
@@ -48,7 +52,7 @@ class EstrategiaVisualizacao(ABC):
         rotulos: list[int] | None = None,
         titulo: str | None = None,
         config_analises: "ConfigAnalisesInfo | None" = None,
-    ) -> go.Figure | object:
+    ) -> FiguraAnalitica:
         """Gera diagramas boxplot para comparar a distribuição de atributos."""
 
     @abstractmethod
@@ -60,7 +64,7 @@ class EstrategiaVisualizacao(ABC):
         rotulos: list[int] | None = None,
         titulo: str | None = None,
         config_analises: "ConfigAnalisesInfo | None" = None,
-    ) -> go.Figure | object:
+    ) -> FiguraAnalitica:
         """Gera dispersão entre dois atributos reais."""
 
     @abstractmethod
@@ -69,7 +73,7 @@ class EstrategiaVisualizacao(ABC):
         resumo: ResumoAnaliseClusters,
         titulo: str | None = None,
         config_analises: "ConfigAnalisesInfo | None" = None,
-    ) -> go.Figure | object:
+    ) -> FiguraAnalitica:
         """Gera comparativo multivariado do perfil médio dos clusters."""
 
     @abstractmethod
@@ -78,13 +82,31 @@ class EstrategiaVisualizacao(ABC):
         resumo: ResumoAnaliseClusters,
         titulo: str | None = None,
         config_analises: "ConfigAnalisesInfo | None" = None,
-    ) -> go.Figure | object:
+    ) -> FiguraAnalitica:
         """Produz tabela interativa consolidando estatísticas e métricas de negócio."""
+
+    @abstractmethod
+    def gerar_grafico_evolucao_temporal(
+        self,
+        resumo_temporal: ResumoAnaliseTemporal,
+        titulo: str | None = None,
+        config_analises: "ConfigAnalisesInfo | None" = None,
+    ) -> FiguraAnalitica:
+        """Gera gráfico cronológico demonstrando o volume de cada cluster por período."""
+
+    @abstractmethod
+    def gerar_grafico_area_empilhada_temporal(
+        self,
+        resumo_temporal: ResumoAnaliseTemporal,
+        titulo: str | None = None,
+        config_analises: "ConfigAnalisesInfo | None" = None,
+    ) -> FiguraAnalitica:
+        """Gera gráfico de área 100% empilhada com a proporção de cada cluster ao longo do tempo."""
 
     @abstractmethod
     def exportar_relatorio_html(
         self,
-        figuras: list[go.Figure | object],
+        figuras: list[FiguraAnalitica],
         caminho_saida: str | Path,
         titulo: str | None = None,
         subtitulo: str | None = None,

@@ -7,7 +7,7 @@ funcionalidades:
   pln:
     habilitado: false
   analise_temporal:
-    habilitado: false
+    habilitado: true
   api:
     habilitado: true
   mlflow:

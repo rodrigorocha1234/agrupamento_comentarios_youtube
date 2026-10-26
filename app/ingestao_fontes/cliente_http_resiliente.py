@@ -1,10 +1,12 @@
 """Cliente HTTP resiliente com retries exponenciais, tratamento de rate limit e timeouts."""
 
 import time
+from types import TracebackType
 from typing import Final, Self
 
 import httpx
 
+from app.contratos.tipos_dados import DicionarioJson
 from app.excecoes import ErroConexaoFonte
 
 STATUS_RETENTAVEIS: Final[set[int]] = {429, 500, 502, 503, 504}
@@ -38,7 +40,12 @@ class ClienteHTTPResiliente:
     def __enter__(self) -> Self:
         return self
 
-    def __exit__(self, *args: object) -> None:
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: TracebackType | None,
+    ) -> None:
         self.fechar()
 
     def requisitar_json(
@@ -47,7 +54,7 @@ class ClienteHTTPResiliente:
         url: str,
         parametros: dict[str, str | int | float | bool] | None = None,
         headers: dict[str, str] | None = None,
-    ) -> dict[str, object]:
+    ) -> DicionarioJson:
         """Executa uma requisição HTTP retornando a resposta decodificada em JSON.
 
         Aplica retries exponenciais automáticos em caso de erros temporários ou status 429/5xx.

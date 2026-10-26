@@ -11,16 +11,19 @@ from app.analise_clusters.analisador_clusters import (
     ResumoAnaliseClusters,
 )
 from app.analise_clusters.gerador_graficos import GeradorVisualizacoesClusters
+from app.analise_temporal import FabricaAnaliseTemporal, ResumoAnaliseTemporal
 from app.clustering.avaliador_clusters import MetricasClustering
 from app.clustering.executor_clustering import ExecutorClustering, ResultadoClustering
 from app.clustering.rastreador_mlflow import RastreadorMLflow
 from app.conf_yaml import (
     ConfigAnalisesInfo,
+    ConfigAnaliseTemporalInfo,
     ConfigAtributosInfo,
     ConfigClusteringInfo,
     ConfigFonteDados,
     ConfigFonteInfo,
     ConfigMLflowInfo,
+    ConfigPLNInfo,
     ConfigPreprocessamentoInfo,
     ConfigProcessamentoInfo,
     ConfigRegrasNegocioInfo,
@@ -32,6 +35,7 @@ from app.ingestao_fontes.coletor_dados import ColetorDados
 from app.ingestao_fontes.fabrica_fontes import FabricaFontesDados
 from app.preprocessamento_ml.engenheiro_atributos import EngenheiroAtributos
 from app.processamento_dados.processador_tabela import ProcessadorTabela
+from app.processamento_pln.fachada_pln import FachadaProcessamentoPLN
 from app.regras_negocio.avaliador_regras import AvaliadorRegrasNegocio
 
 SUFIXO_VISAO_CLUSTERS: Final[str] = "clusters"
@@ -50,6 +54,7 @@ class ResultadoExecucaoPipeline:
     figuras_geradas: dict[str, go.Figure] = field(default_factory=dict)
     caminho_relatorio_html: str = ""
     run_id_mlflow: str | None = None
+    resumo_temporal: ResumoAnaliseTemporal | None = None
 
 
 class FachadaPipelineClustering:
@@ -65,6 +70,8 @@ class FachadaPipelineClustering:
         config_mlflow: ConfigMLflowInfo | None = None,
         config_analises: ConfigAnalisesInfo | None = None,
         config_regras_negocio: ConfigRegrasNegocioInfo | None = None,
+        config_pln: ConfigPLNInfo | None = None,
+        config_analise_temporal: ConfigAnaliseTemporalInfo | None = None,
         repositorio_lakehouse: ProtocoloRepositorioLakehouse | None = None,
         fonte_dados: ProtocoloFonteDados | None = None,
     ) -> None:
@@ -76,6 +83,8 @@ class FachadaPipelineClustering:
         self._config_mlflow = config_mlflow or ConfigMLflowInfo(habilitado=False)
         self._config_analises = config_analises or ConfigAnalisesInfo()
         self._config_regras_negocio = config_regras_negocio or ConfigRegrasNegocioInfo(habilitado=False)
+        self._config_pln = config_pln or ConfigPLNInfo(habilitado=False)
+        self._config_temporal = config_analise_temporal or ConfigAnaliseTemporalInfo(habilitado=False)
 
         self._repositorio = repositorio_lakehouse or RepositorioS3Lakehouse()
         self._fonte_dados = fonte_dados or FabricaFontesDados.criar_fonte(
@@ -83,6 +92,8 @@ class FachadaPipelineClustering:
         )
         self._rastreador_mlflow = RastreadorMLflow(self._config_mlflow)
         self._avaliador_regras = AvaliadorRegrasNegocio(self._config_regras_negocio)
+        self._fachada_pln = FachadaProcessamentoPLN(self._config_pln)
+        self._analisador_temporal = FabricaAnaliseTemporal.criar_analisador(self._config_temporal)
 
     def executar(
         self,
@@ -118,6 +129,14 @@ class FachadaPipelineClustering:
             repositorio=self._repositorio,
         )
 
+        # 3.1 Processamento e Fusão de PLN (quando habilitado)
+        matriz_treino_final = artefato_gold.matriz_treino
+        if self._fachada_pln.habilitado:
+            matriz_treino_final = self._fachada_pln.processar_e_fundir(
+                dados_silver=dados_silver,
+                matriz_numerica_treino=matriz_treino_final,
+            )
+
         # 4. Ajuste do Motor de Clustering & MLflow Tracking
         executor_clustering = ExecutorClustering(
             config_clustering=self._config_clustering,
@@ -125,17 +144,17 @@ class FachadaPipelineClustering:
             rastreador=self._rastreador_mlflow,
         )
         resultado_clustering = executor_clustering.executar(
-            matriz_treino=artefato_gold.matriz_treino,
+            matriz_treino=matriz_treino_final,
             metadados=artefato_gold.metadados,
             identificador=identificador,
             repositorio=self._repositorio,
         )
 
         # 5. Análise de Perfis & Diagnósticos
-        matriz_np = artefato_gold.matriz_treino.to_numpy(dtype=float)
+        matriz_np = matriz_treino_final.to_numpy(dtype=float)
         centroides = resultado_clustering.motor.obter_centroides()
         resumo_analitico = AnalisadorClusters.gerar_resumo_estatistico(
-            matriz_treino=artefato_gold.matriz_treino,
+            matriz_treino=matriz_treino_final,
             rotulos=resultado_clustering.rotulos,
             metadados=artefato_gold.metadados,
             centroides=centroides,
@@ -196,6 +215,26 @@ class FachadaPipelineClustering:
                 config_analises=self._config_analises,
             )
 
+        # 6.1 Análise Temporal dos Agrupamentos (quando habilitada)
+        resumo_temporal: ResumoAnaliseTemporal | None = None
+        if self._config_temporal.habilitado:
+            resumo_temporal = self._analisador_temporal.analisar(
+                dados=dados_silver,
+                rotulos=resultado_clustering.rotulos,
+            )
+            if self._config_temporal.visualizacoes.grafico_evolucao_linhas and resumo_temporal.periodos_ordenados:
+                figuras["evolucao_temporal"] = GeradorVisualizacoesClusters.gerar_grafico_evolucao_temporal(
+                    resumo_temporal=resumo_temporal,
+                    titulo=self._config_temporal.visualizacoes.titulo_evolucao,
+                    config_analises=self._config_analises,
+                )
+            if self._config_temporal.visualizacoes.grafico_area_empilhada and resumo_temporal.periodos_ordenados:
+                figuras["area_empilhada_temporal"] = GeradorVisualizacoesClusters.gerar_grafico_area_empilhada_temporal(
+                    resumo_temporal=resumo_temporal,
+                    titulo=self._config_temporal.visualizacoes.titulo_area_empilhada,
+                    config_analises=self._config_analises,
+                )
+
         caminho_relatorio_str = ""
         if caminho_exportacao_relatorio is not None and figuras:
             caminho_path = Path(caminho_exportacao_relatorio)
@@ -223,4 +262,5 @@ class FachadaPipelineClustering:
             figuras_geradas=figuras,
             caminho_relatorio_html=caminho_relatorio_str,
             run_id_mlflow=resultado_clustering.run_id,
+            resumo_temporal=resumo_temporal,
         )

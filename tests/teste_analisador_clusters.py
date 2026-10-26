@@ -6,14 +6,19 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from app.analise_clusters.analisador_clusters import AnalisadorClusters
+from app.analise_clusters.analisador_clusters import (
+    AnalisadorClusters,
+    ResumoAnaliseClusters,
+)
 from app.analise_clusters.gerador_graficos import (
     EstrategiaVisualizacao,
     EstrategiaVisualizacaoAltair,
     EstrategiaVisualizacaoPlotly,
     FabricaVisualizacoes,
+    FiguraAnalitica,
     GeradorVisualizacoesClusters,
 )
+from app.analise_temporal.contratos import ResumoAnaliseTemporal
 from app.conf_yaml import (
     ConfigAmostrasAnalises,
     ConfigAnalisesInfo,
@@ -289,25 +294,84 @@ def test_padrao_gof_estrategia_e_fabrica_visualizacoes(tmp_path: Path) -> None:
 
     # 3. Valida extensibilidade: registrar novo motor dinamicamente no runtime
     class EstrategiaCustom(EstrategiaVisualizacao):
-        def gerar_grafico_pca_2d(self, *args: object, **kwargs: object) -> str:
-            return "pca_custom"
+        def gerar_grafico_pca_2d(
+            self,
+            matriz_treino: np.ndarray | pd.DataFrame,
+            rotulos: list[int],
+            titulo: str | None = None,
+            config_analises: ConfigAnalisesInfo | None = None,
+        ) -> FiguraAnalitica:
+            return {"grafico": "pca_custom"}
 
-        def gerar_grafico_distribuicao_clusters(self, *args: object, **kwargs: object) -> str:
-            return "dist_custom"
+        def gerar_grafico_distribuicao_clusters(
+            self,
+            rotulos: list[int],
+            titulo: str | None = None,
+            config_analises: ConfigAnalisesInfo | None = None,
+        ) -> FiguraAnalitica:
+            return {"grafico": "dist_custom"}
 
-        def gerar_boxplot_atributos(self, *args: object, **kwargs: object) -> str:
-            return "box_custom"
+        def gerar_boxplot_atributos(
+            self,
+            dados: pd.DataFrame,
+            atributo: str | None = None,
+            rotulos: list[int] | None = None,
+            titulo: str | None = None,
+            config_analises: ConfigAnalisesInfo | None = None,
+        ) -> FiguraAnalitica:
+            return {"grafico": "box_custom"}
 
-        def gerar_grafico_dispersao_2_atributos(self, *args: object, **kwargs: object) -> str:
-            return "disp_custom"
+        def gerar_grafico_dispersao_2_atributos(
+            self,
+            dados: pd.DataFrame,
+            atributo_x: str | None = None,
+            atributo_y: str | None = None,
+            rotulos: list[int] | None = None,
+            titulo: str | None = None,
+            config_analises: ConfigAnalisesInfo | None = None,
+        ) -> FiguraAnalitica:
+            return {"grafico": "disp_custom"}
 
-        def gerar_grafico_perfil_clusters(self, *args: object, **kwargs: object) -> str:
-            return "perfil_custom"
+        def gerar_grafico_perfil_clusters(
+            self,
+            resumo: ResumoAnaliseClusters,
+            titulo: str | None = None,
+            config_analises: ConfigAnalisesInfo | None = None,
+        ) -> FiguraAnalitica:
+            return {"grafico": "perfil_custom"}
 
-        def gerar_tabela_resumo_clusters(self, *args: object, **kwargs: object) -> str:
-            return "tabela_custom"
+        def gerar_tabela_resumo_clusters(
+            self,
+            resumo: ResumoAnaliseClusters,
+            titulo: str | None = None,
+            config_analises: ConfigAnalisesInfo | None = None,
+        ) -> FiguraAnalitica:
+            return {"grafico": "tabela_custom"}
 
-        def exportar_relatorio_html(self, *args: object, **kwargs: object) -> None:
+        def gerar_grafico_evolucao_temporal(
+            self,
+            resumo_temporal: ResumoAnaliseTemporal,
+            titulo: str | None = None,
+            config_analises: ConfigAnalisesInfo | None = None,
+        ) -> FiguraAnalitica:
+            return {"grafico": "evolucao_custom"}
+
+        def gerar_grafico_area_empilhada_temporal(
+            self,
+            resumo_temporal: ResumoAnaliseTemporal,
+            titulo: str | None = None,
+            config_analises: ConfigAnalisesInfo | None = None,
+        ) -> FiguraAnalitica:
+            return {"grafico": "area_empilhada_custom"}
+
+        def exportar_relatorio_html(
+            self,
+            figuras: list[FiguraAnalitica],
+            caminho_saida: str | Path,
+            titulo: str | None = None,
+            subtitulo: str | None = None,
+            config_analises: ConfigAnalisesInfo | None = None,
+        ) -> None:
             pass
 
     FabricaVisualizacoes.registrar_estrategia("custom_engine", EstrategiaCustom)

@@ -33,7 +33,7 @@ class AvaliadorRegrasNegocio:
     @staticmethod
     def _criar_dataframe_perfil(perfil: PerfilCluster) -> pd.DataFrame:
         """Estrutura os atributos do perfil em DataFrame para avaliação vetorizada de expressões."""
-        dados: dict[str, object] = {
+        dados: dict[str, list[int | float]] = {
             "id_cluster": [perfil.id_cluster],
             "quantidade_amostras": [perfil.quantidade_amostras],
             "proporcao_amostras": [perfil.proporcao_amostras],

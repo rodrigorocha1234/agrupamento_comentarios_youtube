@@ -2,6 +2,7 @@
 
 from app.contratos.fonte_dados import ProtocoloFonteDados
 from app.contratos.repositorio import ProtocoloRepositorioLakehouse
+from app.contratos.tipos_dados import DicionarioJson
 from app.ingestao_fontes.coletor_dados import ColetorDados
 
 
@@ -27,7 +28,7 @@ class ColetorSteam(ColetorDados):
         limite_total: int = 1000,
         tamanho_lote: int = 100,
         pausa_segundos: float = 0.2,
-    ) -> dict[str, object]:
+    ) -> DicionarioJson:
         """Método de conveniência para coletar avaliações de um jogo específico da Steam."""
         return self.executar_coleta(
             identificador_origem=appid,

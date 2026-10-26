@@ -1,8 +1,7 @@
-"""Adaptador de fonte de dados para a API de Avaliações da Steam (Steam Reviews API)."""
-
 from typing import override
 
 from app.contratos.fonte_dados import ProtocoloFonteDados
+from app.contratos.tipos_dados import DicionarioJson, RegistroDado
 from app.excecoes import ErroConexaoFonte
 from app.ingestao_fontes.cliente_http_resiliente import ClienteHTTPResiliente
 
@@ -26,7 +25,7 @@ class AdaptadorSteam(ProtocoloFonteDados):
         identificador_origem: str | int,
         marcador_posicao: str | None = None,
         limite: int = 100,
-    ) -> tuple[list[dict[str, object]], str | None, bool]:
+    ) -> tuple[list[RegistroDado], str | None, bool]:
         """Extrai um lote de avaliações da Steam para o appid informado.
 
         Args:
@@ -69,7 +68,7 @@ class AdaptadorSteam(ProtocoloFonteDados):
         if not isinstance(reviews_brutas, list):
             return [], None, False
 
-        registros_achatados: list[dict[str, object]] = []
+        registros_achatados: list[RegistroDado] = []
         for item in reviews_brutas:
             if isinstance(item, dict):
                 registros_achatados.append(self._achatar_registro_review(appid, item))
@@ -88,7 +87,7 @@ class AdaptadorSteam(ProtocoloFonteDados):
         appid: int,
         cursor: str,
         quantidade_por_pagina: int,
-    ) -> tuple[list[dict[str, object]], str, bool]:
+    ) -> tuple[list[RegistroDado], str, bool]:
         """Método de compatibilidade para chamadas orientadas a cursor explícito."""
         registros, prox_cursor, tem_mais = self.extrair_lote(
             identificador_origem=appid,
@@ -104,17 +103,22 @@ class AdaptadorSteam(ProtocoloFonteDados):
         return f"{self._endpoint_base.rstrip('/')}/appreviews/{appid}"
 
     @staticmethod
-    def _achatar_registro_review(appid: int, review_dict: dict[str, object]) -> dict[str, object]:
+    def _achatar_registro_review(appid: int, review_dict: DicionarioJson) -> RegistroDado:
         """Achata a estrutura aninhada de 'author' e normaliza os tipos de campos."""
-        resultado: dict[str, object] = {"appid": appid}
+        resultado: RegistroDado = {"appid": appid}
 
         for chave, valor in review_dict.items():
             if chave == "author" and isinstance(valor, dict):
                 # Achata atributos do autor (steamid, playtime_forever, etc.)
                 for chave_autor, valor_autor in valor.items():
-                    resultado[chave_autor] = valor_autor
-            else:
+                    if isinstance(valor_autor, (str, int, float, bool)) or valor_autor is None:
+                        resultado[chave_autor] = valor_autor
+                    else:
+                        resultado[chave_autor] = str(valor_autor)
+            elif isinstance(valor, (str, int, float, bool)) or valor is None:
                 resultado[chave] = valor
+            else:
+                resultado[chave] = str(valor)
 
         # Garante que recommendationid seja sempre string para evitar perda de precisão
         if "recommendationid" in resultado:

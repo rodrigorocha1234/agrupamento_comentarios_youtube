@@ -2,6 +2,8 @@
 
 from typing import Protocol, runtime_checkable
 
+from app.contratos.tipos_dados import RegistroDado
+
 
 @runtime_checkable
 class ProtocoloFonteDados(Protocol):
@@ -12,7 +14,7 @@ class ProtocoloFonteDados(Protocol):
         identificador_origem: str | int,
         marcador_posicao: str | None = None,
         limite: int = 100,
-    ) -> tuple[list[dict[str, object]], str | None, bool]:
+    ) -> tuple[list[RegistroDado], str | None, bool]:
         """Extrai um lote de registros da fonte informada.
 
         Args:
@@ -30,6 +32,6 @@ class ProtocoloFonteDados(Protocol):
         appid: int,
         cursor: str,
         quantidade_por_pagina: int,
-    ) -> tuple[list[dict[str, object]], str, bool]:
+    ) -> tuple[list[RegistroDado], str, bool]:
         """Método de compatibilidade para APIs com cursor explícito."""
         ...

@@ -13,8 +13,10 @@ from app.analise_clusters.estrategia_plotly import EstrategiaVisualizacaoPlotly
 from app.analise_clusters.estrategia_visualizacao import (
     AVISO_PCA,
     EstrategiaVisualizacao,
+    FiguraAnalitica,
 )
 from app.analise_clusters.fabrica_visualizacoes import FabricaVisualizacoes
+from app.analise_temporal.contratos import ResumoAnaliseTemporal
 
 if TYPE_CHECKING:
     from app.conf_yaml import ConfigAnalisesInfo
@@ -148,9 +150,35 @@ class GeradorVisualizacoesClusters:
         return resultado if isinstance(resultado, go.Figure) else go.Figure()
 
     @classmethod
+    def gerar_grafico_evolucao_temporal(
+        cls,
+        resumo_temporal: ResumoAnaliseTemporal,
+        titulo: str | None = None,
+        config_analises: "ConfigAnalisesInfo | None" = None,
+    ) -> go.Figure:
+        """Gera gráfico cronológico de volume delegando para a estratégia configurada."""
+        cfg = config_analises or cls._obter_config_analises_padrao()
+        est = cls.resolver_estrategia(cfg)
+        resultado = est.gerar_grafico_evolucao_temporal(resumo_temporal, titulo, cfg)
+        return resultado if isinstance(resultado, go.Figure) else go.Figure()
+
+    @classmethod
+    def gerar_grafico_area_empilhada_temporal(
+        cls,
+        resumo_temporal: ResumoAnaliseTemporal,
+        titulo: str | None = None,
+        config_analises: "ConfigAnalisesInfo | None" = None,
+    ) -> go.Figure:
+        """Gera gráfico de área 100% empilhada delegando para a estratégia configurada."""
+        cfg = config_analises or cls._obter_config_analises_padrao()
+        est = cls.resolver_estrategia(cfg)
+        resultado = est.gerar_grafico_area_empilhada_temporal(resumo_temporal, titulo, cfg)
+        return resultado if isinstance(resultado, go.Figure) else go.Figure()
+
+    @classmethod
     def exportar_relatorio_html(
         cls,
-        figuras: list[go.Figure | object],
+        figuras: list[FiguraAnalitica],
         caminho_saida: str | Path,
         titulo: str | None = None,
         subtitulo: str | None = None,
